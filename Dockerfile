@@ -27,7 +27,7 @@ COPY src/ ./src/
 
 # Set environment variables
 ENV PATH="/app/.venv/bin:$PATH"
-ENV PYTHONPATH="/app:$PYTHONPATH"
+ENV PYTHONPATH="/app"
 
 # Expose port
 EXPOSE 8000

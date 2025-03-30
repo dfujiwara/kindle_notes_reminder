@@ -12,7 +12,7 @@ COPY pyproject.toml uv.lock ./
 # Create venv and sync with lock file
 RUN uv venv && \
     . .venv/bin/activate && \
-    uv sync --frozen
+    uv sync --frozen --no-dev
 
 # Stage 2: Runtime stage
 FROM python:3.13-slim

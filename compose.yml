@@ -10,6 +10,7 @@ services:
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/fastapi_db
       - PYTHONPATH=/app
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
     depends_on:
       - db
     networks:

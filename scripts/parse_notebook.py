@@ -2,7 +2,7 @@
 import sys
 import json
 import argparse
-from src.notebook_parser import parse_notebook_html
+from src.notebook_parser import parse_notebook_html, NotebookParseError
 
 def main():
     # Set up argument parser
@@ -22,10 +22,12 @@ def main():
         sys.exit(1)
 
     # Parse the HTML content
-    output_data = parse_notebook_html(html_content)
-
-    # Print JSON output (always formatted)
-    print(json.dumps(output_data, indent=2, ensure_ascii=False))
+    try:
+        result = parse_notebook_html(html_content)
+        print(json.dumps(result.to_dict(), indent=2, ensure_ascii=False))
+    except NotebookParseError as e:
+        print(json.dumps({"error": str(e)}, ensure_ascii=False, indent=2))
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()

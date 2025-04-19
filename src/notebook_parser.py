@@ -1,37 +1,70 @@
 # src/notebook_parser.py
+from dataclasses import dataclass
+from typing import List, Optional
 from bs4 import BeautifulSoup
 
-def parse_notebook_html(html_content):
+
+class NotebookParseError(Exception):
+    """Exception raised when parsing notebook HTML fails"""
+    pass
+
+
+@dataclass
+class NotebookParseResult:
+    """Result of parsing a notebook HTML file"""
+    book_title: str
+    notes: List[str]
+    total_notes: int
+
+    def to_dict(self) -> dict:
+        """Convert the parse result to a dictionary"""
+        return {
+            "book_title": self.book_title,
+            "notes": self.notes,
+            "total_notes": self.total_notes,
+        }
+
+
+def parse_notebook_html(html_content: str) -> NotebookParseResult:
     """
-    Parse the notebook HTML content and return data in JSON format.
+    Parse the notebook HTML content and return structured result.
 
     Args:
         html_content (str): HTML content as string
 
     Returns:
-        dict: Dictionary containing book title and notes
+        NotebookParseResult: Structured result containing parsed data
+
+    Raises:
+        NotebookParseError: If parsing fails
     """
     try:
         soup = BeautifulSoup(html_content, 'html.parser')
 
         # Extract book title
         book_title_elem = soup.find(class_='bookTitle')
-        book_title = book_title_elem.text.strip() if book_title_elem else "Title not found"
+        if not book_title_elem:
+            raise NotebookParseError("Could not find book title in HTML content")
+        book_title = book_title_elem.text.strip()
 
         # Extract all notes
         notes = []
         note_elements = soup.find_all(class_='noteText')
+        if not note_elements:
+            raise NotebookParseError("No notes found in HTML content")
+
         for note in note_elements:
             notes.append(note.text.strip())
 
-        # Create JSON structure
-        output_data = {
-            "book_title": book_title,
-            "notes": notes,
-            "total_notes": len(notes)
-        }
+        return NotebookParseResult(
+            book_title=book_title,
+            notes=notes,
+            total_notes=len(notes)
+        )
 
-        return output_data
-
+    except NotebookParseError:
+        # Re-raise our custom exceptions
+        raise
     except Exception as e:
-        return {"error": f"Error parsing HTML content: {str(e)}"}
+        # Wrap any other exceptions in our custom exception
+        raise NotebookParseError(f"Error parsing HTML content: {str(e)}") from e

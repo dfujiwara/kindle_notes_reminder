@@ -1,6 +1,5 @@
 # src/notebook_parser.py
 from dataclasses import dataclass
-from typing import List, Optional
 from bs4 import BeautifulSoup
 
 
@@ -13,7 +12,7 @@ class NotebookParseError(Exception):
 class NotebookParseResult:
     """Result of parsing a notebook HTML file"""
     book_title: str
-    notes: List[str]
+    notes: list[str]
     total_notes: int
 
     def to_dict(self) -> dict:

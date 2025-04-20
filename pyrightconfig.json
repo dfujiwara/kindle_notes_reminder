@@ -1,0 +1,9 @@
+{
+  "include": ["src"],
+  "reportMissingImports": true,
+  "reportUnusedImports": true,
+  "reportUnusedFunction": true,
+  "reportMissingTypeStubs": true,
+  "typeCheckingMode": "strict",
+  "pythonVersion": "3.13"
+}

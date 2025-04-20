@@ -6,7 +6,7 @@ from llm_interface import LLMClientInterface, LLMError
 
 
 class OpenAIClient(LLMClientInterface):
-    def __init__(self, model="gpt-3.5-turbo"):
+    def __init__(self, model:str ="gpt-3.5-turbo"):
         self.model = model
         self.client = openai.AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
@@ -18,7 +18,10 @@ class OpenAIClient(LLMClientInterface):
                     {"role": "user", "content": prompt}
                 ]
             )
-            return response.choices[0].message.content.strip()
+            message_content = response.choices[0].message.content
+            if message_content is None:
+                raise LLMError("No response from OpenAI")
+            return message_content.strip()
         except RateLimitError:
             raise LLMError("Rate limit exceeded. Please try again later.")
         except AuthenticationError:

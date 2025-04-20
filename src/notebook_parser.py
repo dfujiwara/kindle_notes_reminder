@@ -1,5 +1,6 @@
 # src/notebook_parser.py
 from dataclasses import dataclass
+from typing import Any
 from bs4 import BeautifulSoup
 
 
@@ -15,7 +16,7 @@ class NotebookParseResult:
     notes: list[str]
     total_notes: int
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         """Convert the parse result to a dictionary"""
         return {
             "book_title": self.book_title,
@@ -47,7 +48,7 @@ def parse_notebook_html(html_content: str) -> NotebookParseResult:
         book_title = book_title_elem.text.strip()
 
         # Extract all notes
-        notes = []
+        notes: list[str] = []
         note_elements = soup.find_all(class_='noteText')
         if not note_elements:
             raise NotebookParseError("No notes found in HTML content")

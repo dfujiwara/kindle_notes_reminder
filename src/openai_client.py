@@ -2,7 +2,7 @@
 import openai
 import os
 from openai import APIError, RateLimitError, AuthenticationError
-from llm_interface import LLMClientInterface, LLMError
+from src.llm_interface import LLMClientInterface, LLMError
 
 
 class OpenAIClient(LLMClientInterface):

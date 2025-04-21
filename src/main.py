@@ -1,6 +1,8 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from src.notebook_parser import parse_notebook_html, NotebookParseError
+from src.additional_context import get_additional_context
+from src.openai_client import OpenAIClient
 
 app = FastAPI(
     title="FastAPI App", description="A sample FastAPI application", version="0.1.0"
@@ -15,6 +17,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Initialize the OpenAI client
+openai_client = OpenAIClient()
 
 @app.get("/")
 async def root():
@@ -30,7 +34,18 @@ async def health_check():
 async def parse_notebook_endpoint(file: UploadFile = File(...)):
     html_content = await file.read()
     try:
+        # Attempt to parse the notebook HTML content
         result = parse_notebook_html(html_content.decode("utf-8"))
-        return result.to_dict()  # Return the result as a dictionary
     except NotebookParseError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=f"Parsing error: {str(e)}")
+
+    try:
+        # Get additional context from OpenAI using dependency injection
+        additional_context = await get_additional_context(openai_client, result)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error getting additional context: {str(e)}")
+
+    return {
+        "parsed_result": result.to_dict(),  # Return the parsed result
+        "additional_context": additional_context  # Include the additional context
+    }

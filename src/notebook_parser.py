@@ -1,8 +1,11 @@
 # src/notebook_parser.py
+import logging
 from dataclasses import dataclass
 from typing import Any
 from bs4 import BeautifulSoup
 
+# Configure logging for this module
+logger = logging.getLogger(__name__)
 
 class NotebookParseError(Exception):
     """Exception raised when parsing notebook HTML fails"""
@@ -62,9 +65,9 @@ def parse_notebook_html(html_content: str) -> NotebookParseResult:
             total_notes=len(notes)
         )
 
-    except NotebookParseError:
-        # Re-raise our custom exceptions
+    except NotebookParseError as e:
+        logger.error("NotebookParseError: %s", str(e))  # Log the parsing error
         raise
     except Exception as e:
-        # Wrap any other exceptions in our custom exception
+        logger.error("Unexpected error during parsing: %s", str(e))  # Log unexpected errors
         raise NotebookParseError(f"Error parsing HTML content: {str(e)}") from e

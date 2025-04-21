@@ -9,6 +9,6 @@ async def get_additional_context(llm_client: LLMClientInterface, parsed_result: 
     :param parsed_result: The result of parsing the notebook.
     :return: Additional context as a string.
     """
-    prompt = f"Based on the following notes from the notebook titled '{parsed_result.book_title}': {parsed_result.notes}, can you provide additional context or insights?"
+    prompt = f"Based on the following notes from the notebook titled '{parsed_result.book_title}': {parsed_result.notes[0]}, can you provide additional context or insights?"
     response = await llm_client.get_response(prompt)
     return response

@@ -1,5 +1,7 @@
 from sqlmodel import Field, SQLModel, Relationship
 
+metadata = SQLModel.metadata
+
 class Book(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     title: str

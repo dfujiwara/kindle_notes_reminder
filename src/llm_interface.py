@@ -8,9 +8,9 @@ class LLMError(Exception):
 
 class LLMClientInterface(ABC):
     @abstractmethod
-    async def get_response(self, prompt: str) -> str:
+    async def get_response(self, prompt: str, instruction: str) -> str:
         """
-        Send a prompt to the language model and return the response.
+        Send a prompt and instruction to the language model and return the response.
 
         :param prompt: The input prompt to send to the model.
         :return: The model's response as a string.

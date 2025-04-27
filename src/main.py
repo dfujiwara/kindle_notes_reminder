@@ -17,9 +17,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Initialize the OpenAI client
-openai_client = OpenAIClient()
-
 @app.get("/")
 async def root():
     return {"message": "Welcome to FastAPI!"}
@@ -32,6 +29,9 @@ async def health_check():
 
 @app.post("/notebooks")
 async def parse_notebook_endpoint(file: UploadFile = File(...)):
+    # Initialize the OpenAI client
+    openai_client = OpenAIClient()
+
     html_content = await file.read()
     try:
         # Attempt to parse the notebook HTML content

@@ -1,7 +1,6 @@
 import os
 from typing import Generator
-from sqlmodel import SQLModel, create_engine
-from sqlalchemy.orm import sessionmaker, Session
+from sqlmodel import SQLModel, create_engine, Session
 
 # Read DATABASE_URL environment variable or use default psycopg2 URL
 DATABASE_URL: str = os.getenv(
@@ -15,18 +14,11 @@ engine = create_engine(
     echo=True  # set to False in production
 )
 
-# Create session factory
-SessionLocal = sessionmaker(
-    bind=engine,
-    autocommit=False,
-    autoflush=False,
-)
-
 # Function to create all tables
 def create_db_and_tables() -> None:
     SQLModel.metadata.create_all(engine)
 
 # Generator to provide DB sessions
 def get_session() -> Generator[Session, None, None]:
-    with SessionLocal() as session:
+    with Session(engine) as session:
         yield session

@@ -1,8 +1,10 @@
-from sqlmodel import Field, SQLModel, Relationship
+from sqlmodel import Field, SQLModel, Relationship, UniqueConstraint
 
 metadata = SQLModel.metadata
 
 class Book(SQLModel, table=True):
+    __table_args__ = (UniqueConstraint('title', 'author', name='uix_title_author'),)
+
     id: int | None = Field(default=None, primary_key=True)
     title: str
     author: str
@@ -14,6 +16,7 @@ class Book(SQLModel, table=True):
 class Note(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     content: str
+    content_hash: str = Field(unique=True)
 
     # Foreign key to Book
     book_id: int = Field(foreign_key="book.id")

@@ -1,8 +1,11 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from src.notebook_parser import parse_notebook_html, NotebookParseError
-from src.additional_context import get_additional_context
-from src.openai_client import OpenAIClient
+from sqlmodel import Session
+from src.database import get_session
+from src.repositories.note_repository import NoteRepository
+from src.repositories.book_repository import BookRepository
+from src.notebook_processor import process_notebook_result
 
 app = FastAPI(
     title="FastAPI App", description="A sample FastAPI application", version="0.1.0"
@@ -28,10 +31,7 @@ async def health_check():
 
 
 @app.post("/notebooks")
-async def parse_notebook_endpoint(file: UploadFile = File(...)):
-    # Initialize the OpenAI client
-    openai_client = OpenAIClient()
-
+async def parse_notebook_endpoint(file: UploadFile = File(...), session: Session = Depends(get_session)):
     html_content = await file.read()
     try:
         # Attempt to parse the notebook HTML content
@@ -39,13 +39,8 @@ async def parse_notebook_endpoint(file: UploadFile = File(...)):
     except NotebookParseError as e:
         raise HTTPException(status_code=400, detail=f"Parsing error: {str(e)}")
 
-    try:
-        # Get additional context from OpenAI using dependency injection
-        additional_context = await get_additional_context(openai_client, result)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error getting additional context: {str(e)}")
-
-    return {
-        "parsed_result": result.to_dict(),  # Return the parsed result
-        "additional_context": additional_context  # Include the additional context
-    }
+    # Create repositories
+    book_repository = BookRepository(session)
+    note_repository = NoteRepository(session)
+    # Call the process_notebook_result function
+    process_notebook_result(result, book_repository, note_repository)

@@ -2,7 +2,7 @@ from logging.config import fileConfig
 
 from sqlalchemy import pool, create_engine
 from sqlalchemy.engine import Engine
-from src import models
+from src.repositories import models
 
 from alembic import context
 import os

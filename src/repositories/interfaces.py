@@ -1,0 +1,28 @@
+from typing import Protocol
+from src.repositories.models import Book, Note
+
+class BookRepositoryInterface(Protocol):
+    def add(self, book: Book) -> Book:
+        ...
+
+    def get(self, book_id: int) -> Book | None:
+        ...
+
+    def list(self) -> list[Book]:
+        ...
+
+    def delete(self, book_id: int) -> None:
+        ...
+
+class NoteRepositoryInterface(Protocol):
+    def add(self, note: Note) -> Note:
+        ...
+
+    def get(self, note_id: int) -> Note | None:
+        ...
+
+    def list(self) -> list[Note]:
+        ...
+
+    def delete(self, note_id: int) -> None:
+        ...

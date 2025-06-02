@@ -16,6 +16,7 @@ class NotebookParseError(Exception):
 class NotebookParseResult:
     """Result of parsing a notebook HTML file"""
     book_title: str
+    authors_str: str
     notes: list[str]
     total_notes: int
 
@@ -23,6 +24,7 @@ class NotebookParseResult:
         """Convert the parse result to a dictionary"""
         return {
             "book_title": self.book_title,
+            "authors_str": self.authors_str,
             "notes": self.notes,
             "total_notes": self.total_notes,
         }
@@ -50,6 +52,12 @@ def parse_notebook_html(html_content: str) -> NotebookParseResult:
             raise NotebookParseError("Could not find book title in HTML content")
         book_title = book_title_elem.text.strip()
 
+        # Extract author
+        authors_elem = soup.find(class_='authors')
+        if not authors_elem:
+            raise NotebookParseError("Could not find authors in HTML content")
+        authors_str = authors_elem.text.strip()
+
         # Extract all notes
         notes: list[str] = []
         note_elements = soup.find_all(class_='noteText')
@@ -61,6 +69,7 @@ def parse_notebook_html(html_content: str) -> NotebookParseResult:
 
         return NotebookParseResult(
             book_title=book_title,
+            authors_str=authors_str,
             notes=notes,
             total_notes=len(notes)
         )

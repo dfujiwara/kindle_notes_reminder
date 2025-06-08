@@ -1,11 +1,10 @@
-from src.repositories.book_repository import BookRepository
-from src.repositories.note_repository import NoteRepository
 from src.notebook_parser import NotebookParseResult
 from src.repositories.models import Book, Note
 import hashlib
+from src.repositories.interfaces import BookRepositoryInterface, NoteRepositoryInterface
 
 
-def process_notebook_result(result: NotebookParseResult, book_repo: BookRepository, note_repo: NoteRepository):
+def process_notebook_result(result: NotebookParseResult, book_repo: BookRepositoryInterface, note_repo: NoteRepositoryInterface):
     # Create a Book instance
     book = Book(title=result.book_title, author=result.authors_str)
 

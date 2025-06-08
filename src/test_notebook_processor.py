@@ -41,6 +41,9 @@ class StubNoteRepository(NoteRepositoryInterface):
     def delete(self, note_id: int) -> None:
         self.notes = [note for note in self.notes if note.id != note_id]
 
+    def get_random(self) -> Note | None:
+        return self.notes[0] if self.notes else None
+
 
 def test_process_notebook_result():
     # Use stub repositories

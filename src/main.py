@@ -44,3 +44,11 @@ async def parse_notebook_endpoint(file: UploadFile = File(...), session: Session
     note_repository = NoteRepository(session)
     # Call the process_notebook_result function
     process_notebook_result(result, book_repository, note_repository)
+
+@app.get("/random")
+async def get_random_note_endpoint(session: Session = Depends(get_session)):
+    note_repository = NoteRepository(session)
+    random_note = note_repository.get_random()
+    if not random_note:
+        raise HTTPException(status_code=404, detail="No notes found")
+    return random_note

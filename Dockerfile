@@ -1,5 +1,5 @@
-# Stage 1: Build stage
-FROM python:3.13-slim AS builder
+# Single stage: Build and runtime
+FROM python:3.13-slim
 
 WORKDIR /app
 
@@ -13,14 +13,6 @@ COPY pyproject.toml uv.lock ./
 RUN uv venv && \
     . .venv/bin/activate && \
     uv sync --frozen --no-dev
-
-# Stage 2: Runtime stage
-FROM python:3.13-slim
-
-WORKDIR /app
-
-# Copy virtual environment from builder
-COPY --from=builder /app/.venv /app/.venv
 
 # Copy application code
 COPY src/ ./src/

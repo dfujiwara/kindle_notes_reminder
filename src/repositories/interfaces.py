@@ -26,3 +26,6 @@ class NoteRepositoryInterface(Protocol):
 
     def delete(self, note_id: int) -> None:
         ...
+
+    def get_random(self) -> Note | None:
+        ...

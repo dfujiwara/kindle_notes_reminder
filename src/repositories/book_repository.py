@@ -7,6 +7,17 @@ class BookRepository(BookRepositoryInterface):
         self.session = session
 
     def add(self, book: Book) -> Book:
+        # Check if a book with the same title and author exists
+        statement = select(Book).where(
+            Book.title == book.title,
+            Book.author == book.author
+        )
+        existing_book = self.session.exec(statement).first()
+
+        if existing_book:
+            return existing_book
+
+        # If no existing book found, create a new one
         self.session.add(book)
         self.session.commit()
         self.session.refresh(book)

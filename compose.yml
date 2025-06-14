@@ -17,7 +17,7 @@ services:
       - fastapi-network
 
   db:
-    image: postgres:latest
+    image: pgvector/pgvector:pg16
     ports:
       - "5432:5432"
     environment:

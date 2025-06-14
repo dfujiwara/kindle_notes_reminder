@@ -3,8 +3,9 @@ from datetime import datetime, timezone
 
 metadata = SQLModel.metadata
 
+
 class Book(SQLModel, table=True):
-    __table_args__ = (UniqueConstraint('title', 'author', name='uix_title_author'),)
+    __table_args__ = (UniqueConstraint("title", "author", name="uix_title_author"),)
 
     id: int | None = Field(default=None, primary_key=True)
     title: str

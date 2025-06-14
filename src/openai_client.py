@@ -8,8 +8,9 @@ from src.llm_interface import LLMClientInterface, LLMError
 # Configure logging
 logger = logging.getLogger(__name__)
 
+
 class OpenAIClient(LLMClientInterface):
-    def __init__(self, model:str ="gpt-4o-mini"):
+    def __init__(self, model: str = "gpt-4o-mini"):
         self.model = model
         self.client = openai.AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
@@ -19,8 +20,8 @@ class OpenAIClient(LLMClientInterface):
                 model=self.model,
                 messages=[
                     {"role": "system", "content": instruction},
-                    {"role": "user", "content": prompt}
-                ]
+                    {"role": "user", "content": prompt},
+                ],
             )
             message_content = response.choices[0].message.content
             if message_content is None:

@@ -56,7 +56,7 @@ def test_process_notebook_result():
         book_title="Sample Book",
         authors_str="Author Name",
         notes=["Note 1", "Note 2"],
-        total_notes=2
+        total_notes=2,
     )
 
     # Call the function
@@ -70,8 +70,14 @@ def test_process_notebook_result():
     assert note_repo.notes[0].content == "Note 1"
     assert note_repo.notes[1].content == "Note 2"
     # Assertions for content_hash
-    assert note_repo.notes[0].content_hash == hashlib.sha256("Note 1".encode('utf-8')).hexdigest()
-    assert note_repo.notes[1].content_hash == hashlib.sha256("Note 2".encode('utf-8')).hexdigest()
+    assert (
+        note_repo.notes[0].content_hash
+        == hashlib.sha256("Note 1".encode("utf-8")).hexdigest()
+    )
+    assert (
+        note_repo.notes[1].content_hash
+        == hashlib.sha256("Note 2".encode("utf-8")).hexdigest()
+    )
 
 
 def test_process_notebook_result_return_value():
@@ -84,25 +90,35 @@ def test_process_notebook_result_return_value():
         book_title="Sample Book",
         authors_str="Author Name",
         notes=["Note 1", "Note 2"],
-        total_notes=2
+        total_notes=2,
     )
 
     # Call the function and get the return value
     returned_value = process_notebook_result(result, book_repo, note_repo)
 
     # Assertions for the book
-    assert returned_value['book'] == {
-        'id': 1,
-        'title': "Sample Book",
-        'author': "Author Name"
+    assert returned_value["book"] == {
+        "id": 1,
+        "title": "Sample Book",
+        "author": "Author Name",
     }
 
     # Assertions for the notes
     expected_notes = [
-        {'id': 1, 'book_id': 1, 'content': "Note 1", 'content_hash': hashlib.sha256("Note 1".encode('utf-8')).hexdigest()},
-        {'id': 2, 'book_id': 1, 'content': "Note 2", 'content_hash': hashlib.sha256("Note 2".encode('utf-8')).hexdigest()}
+        {
+            "id": 1,
+            "book_id": 1,
+            "content": "Note 1",
+            "content_hash": hashlib.sha256("Note 1".encode("utf-8")).hexdigest(),
+        },
+        {
+            "id": 2,
+            "book_id": 1,
+            "content": "Note 2",
+            "content_hash": hashlib.sha256("Note 2".encode("utf-8")).hexdigest(),
+        },
     ]
 
-    assert len(returned_value['notes']) == len(expected_notes)
-    for note, expected in zip(returned_value['notes'], expected_notes):
+    assert len(returned_value["notes"]) == len(expected_notes)
+    for note, expected in zip(returned_value["notes"], expected_notes):
         assert note == expected

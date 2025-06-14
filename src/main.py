@@ -22,6 +22,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 @app.get("/")
 async def root():
     return {"message": "Welcome to FastAPI!"}
@@ -33,7 +34,9 @@ async def health_check():
 
 
 @app.post("/notebooks")
-async def parse_notebook_endpoint(file: UploadFile = File(...), session: Session = Depends(get_session)) -> ProcessedNotebookResult:
+async def parse_notebook_endpoint(
+    file: UploadFile = File(...), session: Session = Depends(get_session)
+) -> ProcessedNotebookResult:
     html_content = await file.read()
     try:
         # Attempt to parse the notebook HTML content
@@ -48,6 +51,7 @@ async def parse_notebook_endpoint(file: UploadFile = File(...), session: Session
     result = process_notebook_result(result, book_repository, note_repository)
     return result
 
+
 @app.get("/random")
 async def get_random_note_endpoint(session: Session = Depends(get_session)):
     note_repository = NoteRepository(session)
@@ -57,5 +61,12 @@ async def get_random_note_endpoint(session: Session = Depends(get_session)):
 
     # Use OpenAI client for generating additional context
     llm_client = OpenAIClient()
-    additional_context = await get_additional_context(llm_client, random_note.book, random_note)
-    return {"book": random_note.book.title, "author": random_note.book.author, "note": random_note.content, "additional_context": additional_context}
+    additional_context = await get_additional_context(
+        llm_client, random_note.book, random_note
+    )
+    return {
+        "book": random_note.book.title,
+        "author": random_note.book.author,
+        "note": random_note.content,
+        "additional_context": additional_context,
+    }

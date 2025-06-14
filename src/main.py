@@ -6,6 +6,8 @@ from src.database import get_session
 from src.repositories.note_repository import NoteRepository
 from src.repositories.book_repository import BookRepository
 from src.notebook_processor import process_notebook_result, ProcessedNotebookResult
+from src.additional_context import get_additional_context
+from src.openai_client import OpenAIClient
 
 app = FastAPI(
     title="FastAPI App", description="A sample FastAPI application", version="0.1.0"
@@ -52,4 +54,8 @@ async def get_random_note_endpoint(session: Session = Depends(get_session)):
     random_note = note_repository.get_random()
     if not random_note:
         raise HTTPException(status_code=404, detail="No notes found")
-    return random_note
+
+    # Use OpenAI client for generating additional context
+    llm_client = OpenAIClient()
+    additional_context = await get_additional_context(llm_client, random_note.book, random_note)
+    return {"book": random_note.book.title, "author": random_note.book.author, "note": random_note.content, "additional_context": additional_context}

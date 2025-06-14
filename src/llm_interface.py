@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 
 class LLMError(Exception):
     """Base exception class for all LLM-related errors"""
+
     pass
 
 

@@ -3,6 +3,7 @@ from src.repositories.models import Note, Book
 from src.repositories.interfaces import NoteRepositoryInterface
 from sqlalchemy import func
 
+
 class NoteRepository(NoteRepositoryInterface):
     def __init__(self, session: Session):
         self.session = session

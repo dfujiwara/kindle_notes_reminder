@@ -2,6 +2,7 @@ from sqlmodel import Session, select
 from src.repositories.models import Book
 from src.repositories.interfaces import BookRepositoryInterface
 
+
 class BookRepository(BookRepositoryInterface):
     def __init__(self, session: Session):
         self.session = session
@@ -9,8 +10,7 @@ class BookRepository(BookRepositoryInterface):
     def add(self, book: Book) -> Book:
         # Check if a book with the same title and author exists
         statement = select(Book).where(
-            Book.title == book.title,
-            Book.author == book.author
+            Book.title == book.title, Book.author == book.author
         )
         existing_book = self.session.exec(statement).first()
 

@@ -2,6 +2,7 @@
 import pytest
 from src.notebook_parser import parse_notebook_html, NotebookParseError
 
+
 def test_parse_notebook_html_valid():
     html_content = """
     <html>
@@ -20,6 +21,7 @@ def test_parse_notebook_html_valid():
     assert result.notes == ["First note", "Second note"]
     assert result.total_notes == 2
 
+
 def test_parse_notebook_html_missing_title():
     html_content = """
     <html>
@@ -29,8 +31,11 @@ def test_parse_notebook_html_missing_title():
         </body>
     </html>
     """
-    with pytest.raises(NotebookParseError, match="Could not find book title in HTML content"):
+    with pytest.raises(
+        NotebookParseError, match="Could not find book title in HTML content"
+    ):
         parse_notebook_html(html_content)
+
 
 def test_parse_notebook_html_missing_authors():
     html_content = """
@@ -42,8 +47,11 @@ def test_parse_notebook_html_missing_authors():
         </body>
     </html>
     """
-    with pytest.raises(NotebookParseError, match="Could not find authors in HTML content"):
+    with pytest.raises(
+        NotebookParseError, match="Could not find authors in HTML content"
+    ):
         parse_notebook_html(html_content)
+
 
 def test_parse_notebook_html_no_notes():
     html_content = """
@@ -57,6 +65,7 @@ def test_parse_notebook_html_no_notes():
     """
     with pytest.raises(NotebookParseError, match="No notes found in HTML content"):
         parse_notebook_html(html_content)
+
 
 def test_parse_notebook_html_malformed():
     html_content = "<html><head><title>Test Notebook</title></head><body><div class='bookTitle'></div></body>"

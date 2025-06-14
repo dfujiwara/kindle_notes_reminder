@@ -1,5 +1,5 @@
 from sqlmodel import Session, select
-from src.repositories.models import Note
+from src.repositories.models import Note, Book
 from src.repositories.interfaces import NoteRepositoryInterface
 from sqlalchemy import func
 
@@ -36,6 +36,5 @@ class NoteRepository(NoteRepositoryInterface):
         self.session.commit()
 
     def get_random(self) -> Note | None:
-        statement = select(Note).order_by(func.random()).limit(1)
-        result = self.session.exec(statement).first()
-        return result
+        statement = select(Note).join(Book).order_by(func.random()).limit(1)
+        return self.session.exec(statement).first()

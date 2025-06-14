@@ -6,7 +6,7 @@ from typing import Any, TypedDict
 
 
 class ProcessedNotebookResult(TypedDict):
-    book: dict[str, str]
+    book: dict[str, str | int]
     notes: list[dict[str, Any]]
 
 

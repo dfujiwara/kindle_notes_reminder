@@ -8,6 +8,14 @@ class NoteRepository(NoteRepositoryInterface):
         self.session = session
 
     def add(self, note: Note) -> Note:
+        # Check if a note with the same content hash exists
+        statement = select(Note).where(Note.content_hash == note.content_hash)
+        existing_note = self.session.exec(statement).first()
+
+        if existing_note:
+            return existing_note
+
+        # If no existing note found, create a new one
         self.session.add(note)
         self.session.commit()
         self.session.refresh(note)

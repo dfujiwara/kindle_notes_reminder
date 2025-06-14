@@ -5,7 +5,7 @@ from sqlmodel import Session
 from src.database import get_session
 from src.repositories.note_repository import NoteRepository
 from src.repositories.book_repository import BookRepository
-from src.notebook_processor import process_notebook_result
+from src.notebook_processor import process_notebook_result, ProcessedNotebookResult
 
 app = FastAPI(
     title="FastAPI App", description="A sample FastAPI application", version="0.1.0"
@@ -31,7 +31,7 @@ async def health_check():
 
 
 @app.post("/notebooks")
-async def parse_notebook_endpoint(file: UploadFile = File(...), session: Session = Depends(get_session)):
+async def parse_notebook_endpoint(file: UploadFile = File(...), session: Session = Depends(get_session)) -> ProcessedNotebookResult:
     html_content = await file.read()
     try:
         # Attempt to parse the notebook HTML content
@@ -43,7 +43,8 @@ async def parse_notebook_endpoint(file: UploadFile = File(...), session: Session
     book_repository = BookRepository(session)
     note_repository = NoteRepository(session)
     # Call the process_notebook_result function
-    process_notebook_result(result, book_repository, note_repository)
+    result = process_notebook_result(result, book_repository, note_repository)
+    return result
 
 @app.get("/random")
 async def get_random_note_endpoint(session: Session = Depends(get_session)):

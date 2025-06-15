@@ -7,7 +7,7 @@ from src.repositories.note_repository import NoteRepository
 from src.repositories.book_repository import BookRepository
 from src.notebook_processor import process_notebook_result, ProcessedNotebookResult
 from src.additional_context import get_additional_context
-from src.openai_client import OpenAIClient
+from src.openai_client import OpenAIClient, OpenAIEmbeddingClient
 
 app = FastAPI(
     title="FastAPI App", description="A sample FastAPI application", version="0.1.0"
@@ -47,8 +47,11 @@ async def parse_notebook_endpoint(
     # Create repositories
     book_repository = BookRepository(session)
     note_repository = NoteRepository(session)
+    embedding_client = OpenAIEmbeddingClient()
     # Call the process_notebook_result function
-    result = process_notebook_result(result, book_repository, note_repository)
+    result = await process_notebook_result(
+        result, book_repository, note_repository, embedding_client
+    )
     return result
 
 

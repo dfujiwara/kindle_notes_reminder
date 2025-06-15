@@ -1,9 +1,11 @@
+import pytest
 from src.notebook_processor import process_notebook_result
-from src.repositories.models import Note, Book
 from src.notebook_parser import NotebookParseResult
+from src.repositories.models import Book, Note
 from src.repositories.interfaces import BookRepositoryInterface, NoteRepositoryInterface
-import hashlib
+from src.embedding_interface import EmbeddingClientInterface, EmbeddingError
 from src.types import Embedding
+import hashlib
 
 
 class StubBookRepository(BookRepositoryInterface):
@@ -47,13 +49,27 @@ class StubNoteRepository(NoteRepositoryInterface):
         return self.notes[0] if self.notes else None
 
     def update_embedding(self, note: Note, embedding: Embedding) -> Note:
+        note.embedding = embedding
         return note
 
 
-def test_process_notebook_result():
-    # Use stub repositories
+class StubEmbeddingClient(EmbeddingClientInterface):
+    def __init__(self, should_fail: bool = False):
+        self.should_fail = should_fail
+
+    async def generate_embedding(self, content: str) -> list[float]:
+        if self.should_fail:
+            raise EmbeddingError("Simulated embedding generation failure")
+        # Return a simple mock embedding
+        return [0.1] * 1536  # OpenAI embeddings are 1536 dimensions
+
+
+@pytest.mark.asyncio
+async def test_process_notebook_result_success():
+    # Setup
     book_repo = StubBookRepository()
     note_repo = StubNoteRepository()
+    embedding_client = StubEmbeddingClient()
 
     # Create a sample NotebookParseResult
     result = NotebookParseResult(
@@ -64,30 +80,27 @@ def test_process_notebook_result():
     )
 
     # Call the function
-    process_notebook_result(result, book_repo, note_repo)
+    processed_result = await process_notebook_result(
+        result, book_repo, note_repo, embedding_client
+    )
 
     # Assertions
-    assert len(book_repo.books) == 1
-    assert book_repo.books[0].title == "Sample Book"
-    assert book_repo.books[0].author == "Author Name"
-    assert len(note_repo.notes) == 2
-    assert note_repo.notes[0].content == "Note 1"
-    assert note_repo.notes[1].content == "Note 2"
-    # Assertions for content_hash
+    assert processed_result["book"]["title"] == "Sample Book"
+    assert processed_result["book"]["author"] == "Author Name"
+    assert len(processed_result["notes"]) == 2
+    assert processed_result["notes"][0]["content"] == "Note 1"
+    assert processed_result["notes"][1]["content"] == "Note 2"
     assert (
-        note_repo.notes[0].content_hash
-        == hashlib.sha256("Note 1".encode("utf-8")).hexdigest()
-    )
-    assert (
-        note_repo.notes[1].content_hash
-        == hashlib.sha256("Note 2".encode("utf-8")).hexdigest()
-    )
+        "embedding" not in processed_result["notes"][0]
+    )  # Embedding should be excluded
 
 
-def test_process_notebook_result_return_value():
-    # Use stub repositories
+@pytest.mark.asyncio
+async def test_process_notebook_result_return_value():
+    # Setup
     book_repo = StubBookRepository()
     note_repo = StubNoteRepository()
+    embedding_client = StubEmbeddingClient()
 
     # Create a sample NotebookParseResult
     result = NotebookParseResult(
@@ -98,7 +111,9 @@ def test_process_notebook_result_return_value():
     )
 
     # Call the function and get the return value
-    returned_value = process_notebook_result(result, book_repo, note_repo)
+    returned_value = await process_notebook_result(
+        result, book_repo, note_repo, embedding_client
+    )
 
     # Assertions for the book
     assert returned_value["book"] == {
@@ -114,17 +129,35 @@ def test_process_notebook_result_return_value():
             "book_id": 1,
             "content": "Note 1",
             "content_hash": hashlib.sha256("Note 1".encode("utf-8")).hexdigest(),
-            "embedding": None,
         },
         {
             "id": 2,
             "book_id": 1,
             "content": "Note 2",
             "content_hash": hashlib.sha256("Note 2".encode("utf-8")).hexdigest(),
-            "embedding": None,
         },
     ]
 
     assert len(returned_value["notes"]) == len(expected_notes)
     for note, expected in zip(returned_value["notes"], expected_notes):
         assert note == expected
+
+
+@pytest.mark.asyncio
+async def test_process_notebook_result_embedding_failure():
+    # Setup
+    book_repo = StubBookRepository()
+    note_repo = StubNoteRepository()
+    embedding_client = StubEmbeddingClient(should_fail=True)
+
+    # Create a sample NotebookParseResult
+    result = NotebookParseResult(
+        book_title="Sample Book",
+        authors_str="Author Name",
+        notes=["Note 1"],
+        total_notes=1,
+    )
+
+    # Call the function and expect it to raise EmbeddingError
+    with pytest.raises(EmbeddingError):
+        await process_notebook_result(result, book_repo, note_repo, embedding_client)

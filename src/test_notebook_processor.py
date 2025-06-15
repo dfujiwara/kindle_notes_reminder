@@ -3,6 +3,7 @@ from src.repositories.models import Note, Book
 from src.notebook_parser import NotebookParseResult
 from src.repositories.interfaces import BookRepositoryInterface, NoteRepositoryInterface
 import hashlib
+from src.types import Embedding
 
 
 class StubBookRepository(BookRepositoryInterface):
@@ -44,6 +45,9 @@ class StubNoteRepository(NoteRepositoryInterface):
 
     def get_random(self) -> Note | None:
         return self.notes[0] if self.notes else None
+
+    def update_embedding(self, note: Note, embedding: Embedding) -> Note:
+        return note
 
 
 def test_process_notebook_result():
@@ -110,12 +114,14 @@ def test_process_notebook_result_return_value():
             "book_id": 1,
             "content": "Note 1",
             "content_hash": hashlib.sha256("Note 1".encode("utf-8")).hexdigest(),
+            "embedding": None,
         },
         {
             "id": 2,
             "book_id": 1,
             "content": "Note 2",
             "content_hash": hashlib.sha256("Note 2".encode("utf-8")).hexdigest(),
+            "embedding": None,
         },
     ]
 

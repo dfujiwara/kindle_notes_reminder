@@ -25,7 +25,7 @@ class NoteRepository(NoteRepositoryInterface):
     def get(self, note_id: int) -> Note | None:
         return self.session.get(Note, note_id)
 
-    def list(self) -> list[Note]:
+    def list_notes(self) -> list[Note]:
         statement = select(Note)
         return list(self.session.exec(statement))
 

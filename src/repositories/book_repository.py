@@ -26,7 +26,7 @@ class BookRepository(BookRepositoryInterface):
     def get(self, book_id: int) -> Book | None:
         return self.session.get(Book, book_id)
 
-    def list(self) -> list[Book]:
+    def list_books(self) -> list[Book]:
         statement = select(Book)
         return list(self.session.exec(statement))
 

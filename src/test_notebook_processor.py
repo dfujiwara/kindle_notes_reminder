@@ -17,7 +17,7 @@ class StubBookRepository(BookRepositoryInterface):
     def get(self, book_id: int) -> Book | None:
         return next((book for book in self.books if book.id == book_id), None)
 
-    def list(self) -> list[Book]:
+    def list_books(self) -> list[Book]:
         return self.books
 
     def delete(self, book_id: int) -> None:
@@ -36,7 +36,7 @@ class StubNoteRepository(NoteRepositoryInterface):
     def get(self, note_id: int) -> Note | None:
         return next((note for note in self.notes if note.id == note_id), None)
 
-    def list(self) -> list[Note]:
+    def list_notes(self) -> list[Note]:
         return self.notes
 
     def delete(self, note_id: int) -> None:

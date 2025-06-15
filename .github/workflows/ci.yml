@@ -28,8 +28,11 @@ jobs:
       - name: Install the project
         run: uv sync --locked
 
-      - name: Run ruff
+      - name: Run ruff linter
         run: uv run ruff check
+
+      - name: Run ruff formatter
+        run: uv run ruff format --check
 
       - name: Run pyright
         run: uv run pyright

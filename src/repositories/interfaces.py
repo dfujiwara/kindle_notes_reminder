@@ -1,5 +1,6 @@
 from typing import Protocol
 from src.repositories.models import Book, Note
+from src.types import Embedding
 
 
 class BookRepositoryInterface(Protocol):
@@ -22,3 +23,5 @@ class NoteRepositoryInterface(Protocol):
     def delete(self, note_id: int) -> None: ...
 
     def get_random(self) -> Note | None: ...
+
+    def update_embedding(self, note: Note, embedding: Embedding) -> Note: ...

@@ -2,6 +2,7 @@ from sqlmodel import Session, select
 from src.repositories.models import Note, Book
 from src.repositories.interfaces import NoteRepositoryInterface
 from sqlalchemy import func
+from src.types import Embedding
 
 
 class NoteRepository(NoteRepositoryInterface):
@@ -39,3 +40,20 @@ class NoteRepository(NoteRepositoryInterface):
     def get_random(self) -> Note | None:
         statement = select(Note).join(Book).order_by(func.random()).limit(1)
         return self.session.exec(statement).first()
+
+    def update_embedding(self, note: Note, embedding: Embedding) -> Note:
+        """
+        Update the embedding for a note.
+
+        Args:
+            note: The note to update
+            embedding: The embedding vector to update the note with
+
+        Returns:
+            The updated note with the new embedding
+        """
+        note.embedding = embedding
+        self.session.add(note)
+        self.session.commit()
+        self.session.refresh(note)
+        return note

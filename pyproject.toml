@@ -6,9 +6,10 @@ readme = "README.md"
 requires-python = "==3.13.2"
 dependencies = [
     "alembic==1.15.2",
-    "beautifulsoup4>=4.13.4",
+    "beautifulsoup4==4.13.4",
     "fastapi[standard]==0.115.12",
     "openai==1.72.0",
+    "pgvector==0.4.1",
     "psycopg2-binary==2.9.10",
     "sqlmodel==0.0.24",
 ]

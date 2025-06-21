@@ -9,6 +9,8 @@ from src.repositories.interfaces import BookRepositoryInterface, NoteRepositoryI
 from src.notebook_processor import process_notebook_result, ProcessedNotebookResult
 from src.additional_context import get_additional_context
 from src.openai_client import OpenAIClient, OpenAIEmbeddingClient
+from src.embedding_interface import EmbeddingClientInterface
+from src.llm_interface import LLMClientInterface
 
 app = FastAPI(
     title="FastAPI App", description="A sample FastAPI application", version="0.1.0"
@@ -37,6 +39,14 @@ def get_note_repository(
     return NoteRepository(session)
 
 
+def get_embedding_client() -> EmbeddingClientInterface:
+    return OpenAIEmbeddingClient()
+
+
+def get_llm_client() -> LLMClientInterface:
+    return OpenAIClient()
+
+
 @app.get("/")
 async def root():
     return {"message": "Welcome to FastAPI!"}
@@ -52,6 +62,7 @@ async def parse_notebook_endpoint(
     file: UploadFile = File(...),
     book_repository: BookRepositoryInterface = Depends(get_book_repository),
     note_repository: NoteRepositoryInterface = Depends(get_note_repository),
+    embedding_client: EmbeddingClientInterface = Depends(get_embedding_client),
 ) -> ProcessedNotebookResult:
     html_content = await file.read()
     try:
@@ -60,7 +71,6 @@ async def parse_notebook_endpoint(
     except NotebookParseError as e:
         raise HTTPException(status_code=400, detail=f"Parsing error: {str(e)}")
 
-    embedding_client = OpenAIEmbeddingClient()
     # Call the process_notebook_result function
     result = await process_notebook_result(
         result, book_repository, note_repository, embedding_client
@@ -87,6 +97,7 @@ async def get_notes_by_book(
 @app.get("/random")
 async def get_random_note_endpoint(
     note_repository: NoteRepositoryInterface = Depends(get_note_repository),
+    llm_client: LLMClientInterface = Depends(get_llm_client),
 ):
     random_note = note_repository.get_random()
     if not random_note:
@@ -96,7 +107,6 @@ async def get_random_note_endpoint(
     similar_notes = note_repository.find_similar_notes(random_note, limit=3)
 
     # Use OpenAI client for generating additional context
-    llm_client = OpenAIClient()
     additional_context = await get_additional_context(
         llm_client, random_note.book, random_note
     )

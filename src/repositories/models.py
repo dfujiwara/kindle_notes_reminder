@@ -1,6 +1,6 @@
 from sqlmodel import Field, SQLModel, Relationship, UniqueConstraint, Column
 from datetime import datetime, timezone
-from pgvector.sqlalchemy import Vector  # type: ignore
+from pgvector.sqlalchemy import Vector
 from typing import Optional
 from src.types import Embedding
 

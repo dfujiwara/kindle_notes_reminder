@@ -5,6 +5,7 @@ from sqlmodel import Session
 from src.database import get_session
 from src.repositories.note_repository import NoteRepository
 from src.repositories.book_repository import BookRepository
+from src.repositories.interfaces import BookRepositoryInterface, NoteRepositoryInterface
 from src.notebook_processor import process_notebook_result, ProcessedNotebookResult
 from src.additional_context import get_additional_context
 from src.openai_client import OpenAIClient, OpenAIEmbeddingClient
@@ -23,6 +24,19 @@ app.add_middleware(
 )
 
 
+# Dependency functions for repositories
+def get_book_repository(
+    session: Session = Depends(get_session),
+) -> BookRepositoryInterface:
+    return BookRepository(session)
+
+
+def get_note_repository(
+    session: Session = Depends(get_session),
+) -> NoteRepositoryInterface:
+    return NoteRepository(session)
+
+
 @app.get("/")
 async def root():
     return {"message": "Welcome to FastAPI!"}
@@ -35,7 +49,9 @@ async def health_check():
 
 @app.post("/notebooks")
 async def parse_notebook_endpoint(
-    file: UploadFile = File(...), session: Session = Depends(get_session)
+    file: UploadFile = File(...),
+    book_repository: BookRepositoryInterface = Depends(get_book_repository),
+    note_repository: NoteRepositoryInterface = Depends(get_note_repository),
 ) -> ProcessedNotebookResult:
     html_content = await file.read()
     try:
@@ -44,9 +60,6 @@ async def parse_notebook_endpoint(
     except NotebookParseError as e:
         raise HTTPException(status_code=400, detail=f"Parsing error: {str(e)}")
 
-    # Create repositories
-    book_repository = BookRepository(session)
-    note_repository = NoteRepository(session)
     embedding_client = OpenAIEmbeddingClient()
     # Call the process_notebook_result function
     result = await process_notebook_result(
@@ -55,9 +68,26 @@ async def parse_notebook_endpoint(
     return result
 
 
+@app.get("/books/{book_id}/notes")
+async def get_notes_by_book(
+    book_id: int,
+    note_repository: NoteRepositoryInterface = Depends(get_note_repository),
+):
+    # Get all notes for the book
+    notes = note_repository.get_by_book_id(book_id)
+
+    return {
+        "notes": [
+            {"id": note.id, "content": note.content, "created_at": note.created_at}
+            for note in notes
+        ]
+    }
+
+
 @app.get("/random")
-async def get_random_note_endpoint(session: Session = Depends(get_session)):
-    note_repository = NoteRepository(session)
+async def get_random_note_endpoint(
+    note_repository: NoteRepositoryInterface = Depends(get_note_repository),
+):
     random_note = note_repository.get_random()
     if not random_note:
         raise HTTPException(status_code=404, detail="No notes found")

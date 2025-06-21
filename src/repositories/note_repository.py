@@ -30,6 +30,10 @@ class NoteRepository(NoteRepositoryInterface):
         statement = select(Note)
         return list(self.session.exec(statement))
 
+    def get_by_book_id(self, book_id: int) -> list[Note]:
+        statement = select(Note).where(Note.book_id == book_id)
+        return list(self.session.exec(statement))
+
     def delete(self, note_id: int) -> None:
         note = self.get(note_id)
         if not note:

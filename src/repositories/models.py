@@ -1,8 +1,11 @@
 from sqlmodel import Field, SQLModel, Relationship, UniqueConstraint, Column
 from datetime import datetime, timezone
 from pgvector.sqlalchemy import Vector
-from typing import Optional
+from typing import Optional, TYPE_CHECKING, cast
 from src.types import Embedding
+
+if TYPE_CHECKING:
+    from sqlalchemy.sql.elements import ColumnElement
 
 metadata = SQLModel.metadata
 
@@ -32,3 +35,15 @@ class Note(SQLModel, table=True):
     book_id: int = Field(foreign_key="book.id")
     # Relationship
     book: Book = Relationship(back_populates="notes")
+
+    @classmethod
+    def embedding_cosine_distance(cls, target: Embedding) -> "ColumnElement[float]":
+        """Calculate cosine distance to target embedding."""
+        embedding_col = cast("ColumnElement[Vector]", cls.__table__.c.embedding)  # type: ignore
+        return embedding_col.cosine_distance(target)
+
+    @classmethod
+    def embedding_is_not_null(cls) -> "ColumnElement[bool]":
+        """Check if embedding is not null."""
+        embedding_col = cast("ColumnElement[Vector]", cls.__table__.c.embedding)  # type: ignore
+        return embedding_col.is_not(None)

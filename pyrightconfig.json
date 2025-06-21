@@ -1,5 +1,6 @@
 {
   "include": ["src"],
+  "stubPath": "src/stubs",
   "reportMissingImports": true,
   "reportUnusedImports": true,
   "reportUnusedFunction": true,

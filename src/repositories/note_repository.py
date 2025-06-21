@@ -74,7 +74,7 @@ class NoteRepository(NoteRepositoryInterface):
         Returns:
             A list of similar notes from the same book, ordered by similarity (most similar first)
         """
-        if not note.embedding:
+        if note.embedding is None:
             return []
 
         distance = Note.embedding_cosine_distance(note.embedding)

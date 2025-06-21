@@ -8,6 +8,7 @@ that can be used across different test files.
 from src.repositories.models import Book, Note
 from src.repositories.interfaces import BookRepositoryInterface, NoteRepositoryInterface
 from src.embedding_interface import EmbeddingClientInterface, EmbeddingError
+from src.llm_interface import LLMClientInterface, LLMError
 from src.types import Embedding
 
 
@@ -85,3 +86,16 @@ class StubEmbeddingClient(EmbeddingClientInterface):
             raise EmbeddingError("Simulated embedding generation failure")
         # Return a simple mock embedding
         return [0.1] * 1536  # OpenAI embeddings are 1536 dimensions
+
+
+class StubLLMClient(LLMClientInterface):
+    """Stub implementation of LLMClient for testing."""
+
+    def __init__(self, response: str = "Test response", should_fail: bool = False):
+        self.response = response
+        self.should_fail = should_fail
+
+    async def get_response(self, prompt: str, instruction: str) -> str:
+        if self.should_fail:
+            raise LLMError("Simulated LLM generation failure")
+        return self.response

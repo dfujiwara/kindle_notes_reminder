@@ -62,14 +62,25 @@ async def get_random_note_endpoint(session: Session = Depends(get_session)):
     if not random_note:
         raise HTTPException(status_code=404, detail="No notes found")
 
+    # Find similar notes using vector similarity
+    similar_notes = note_repository.find_similar_notes(random_note, limit=3)
+
     # Use OpenAI client for generating additional context
     llm_client = OpenAIClient()
     additional_context = await get_additional_context(
         llm_client, random_note.book, random_note
     )
+
     return {
         "book": random_note.book.title,
         "author": random_note.book.author,
         "note": random_note.content,
         "additional_context": additional_context,
+        "related_notes": [
+            {
+                "id": note.id,
+                "content": note.content,
+            }
+            for note in similar_notes
+        ],
     }

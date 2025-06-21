@@ -17,6 +17,8 @@ This project uses `uv` for Python package management:
 - `uv run pyright` - Run type checking
 - `uv run pytest` - Run all tests
 
+**IMPORTANT**: Always run `uv run ruff format` before completing any task to ensure consistent code formatting across the codebase.
+
 ### Database Operations
 - `uv run alembic revision --autogenerate -m "description"` - Create new migration
 - `uv run alembic upgrade head` - Apply migrations

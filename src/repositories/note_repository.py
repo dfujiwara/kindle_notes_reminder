@@ -57,3 +57,36 @@ class NoteRepository(NoteRepositoryInterface):
         self.session.commit()
         self.session.refresh(note)
         return note
+
+    def find_similar_notes(
+        self, note: Note, limit: int = 5, similarity_threshold: float = 0.3
+    ) -> list[Note]:
+        """
+        Find notes similar to the given note using vector similarity.
+        Only searches within the same book as the input note.
+
+        Args:
+            note: The note to find similar notes for
+            limit: Maximum number of similar notes to return (default: 5)
+            similarity_threshold: Maximum cosine distance to consider notes similar (default: 0.3)
+                                Lower values mean more similar (0 = identical, 1 = completely different)
+
+        Returns:
+            A list of similar notes from the same book, ordered by similarity (most similar first)
+        """
+        if not note.embedding:
+            return []
+
+        distance = Note.embedding_cosine_distance(note.embedding)
+
+        statement = (
+            select(Note)
+            .where(Note.id != note.id)
+            .where(Note.book_id == note.book_id)
+            .where(Note.embedding_is_not_null())
+            .where(distance <= similarity_threshold)
+            .order_by(distance)
+            .limit(limit)
+        )
+
+        return list(self.session.exec(statement))

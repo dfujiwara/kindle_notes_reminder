@@ -5,8 +5,12 @@ This module provides reusable stub implementations of repositories and clients
 that can be used across different test files.
 """
 
-from src.repositories.models import Book, Note
-from src.repositories.interfaces import BookRepositoryInterface, NoteRepositoryInterface
+from src.repositories.models import Book, Note, Evaluation
+from src.repositories.interfaces import (
+    BookRepositoryInterface,
+    EvaluationRepositoryInterface,
+    NoteRepositoryInterface,
+)
 from src.embedding_interface import EmbeddingClientInterface, EmbeddingError
 from src.llm_interface import LLMClientInterface, LLMError
 from src.types import Embedding
@@ -73,6 +77,19 @@ class StubNoteRepository(NoteRepositoryInterface):
         return [n for n in self.notes if n.id != note.id and n.book_id == note.book_id][
             :limit
         ]
+
+
+class StubEvaluationRepository(EvaluationRepositoryInterface):
+    def __init__(self):
+        self.evaluations: list[Evaluation] = []
+
+    def add(self, evaluation: Evaluation) -> Evaluation:
+        evaluation.id = len(self.evaluations) + 1  # Simulate auto-increment ID
+        self.evaluations.append(evaluation)
+        return evaluation
+
+    def get_by_note_id(self, note_id: int) -> list[Evaluation]:
+        return [eval for eval in self.evaluations if eval.note_id == note_id]
 
 
 class StubEmbeddingClient(EmbeddingClientInterface):

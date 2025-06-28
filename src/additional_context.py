@@ -1,5 +1,6 @@
 from src.llm_interface import LLMClientInterface
 from src.repositories.models import Book, Note
+from src.prompts import create_context_prompt, SYSTEM_INSTRUCTIONS
 
 
 async def get_additional_context(
@@ -13,7 +14,7 @@ async def get_additional_context(
     :param note: The Note model containing the note content.
     :return: Additional context as a string.
     """
-    prompt = f"Based on the following notes from the notebook titled '{book.title}': {note.content}, can you provide additional context or insights?"
-    instruction = """You are helping a user remember the concept highlighted in a given book. Please provide some additional context and use some examples so that it will be easier for the user to understand it more."""
+    prompt = create_context_prompt(book.title, note.content)
+    instruction = SYSTEM_INSTRUCTIONS["context_provider"]
     response = await llm_client.get_response(prompt, instruction)
     return response

@@ -94,8 +94,10 @@ class StubLLMClient(LLMClientInterface):
     def __init__(self, response: str = "Test response", should_fail: bool = False):
         self.response = response
         self.should_fail = should_fail
+        self.call_count = 0
 
     async def get_response(self, prompt: str, instruction: str) -> str:
+        self.call_count += 1
         if self.should_fail:
             raise LLMError("Simulated LLM generation failure")
         return self.response

@@ -33,8 +33,9 @@ class Note(SQLModel, table=True):
 
     # Foreign key to Book
     book_id: int = Field(foreign_key="book.id")
-    # Relationship
+    # Relationships
     book: Book = Relationship(back_populates="notes")
+    evaluations: list["Evaluation"] = Relationship(back_populates="note")
 
     @classmethod
     def embedding_cosine_distance(cls, target: Embedding) -> "ColumnElement[float]":
@@ -47,3 +48,18 @@ class Note(SQLModel, table=True):
         """Check if embedding is not null."""
         embedding_col = cast("ColumnElement[Vector]", cls.__table__.c.embedding)  # type: ignore
         return embedding_col.is_not(None)
+
+
+class Evaluation(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    score: float = Field(ge=0.0, le=1.0)
+    prompt: str
+    response: str
+    analysis: str
+    model_name: str = Field(default="gpt-4")
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+    # Foreign key to Note
+    note_id: int = Field(foreign_key="note.id")
+    # Relationship
+    note: Note = Relationship(back_populates="evaluations")

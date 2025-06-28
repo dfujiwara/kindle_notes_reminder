@@ -1,5 +1,5 @@
 from typing import Protocol
-from src.repositories.models import Book, Note
+from src.repositories.models import Book, Note, Evaluation
 from src.types import Embedding
 
 
@@ -29,3 +29,9 @@ class NoteRepositoryInterface(Protocol):
     def get_by_book_id(self, book_id: int) -> list[Note]: ...
 
     def find_similar_notes(self, note: Note, limit: int = 5) -> list[Note]: ...
+
+
+class EvaluationRepositoryInterface(Protocol):
+    def add(self, evaluation: Evaluation) -> Evaluation: ...
+
+    def get_by_note_id(self, note_id: int) -> list[Evaluation]: ...

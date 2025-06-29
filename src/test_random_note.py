@@ -1,16 +1,59 @@
+import pytest
+from typing import Callable, Generator
 from fastapi.testclient import TestClient
 from datetime import datetime, timezone
-from .main import app, get_note_repository, get_llm_client
+from .main import app, get_note_repository, get_llm_client, get_evaluation_repository
 from .repositories.models import Note, Book
-from .test_utils import StubNoteRepository, StubLLMClient
+from .test_utils import StubNoteRepository, StubEvaluationRepository, StubLLMClient
 
 client = TestClient(app)
 
+# Type alias for the setup function returned by fixture
+SetupFunction = Callable[
+    [list[str] | None],
+    tuple[StubNoteRepository, StubEvaluationRepository, StubLLMClient],
+]
 
-def test_get_random_note_success():
-    # Setup stub repository with test data
-    note_repo = StubNoteRepository()
-    llm_client = StubLLMClient(response="This is additional context about the note")
+
+evaluation_response = (
+    "Score: 0.85\nEvaluation: Well-structured and informative response."
+)
+
+
+@pytest.fixture
+def setup_dependencies() -> Generator[SetupFunction, None, None]:
+    """Fixture to set up dependency overrides with proper cleanup"""
+
+    def _setup(
+        llm_responses: list[str] | None = None,
+    ) -> tuple[StubNoteRepository, StubEvaluationRepository, StubLLMClient]:
+        if llm_responses is None:
+            llm_responses = ["Default additional context", evaluation_response]
+
+        # Create fresh instances for each test call
+        note_repo = StubNoteRepository()
+        evaluation_repo = StubEvaluationRepository()
+        llm_client = StubLLMClient(responses=llm_responses)
+
+        # Override dependencies
+        app.dependency_overrides[get_note_repository] = lambda: note_repo
+        app.dependency_overrides[get_llm_client] = lambda: llm_client
+        app.dependency_overrides[get_evaluation_repository] = lambda: evaluation_repo
+
+        return note_repo, evaluation_repo, llm_client
+
+    yield _setup
+
+    # Cleanup
+    app.dependency_overrides.clear()
+
+
+def test_get_random_note_success(setup_dependencies: SetupFunction):
+    # Setup with custom LLM responses
+    note_repo, _, _ = setup_dependencies(
+        ["This is additional context about the note", evaluation_response]
+    )
+
     created_at = datetime.now(timezone.utc)
 
     # Create a book
@@ -36,68 +79,50 @@ def test_get_random_note_success():
     note_repo.add(note1)
     note_repo.add(note2)
 
-    # Override dependencies
-    app.dependency_overrides[get_note_repository] = lambda: note_repo
-    app.dependency_overrides[get_llm_client] = lambda: llm_client
+    # Make the request
+    response = client.get("/random")
 
-    try:
-        # Make the request
-        response = client.get("/random")
+    # Assertions
+    assert response.status_code == 200
+    data = response.json()
 
-        # Assertions
-        assert response.status_code == 200
-        data = response.json()
+    # Check response structure
+    assert "book" in data
+    assert "author" in data
+    assert "note" in data
+    assert "additional_context" in data
+    assert "related_notes" in data
 
-        # Check response structure
-        assert "book" in data
-        assert "author" in data
-        assert "note" in data
-        assert "additional_context" in data
-        assert "related_notes" in data
+    # Check content
+    assert data["book"] == "Test Book"
+    assert data["author"] == "Test Author"
+    assert data["note"] == "Primary note content"
+    assert data["additional_context"] == "This is additional context about the note"
 
-        # Check content
-        assert data["book"] == "Test Book"
-        assert data["author"] == "Test Author"
-        assert data["note"] == "Primary note content"
-        assert data["additional_context"] == "This is additional context about the note"
-
-        # Check related notes (should be note2 since note1 is the primary)
-        assert len(data["related_notes"]) == 1
-        assert data["related_notes"][0]["id"] == 2
-        assert data["related_notes"][0]["content"] == "Related note content"
-
-    finally:
-        # Clean up dependency overrides
-        app.dependency_overrides.clear()
+    # Check related notes (should be note2 since note1 is the primary)
+    assert len(data["related_notes"]) == 1
+    assert data["related_notes"][0]["id"] == 2
+    assert data["related_notes"][0]["content"] == "Related note content"
 
 
-def test_get_random_note_no_notes():
+def test_get_random_note_no_notes(setup_dependencies: SetupFunction):
     # Setup empty stub repository
-    note_repo = StubNoteRepository()
-    llm_client = StubLLMClient()
+    _, _, _ = setup_dependencies(["additional context", evaluation_response])
 
-    # Override dependencies
-    app.dependency_overrides[get_note_repository] = lambda: note_repo
-    app.dependency_overrides[get_llm_client] = lambda: llm_client
+    # Make the request
+    response = client.get("/random")
 
-    try:
-        # Make the request
-        response = client.get("/random")
-
-        # Assertions
-        assert response.status_code == 404
-        data = response.json()
-        assert data["detail"] == "No notes found"
-
-    finally:
-        # Clean up dependency overrides
-        app.dependency_overrides.clear()
+    # Assertions
+    assert response.status_code == 404
+    data = response.json()
+    assert data["detail"] == "No notes found"
 
 
-def test_get_random_note_single_note():
+def test_get_random_note_single_note(setup_dependencies: SetupFunction):
     # Setup stub repository with single note
-    note_repo = StubNoteRepository()
-    llm_client = StubLLMClient(response="Context for single note")
+    note_repo, _, _ = setup_dependencies(
+        ["Context for single note", evaluation_response]
+    )
     created_at = datetime.now(timezone.utc)
 
     # Create a book
@@ -114,35 +139,25 @@ def test_get_random_note_single_note():
     )
     note_repo.add(note)
 
-    # Override dependencies
-    app.dependency_overrides[get_note_repository] = lambda: note_repo
-    app.dependency_overrides[get_llm_client] = lambda: llm_client
+    # Make the request
+    response = client.get("/random")
 
-    try:
-        # Make the request
-        response = client.get("/random")
+    # Assertions
+    assert response.status_code == 200
+    data = response.json()
 
-        # Assertions
-        assert response.status_code == 200
-        data = response.json()
+    assert data["book"] == "Solo Book"
+    assert data["author"] == "Solo Author"
+    assert data["note"] == "Only note content"
+    assert data["additional_context"] == "Context for single note"
 
-        assert data["book"] == "Solo Book"
-        assert data["author"] == "Solo Author"
-        assert data["note"] == "Only note content"
-        assert data["additional_context"] == "Context for single note"
-
-        # Should have no related notes since there's only one note
-        assert len(data["related_notes"]) == 0
-
-    finally:
-        # Clean up dependency overrides
-        app.dependency_overrides.clear()
+    # Should have no related notes since there's only one note
+    assert len(data["related_notes"]) == 0
 
 
-def test_get_random_note_multiple_books():
+def test_get_random_note_multiple_books(setup_dependencies: SetupFunction):
     # Setup stub repository with notes from multiple books
-    note_repo = StubNoteRepository()
-    llm_client = StubLLMClient(response="Cross-book context")
+    note_repo, _, _ = setup_dependencies(["Cross-book context", evaluation_response])
     created_at = datetime.now(timezone.utc)
 
     # Create books
@@ -179,36 +194,26 @@ def test_get_random_note_multiple_books():
     note_repo.add(note2)
     note_repo.add(note3)
 
-    # Override dependencies
-    app.dependency_overrides[get_note_repository] = lambda: note_repo
-    app.dependency_overrides[get_llm_client] = lambda: llm_client
+    # Make the request (will return first note since StubNoteRepository.get_random() returns first note)
+    response = client.get("/random")
 
-    try:
-        # Make the request (will return first note since StubNoteRepository.get_random() returns first note)
-        response = client.get("/random")
+    # Assertions
+    assert response.status_code == 200
+    data = response.json()
 
-        # Assertions
-        assert response.status_code == 200
-        data = response.json()
+    assert data["book"] == "Book One"
+    assert data["author"] == "Author One"
+    assert data["note"] == "Note from book 1"
+    assert data["additional_context"] == "Cross-book context"
 
-        assert data["book"] == "Book One"
-        assert data["author"] == "Author One"
-        assert data["note"] == "Note from book 1"
-        assert data["additional_context"] == "Cross-book context"
-
-        # Should only include related notes from the same book
-        assert len(data["related_notes"]) == 1
-        assert data["related_notes"][0]["content"] == "Another note from book 1"
-
-    finally:
-        # Clean up dependency overrides
-        app.dependency_overrides.clear()
+    # Should only include related notes from the same book
+    assert len(data["related_notes"]) == 1
+    assert data["related_notes"][0]["content"] == "Another note from book 1"
 
 
-def test_get_random_note_response_structure():
+def test_get_random_note_response_structure(setup_dependencies: SetupFunction):
     # Test that response doesn't expose sensitive fields
-    note_repo = StubNoteRepository()
-    llm_client = StubLLMClient(response="Structure test")
+    note_repo, _, _ = setup_dependencies(["Structure test", evaluation_response])
     created_at = datetime.now(timezone.utc)
 
     # Create book and note with all fields
@@ -224,40 +229,31 @@ def test_get_random_note_response_structure():
     )
     note_repo.add(note)
 
-    # Override dependencies
-    app.dependency_overrides[get_note_repository] = lambda: note_repo
-    app.dependency_overrides[get_llm_client] = lambda: llm_client
+    # Make the request
+    response = client.get("/random")
 
-    try:
-        # Make the request
-        response = client.get("/random")
+    # Assertions
+    assert response.status_code == 200
+    data = response.json()
 
-        # Assertions
-        assert response.status_code == 200
-        data = response.json()
+    # Check that only expected fields are present at top level
+    expected_fields = {
+        "book",
+        "author",
+        "note",
+        "additional_context",
+        "related_notes",
+    }
+    assert set(data.keys()) == expected_fields
 
-        # Check that only expected fields are present at top level
-        expected_fields = {
-            "book",
-            "author",
-            "note",
-            "additional_context",
-            "related_notes",
-        }
-        assert set(data.keys()) == expected_fields
+    # Check that sensitive fields are not exposed anywhere
+    response_str = response.text
+    assert "content_hash" not in response_str
+    assert "embedding" not in response_str
+    assert "book_id" not in response_str
 
-        # Check that sensitive fields are not exposed anywhere
-        response_str = response.text
-        assert "content_hash" not in response_str
-        assert "embedding" not in response_str
-        assert "book_id" not in response_str
-
-        # Related notes should only have id and content
-        if data["related_notes"]:
-            note_data = data["related_notes"][0]
-            expected_note_fields = {"id", "content"}
-            assert set(note_data.keys()) == expected_note_fields
-
-    finally:
-        # Clean up dependency overrides
-        app.dependency_overrides.clear()
+    # Related notes should only have id and content
+    if data["related_notes"]:
+        note_data = data["related_notes"][0]
+        expected_note_fields = {"id", "content"}
+        assert set(note_data.keys()) == expected_note_fields

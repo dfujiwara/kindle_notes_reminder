@@ -108,13 +108,16 @@ class StubEmbeddingClient(EmbeddingClientInterface):
 class StubLLMClient(LLMClientInterface):
     """Stub implementation of LLMClient for testing."""
 
-    def __init__(self, response: str = "Test response", should_fail: bool = False):
-        self.response = response
+    def __init__(
+        self, responses: list[str] = ["Test response"], should_fail: bool = False
+    ):
+        self.responses = responses
         self.should_fail = should_fail
         self.call_count = 0
 
     async def get_response(self, prompt: str, instruction: str) -> str:
+        response = self.responses[self.call_count]
         self.call_count += 1
         if self.should_fail:
             raise LLMError("Simulated LLM generation failure")
-        return self.response
+        return response

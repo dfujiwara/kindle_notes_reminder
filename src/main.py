@@ -91,6 +91,25 @@ async def parse_notebook_endpoint(
     return result
 
 
+@app.get("/books")
+async def get_books(
+    book_repository: BookRepositoryInterface = Depends(get_book_repository),
+):
+    books = book_repository.list_books()
+
+    return {
+        "books": [
+            {
+                "id": book.id,
+                "title": book.title,
+                "author": book.author,
+                "note_count": len(book.notes) if book.notes else 0,
+            }
+            for book in books
+        ]
+    }
+
+
 @app.get("/books/{book_id}/notes")
 async def get_notes_by_book(
     book_id: int,

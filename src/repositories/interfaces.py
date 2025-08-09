@@ -30,6 +30,10 @@ class NoteRepositoryInterface(Protocol):
 
     def find_similar_notes(self, note: Note, limit: int = 5) -> list[Note]: ...
 
+    def search_notes_by_embedding(
+        self, embedding: Embedding, limit: int = 10, similarity_threshold: float = 0.5
+    ) -> list[Note]: ...
+
 
 class EvaluationRepositoryInterface(Protocol):
     def add(self, evaluation: Evaluation) -> Evaluation: ...

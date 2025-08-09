@@ -1,5 +1,6 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException, Depends, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
+from typing import Any
 from src.notebook_parser import parse_notebook_html, NotebookParseError
 from sqlmodel import Session
 from src.database import get_session
@@ -181,3 +182,61 @@ async def get_random_note_endpoint(
             for note in similar_notes
         ],
     }
+
+
+@app.get("/search")
+async def search_notes(
+    q: str,
+    limit: int = 10,
+    note_repository: NoteRepositoryInterface = Depends(get_note_repository),
+    embedding_client: EmbeddingClientInterface = Depends(get_embedding_client),
+) -> dict[str, Any]:
+    """
+    Search for notes using semantic search based on the provided query.
+
+    Args:
+        q: The search query phrase
+        limit: Maximum number of results to return (default: 10, max: 50)
+
+    Returns:
+        Search results with notes, their books, and similarity scores
+    """
+    # Validate limit
+    limit = min(limit, 50)
+
+    # Generate embedding for the search query
+    query_embedding = await embedding_client.generate_embedding(q)
+
+    # Search for similar notes
+    similar_notes = note_repository.search_notes_by_embedding(
+        query_embedding, limit=limit, similarity_threshold=0.7
+    )
+
+    # Group notes by book
+    books_dict: dict[int, dict[str, Any]] = {}
+
+    for note in similar_notes:
+        book_id = note.book.id
+        if book_id is None:
+            continue
+        if book_id not in books_dict:
+            books_dict[book_id] = {
+                "book": {
+                    "id": note.book.id,
+                    "title": note.book.title,
+                    "author": note.book.author,
+                },
+                "notes": [],
+            }
+
+        books_dict[book_id]["notes"].append(
+            {
+                "id": note.id,
+                "content": note.content,
+            }
+        )
+
+    results = list(books_dict.values())
+    total_notes = sum(len(book["notes"]) for book in results)
+
+    return {"query": q, "results": results, "count": total_notes}

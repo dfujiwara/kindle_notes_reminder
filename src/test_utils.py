@@ -78,6 +78,15 @@ class StubNoteRepository(NoteRepositoryInterface):
             :limit
         ]
 
+    def search_notes_by_embedding(
+        self, embedding: Embedding, limit: int = 10, similarity_threshold: float = 0.5
+    ) -> list[Note]:
+        """
+        Stub implementation of search_notes_by_embedding.
+        Returns first `limit` notes from all books.
+        """
+        return self.notes[:limit]
+
 
 class StubEvaluationRepository(EvaluationRepositoryInterface):
     def __init__(self):

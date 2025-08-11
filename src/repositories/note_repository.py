@@ -94,3 +94,31 @@ class NoteRepository(NoteRepositoryInterface):
         )
 
         return list(self.session.exec(statement))
+
+    def search_notes_by_embedding(
+        self, embedding: Embedding, limit: int = 10, similarity_threshold: float = 0.5
+    ) -> list[Note]:
+        """
+        Search for notes similar to the given embedding across all books.
+
+        Args:
+            embedding: The embedding vector to search for
+            limit: Maximum number of notes to return (default: 10)
+            similarity_threshold: Maximum cosine distance to consider notes similar (default: 0.5)
+                                Lower values mean more similar (0 = identical, 1 = completely different)
+
+        Returns:
+            A list of similar notes from all books, ordered by similarity (most similar first)
+        """
+        distance = Note.embedding_cosine_distance(embedding)
+
+        statement = (
+            select(Note)
+            .join(Book)
+            .where(Note.embedding_is_not_null())
+            .where(distance <= similarity_threshold)
+            .order_by(distance)
+            .limit(limit)
+        )
+
+        return list(self.session.exec(statement))

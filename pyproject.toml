@@ -1,7 +1,7 @@
 [project]
-name = "fastapi-app"
+name = "kindle-notes-archive"
 version = "0.1.0"
-description = "A FastAPI application"
+description = "A Kindle Notes archive and notification application"
 readme = "README.md"
 requires-python = "==3.13.2"
 dependencies = [

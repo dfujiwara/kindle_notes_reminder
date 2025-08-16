@@ -21,7 +21,9 @@ from src.llm_interface import LLMClientInterface, LLMPromptResponse
 from src.evaluations import evaluate_llm_response
 
 app = FastAPI(
-    title="FastAPI App", description="A sample FastAPI application", version="0.1.0"
+    title="Kindle Notes App",
+    description="Kindle Notes Archive and Notifier",
+    version="0.1.0",
 )
 
 # Configure CORS

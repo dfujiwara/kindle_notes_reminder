@@ -1,4 +1,4 @@
-name: 'fastapi-app'
+name: 'kindle-notes-archive'
 
 services:
   app:

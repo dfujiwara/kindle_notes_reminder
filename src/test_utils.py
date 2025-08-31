@@ -19,8 +19,13 @@ from src.types import Embedding
 class StubBookRepository(BookRepositoryInterface):
     """Stub implementation of BookRepository for testing."""
 
-    def __init__(self):
+    def __init__(self, include_sample_book: bool = False):
         self.books: list[Book] = []
+        if include_sample_book:
+            sample_book = Book(
+                id=1, title="The Pragmatic Programmer", author="David Thomas"
+            )
+            self.books.append(sample_book)
 
     def add(self, book: Book) -> Book:
         book.id = len(self.books) + 1  # Simulate auto-increment ID

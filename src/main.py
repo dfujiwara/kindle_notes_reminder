@@ -116,16 +116,26 @@ async def get_books(
 @app.get("/books/{book_id}/notes")
 async def get_notes_by_book(
     book_id: int,
+    book_repository: BookRepositoryInterface = Depends(get_book_repository),
     note_repository: NoteRepositoryInterface = Depends(get_note_repository),
 ):
+    book = book_repository.get(book_id)
+    if not book:
+        raise HTTPException(status_code=404, detail="Book not found")
+
     # Get all notes for the book
     notes = note_repository.get_by_book_id(book_id)
 
     return {
+        "book": {
+            "id": book.id,
+            "title": book.title,
+            "author": book.author,
+        },
         "notes": [
             {"id": note.id, "content": note.content, "created_at": note.created_at}
             for note in notes
-        ]
+        ],
     }
 
 

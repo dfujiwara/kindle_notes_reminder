@@ -21,9 +21,57 @@ from src.llm_interface import LLMClientInterface, LLMPromptResponse
 from src.evaluations import evaluate_llm_response
 
 app = FastAPI(
-    title="Kindle Notes App",
-    description="Kindle Notes Archive and Notifier",
-    version="0.1.0",
+    title="Kindle Notes Archive and Notifier",
+    description="""
+    A sophisticated FastAPI application for managing and exploring Kindle notes with AI-powered features.
+    
+    ## Features
+    
+    * **Notebook Processing**: Upload and parse Kindle HTML notebook files
+    * **Smart Organization**: Automatic book and note extraction with deduplication
+    * **AI-Powered Context**: Generate additional insights for your notes using OpenAI
+    * **Vector Search**: Semantic search across all your notes using embeddings
+    * **Related Notes**: Find similar notes based on content similarity
+    * **Background Processing**: Asynchronous LLM evaluation and embedding generation
+    
+    ## Getting Started
+    
+    1. Upload your Kindle notebook HTML files via `/notebooks`
+    2. Browse your books and notes via `/books`
+    3. Get AI-enhanced random notes via `/random`
+    4. Search semantically across all notes via `/search`
+    """,
+    version="1.0.0",
+    contact={
+        "name": "Kindle Notes API",
+        "url": "https://github.com/dfujiwara/kindle_notes_reminder",
+    },
+    license_info={
+        "name": "MIT",
+        "url": "https://opensource.org/licenses/MIT",
+    },
+    openapi_tags=[
+        {
+            "name": "general",
+            "description": "General endpoints for health checks and basic info",
+        },
+        {
+            "name": "notebooks",
+            "description": "Upload and process Kindle HTML notebook files",
+        },
+        {
+            "name": "books",
+            "description": "Browse and manage your book collection",
+        },
+        {
+            "name": "notes",
+            "description": "Access and explore your notes with AI enhancements",
+        },
+        {
+            "name": "search",
+            "description": "Semantic search across all your notes using AI embeddings",
+        },
+    ],
 )
 
 # Configure CORS
@@ -63,17 +111,47 @@ def get_llm_client() -> LLMClientInterface:
     return OpenAIClient()
 
 
-@app.get("/")
+@app.get(
+    "/",
+    tags=["general"],
+    summary="Welcome message",
+    description="Returns a welcome message for the Kindle Notes API",
+    response_description="Welcome message",
+)
 async def root():
     return {"message": "Welcome to FastAPI!"}
 
 
-@app.get("/health")
+@app.get(
+    "/health",
+    tags=["general"],
+    summary="Health check",
+    description="Check if the API service is running and healthy",
+    response_description="Health status",
+)
 async def health_check():
     return {"status": "healthy"}
 
 
-@app.post("/notebooks")
+@app.post(
+    "/notebooks",
+    tags=["notebooks"],
+    summary="Upload Kindle notebook",
+    description="""
+    Process and store a Kindle HTML notebook file with notes and highlights.
+    
+    This endpoint:
+    - Parses the uploaded HTML file to extract book metadata and notes
+    - Stores the book and notes in the database with deduplication
+    - Generates embeddings for semantic search capabilities
+    - Returns a summary of the processed content
+    """,
+    response_description="Processing result with book and notes count",
+    responses={
+        400: {"description": "Invalid file or parsing error"},
+        200: {"description": "Notebook processed successfully"},
+    },
+)
 async def parse_notebook_endpoint(
     file: UploadFile = File(...),
     book_repository: BookRepositoryInterface = Depends(get_book_repository),
@@ -94,7 +172,13 @@ async def parse_notebook_endpoint(
     return result
 
 
-@app.get("/books")
+@app.get(
+    "/books",
+    tags=["books"],
+    summary="List all books",
+    description="Retrieve all processed books with their note counts",
+    response_description="List of books with metadata and note counts",
+)
 async def get_books(
     book_repository: BookRepositoryInterface = Depends(get_book_repository),
 ):
@@ -113,7 +197,17 @@ async def get_books(
     }
 
 
-@app.get("/books/{book_id}/notes")
+@app.get(
+    "/books/{book_id}/notes",
+    tags=["books", "notes"],
+    summary="Get notes for a specific book",
+    description="Retrieve all notes for a given book ID along with book metadata",
+    response_description="Book information and list of associated notes",
+    responses={
+        404: {"description": "Book not found"},
+        200: {"description": "Book and notes retrieved successfully"},
+    },
+)
 async def get_notes_by_book(
     book_id: int,
     book_repository: BookRepositoryInterface = Depends(get_book_repository),
@@ -139,7 +233,25 @@ async def get_notes_by_book(
     }
 
 
-@app.get("/random")
+@app.get(
+    "/random",
+    tags=["notes"],
+    summary="Get random note with AI context",
+    description="""
+    Retrieve a random note enhanced with AI-generated additional context and related notes.
+    
+    This endpoint:
+    - Selects a random note from the database
+    - Generates AI-powered additional context using OpenAI
+    - Finds related notes based on vector similarity
+    - Evaluates the AI response quality in the background
+    """,
+    response_description="Random note with AI analysis and similar notes",
+    responses={
+        404: {"description": "No notes found in the database"},
+        200: {"description": "Random note with context retrieved successfully"},
+    },
+)
 async def get_random_note_endpoint(
     background_tasks: BackgroundTasks,
     note_repository: NoteRepositoryInterface = Depends(get_note_repository),
@@ -196,23 +308,31 @@ async def get_random_note_endpoint(
     }
 
 
-@app.get("/search")
+@app.get(
+    "/search",
+    tags=["search"],
+    summary="Semantic search across notes",
+    description="""
+    Search for notes using semantic search based on the provided query.
+    
+    This endpoint:
+    - Converts your search query into embeddings using OpenAI
+    - Finds semantically similar notes using vector similarity
+    - Groups results by book for better organization
+    - Returns results with similarity scores above the threshold
+    """,
+    response_description="Search results grouped by book with similarity scores",
+    responses={
+        200: {"description": "Search completed successfully"},
+        422: {"description": "Invalid query parameters"},
+    },
+)
 async def search_notes(
     q: str,
     limit: int = 10,
     note_repository: NoteRepositoryInterface = Depends(get_note_repository),
     embedding_client: EmbeddingClientInterface = Depends(get_embedding_client),
 ) -> dict[str, Any]:
-    """
-    Search for notes using semantic search based on the provided query.
-
-    Args:
-        q: The search query phrase
-        limit: Maximum number of results to return (default: 10, max: 50)
-
-    Returns:
-        Search results with notes, their books, and similarity scores
-    """
     # Validate limit
     limit = min(limit, 50)
 

@@ -1,14 +1,15 @@
 from fastapi.testclient import TestClient
 from datetime import datetime, timezone
-from .main import app, get_note_repository
-from .repositories.models import Note
-from .test_utils import StubNoteRepository
+from .main import app, get_note_repository, get_book_repository
+from .repositories.models import Note, Book
+from .test_utils import StubNoteRepository, StubBookRepository
 
 client = TestClient(app)
 
 
 def test_get_notes_by_book_with_notes():
     # Setup stub repository with test data
+    book_repo = StubBookRepository(include_sample_book=True)
     note_repo = StubNoteRepository()
     created_at = datetime.now(timezone.utc)
 
@@ -24,6 +25,7 @@ def test_get_notes_by_book_with_notes():
 
     # Override the dependency
     app.dependency_overrides[get_note_repository] = lambda: note_repo
+    app.dependency_overrides[get_book_repository] = lambda: book_repo
 
     try:
         # Make the request
@@ -32,6 +34,11 @@ def test_get_notes_by_book_with_notes():
         # Assertions
         assert response.status_code == 200
         data = response.json()
+
+        assert "book" in data
+        assert data["book"]["id"] == 1
+        assert data["book"]["title"] == "The Pragmatic Programmer"
+        assert data["book"]["author"] == "David Thomas"
 
         assert "notes" in data
         assert len(data["notes"]) == 2
@@ -52,9 +59,11 @@ def test_get_notes_by_book_with_notes():
 
 def test_get_notes_by_book_empty_book():
     # Setup empty stub repository
+    book_repo = StubBookRepository(include_sample_book=True)
     note_repo = StubNoteRepository()
 
     # Override the dependency
+    app.dependency_overrides[get_book_repository] = lambda: book_repo
     app.dependency_overrides[get_note_repository] = lambda: note_repo
 
     try:
@@ -75,6 +84,7 @@ def test_get_notes_by_book_empty_book():
 
 def test_get_notes_by_book_nonexistent_book():
     # Setup stub repository with notes for different book
+    book_repo = StubBookRepository(include_sample_book=False)
     note_repo = StubNoteRepository()
     created_at = datetime.now(timezone.utc)
 
@@ -88,6 +98,7 @@ def test_get_notes_by_book_nonexistent_book():
     note_repo.add(note)
 
     # Override the dependency
+    app.dependency_overrides[get_book_repository] = lambda: book_repo
     app.dependency_overrides[get_note_repository] = lambda: note_repo
 
     try:
@@ -95,12 +106,7 @@ def test_get_notes_by_book_nonexistent_book():
         response = client.get("/books/999/notes")
 
         # Assertions
-        assert response.status_code == 200
-        data = response.json()
-
-        assert "notes" in data
-        assert len(data["notes"]) == 0
-        assert data["notes"] == []
+        assert response.status_code == 404
     finally:
         # Clean up dependency override
         app.dependency_overrides.clear()
@@ -108,9 +114,13 @@ def test_get_notes_by_book_nonexistent_book():
 
 def test_get_notes_by_book_multiple_books():
     # Setup stub repository with notes for multiple books
+    book_repo = StubBookRepository(include_sample_book=True)
     note_repo = StubNoteRepository()
     created_at = datetime.now(timezone.utc)
 
+    # Add additional book
+    book_2 = Book(author="Robert C. Martin", title="Clean Code")
+    book_repo.add(book_2)
     # Add notes for book 1
     note1_1 = Note(
         content="Book 1 Note 1", content_hash="hash1", book_id=1, created_at=created_at
@@ -128,6 +138,7 @@ def test_get_notes_by_book_multiple_books():
     note_repo.add(note2_1)
 
     # Override the dependency
+    app.dependency_overrides[get_book_repository] = lambda: book_repo
     app.dependency_overrides[get_note_repository] = lambda: note_repo
 
     try:
@@ -158,6 +169,7 @@ def test_get_notes_by_book_invalid_book_id():
 
 def test_get_notes_by_book_response_structure():
     # Setup stub repository with test data including embedding
+    book_repo = StubBookRepository(include_sample_book=True)
     note_repo = StubNoteRepository()
     created_at = datetime.now(timezone.utc)
 
@@ -172,6 +184,7 @@ def test_get_notes_by_book_response_structure():
     note_repo.add(note)
 
     # Override the dependency
+    app.dependency_overrides[get_book_repository] = lambda: book_repo
     app.dependency_overrides[get_note_repository] = lambda: note_repo
 
     try:

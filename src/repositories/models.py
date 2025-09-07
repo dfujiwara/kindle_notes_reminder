@@ -42,6 +42,17 @@ class BookRead(BookBase):
     created_at: datetime
 
 
+class BookResponse(SQLModel):
+    id: int
+    title: str
+    author: str
+    created_at: datetime
+
+
+class BookWithNotesResponse(BookResponse):
+    note_count: int
+
+
 class Note(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     content: str

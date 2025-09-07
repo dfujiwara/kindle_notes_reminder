@@ -24,18 +24,18 @@ app = FastAPI(
     title="Kindle Notes Archive and Notifier",
     description="""
     A sophisticated FastAPI application for managing and exploring Kindle notes with AI-powered features.
-    
+
     ## Features
-    
+
     * **Notebook Processing**: Upload and parse Kindle HTML notebook files
     * **Smart Organization**: Automatic book and note extraction with deduplication
     * **AI-Powered Context**: Generate additional insights for your notes using OpenAI
     * **Vector Search**: Semantic search across all your notes using embeddings
     * **Related Notes**: Find similar notes based on content similarity
     * **Background Processing**: Asynchronous LLM evaluation and embedding generation
-    
+
     ## Getting Started
-    
+
     1. Upload your Kindle notebook HTML files via `/notebooks`
     2. Browse your books and notes via `/books`
     3. Get AI-enhanced random notes via `/random`
@@ -112,17 +112,6 @@ def get_llm_client() -> LLMClientInterface:
 
 
 @app.get(
-    "/",
-    tags=["general"],
-    summary="Welcome message",
-    description="Returns a welcome message for the Kindle Notes API",
-    response_description="Welcome message",
-)
-async def root():
-    return {"message": "Welcome to FastAPI!"}
-
-
-@app.get(
     "/health",
     tags=["general"],
     summary="Health check",
@@ -139,7 +128,7 @@ async def health_check():
     summary="Upload Kindle notebook",
     description="""
     Process and store a Kindle HTML notebook file with notes and highlights.
-    
+
     This endpoint:
     - Parses the uploaded HTML file to extract book metadata and notes
     - Stores the book and notes in the database with deduplication
@@ -239,7 +228,7 @@ async def get_notes_by_book(
     summary="Get random note with AI context",
     description="""
     Retrieve a random note enhanced with AI-generated additional context and related notes.
-    
+
     This endpoint:
     - Selects a random note from the database
     - Generates AI-powered additional context using OpenAI
@@ -314,7 +303,7 @@ async def get_random_note_endpoint(
     summary="Semantic search across notes",
     description="""
     Search for notes using semantic search based on the provided query.
-    
+
     This endpoint:
     - Converts your search query into embeddings using OpenAI
     - Finds semantically similar notes using vector similarity

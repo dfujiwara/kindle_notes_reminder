@@ -22,6 +22,17 @@ class Book(SQLModel, table=True):
     notes: list["Note"] = Relationship(back_populates="book")
 
 
+class BookResponse(SQLModel):
+    id: int
+    title: str
+    author: str
+    created_at: datetime
+
+
+class BookWithNotesResponse(BookResponse):
+    note_count: int
+
+
 class Note(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     content: str

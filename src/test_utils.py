@@ -5,7 +5,7 @@ This module provides reusable stub implementations of repositories and clients
 that can be used across different test files.
 """
 
-from src.repositories.models import Book, Note, Evaluation
+from src.repositories.models import BookCreate, BookRead, Note, Evaluation
 from src.repositories.interfaces import (
     BookRepositoryInterface,
     EvaluationRepositoryInterface,
@@ -14,28 +14,37 @@ from src.repositories.interfaces import (
 from src.embedding_interface import EmbeddingClientInterface, EmbeddingError
 from src.llm_interface import LLMClientInterface, LLMError
 from src.types import Embedding
+from datetime import datetime, timezone
 
 
 class StubBookRepository(BookRepositoryInterface):
     """Stub implementation of BookRepository for testing."""
 
     def __init__(self, include_sample_book: bool = False):
-        self.books: list[Book] = []
+        self.books: list[BookRead] = []
         if include_sample_book:
-            sample_book = Book(
-                id=1, title="The Pragmatic Programmer", author="David Thomas"
+            sample_book = BookRead(
+                id=1,
+                title="The Pragmatic Programmer",
+                author="David Thomas",
+                created_at=datetime.now(timezone.utc),
             )
             self.books.append(sample_book)
 
-    def add(self, book: Book) -> Book:
-        book.id = len(self.books) + 1  # Simulate auto-increment ID
-        self.books.append(book)
-        return book
+    def add(self, book: BookCreate) -> BookRead:
+        book_read = BookRead(
+            id=len(self.books) + 1,
+            title=book.title,
+            author=book.author,
+            created_at=datetime.now(timezone.utc),
+        )
+        self.books.append(book_read)
+        return book_read
 
-    def get(self, book_id: int) -> Book | None:
+    def get(self, book_id: int) -> BookRead | None:
         return next((book for book in self.books if book.id == book_id), None)
 
-    def list_books(self) -> list[Book]:
+    def list_books(self) -> list[BookRead]:
         return self.books
 
     def delete(self, book_id: int) -> None:

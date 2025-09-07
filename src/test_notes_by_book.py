@@ -1,7 +1,7 @@
 from fastapi.testclient import TestClient
 from datetime import datetime, timezone
 from .main import app, get_note_repository, get_book_repository
-from .repositories.models import Note, Book
+from .repositories.models import Note, BookCreate
 from .test_utils import StubNoteRepository, StubBookRepository
 
 client = TestClient(app)
@@ -119,7 +119,7 @@ def test_get_notes_by_book_multiple_books():
     created_at = datetime.now(timezone.utc)
 
     # Add additional book
-    book_2 = Book(author="Robert C. Martin", title="Clean Code")
+    book_2 = BookCreate(author="Robert C. Martin", title="Clean Code")
     book_repo.add(book_2)
     # Add notes for book 1
     note1_1 = Note(

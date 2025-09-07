@@ -10,16 +10,36 @@ if TYPE_CHECKING:
 metadata = SQLModel.metadata
 
 
-class Book(SQLModel, table=True):
+class BookBase(SQLModel):
+    """Base model with shared fields"""
+
+    title: str
+    author: str
+
+
+class BookCreate(BookBase):
+    """Model for creating new books (no id required)"""
+
+    pass
+
+
+class Book(BookBase, table=True):
+    """Database table model"""
+
     __table_args__ = (UniqueConstraint("title", "author", name="uix_title_author"),)
 
     id: int | None = Field(default=None, primary_key=True)
-    title: str
-    author: str
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     # Relationship
     notes: list["Note"] = Relationship(back_populates="book")
+
+
+class BookRead(BookBase):
+    """Model for reading books (id is guaranteed to exist)"""
+
+    id: int
+    created_at: datetime
 
 
 class Note(SQLModel, table=True):

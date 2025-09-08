@@ -173,16 +173,14 @@ async def get_books(
     note_repository: NoteRepositoryInterface = Depends(get_note_repository),
 ):
     books = book_repository.list_books()
-    note_count_dict = note_repository.get_note_counts_by_book_ids(
-        [b.id for b in books if b.id is not None]
-    )
+    note_count_dict = note_repository.get_note_counts_by_book_ids([b.id for b in books])
     return {
         "books": [
             {
                 "id": book.id,
                 "title": book.title,
                 "author": book.author,
-                "note_count": note_count_dict.get(book.id, 0) if book.id else 0,
+                "note_count": note_count_dict.get(book.id, 0),
             }
             for book in books
         ]

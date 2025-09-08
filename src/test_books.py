@@ -1,6 +1,6 @@
 from fastapi.testclient import TestClient
 from .main import app, get_book_repository, get_note_repository
-from .repositories.models import Book, Note
+from .repositories.models import BookCreate, Note
 from .test_utils import StubBookRepository, StubNoteRepository
 
 client = TestClient(app)
@@ -26,8 +26,8 @@ def test_get_books_with_books():
     note_repo = StubNoteRepository()
 
     # Add books to the repository
-    book1 = Book(title="Book 1", author="Author 1")
-    book2 = Book(title="Book 2", author="Author 2")
+    book1 = BookCreate(title="Book 1", author="Author 1")
+    book2 = BookCreate(title="Book 2", author="Author 2")
     book_repo.add(book1)
     book_repo.add(book2)
 
@@ -61,17 +61,17 @@ def test_get_books_multiple_books_different_note_counts():
     note_repo = StubNoteRepository()
 
     # Book with no notes
-    book1 = Book(title="Book No Notes", author="Author 1")
+    book1 = BookCreate(title="Book No Notes", author="Author 1")
     book_repo.add(book1)
 
     # Book with one note
-    book2 = Book(title="Book One Note", author="Author 2")
+    book2 = BookCreate(title="Book One Note", author="Author 2")
     book_repo.add(book2)
     note2 = Note(content="Note", content_hash="hash2", book_id=2)
     note_repo.add(note2)
 
     # Book with multiple notes
-    book3 = Book(title="Book Many Notes", author="Author 3")
+    book3 = BookCreate(title="Book Many Notes", author="Author 3")
     book_repo.add(book3)
     note3_1 = Note(content="Note 1", content_hash="hash3_1", book_id=3)
     note3_2 = Note(content="Note 2", content_hash="hash3_2", book_id=3)

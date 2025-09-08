@@ -1,5 +1,5 @@
 from src.notebook_parser import NotebookParseResult
-from src.repositories.models import Book, Note
+from src.repositories.models import BookCreate, Note
 import hashlib
 from src.repositories.interfaces import BookRepositoryInterface, NoteRepositoryInterface
 from typing import Any, TypedDict
@@ -22,14 +22,11 @@ async def process_notebook_result(
     note_repo: NoteRepositoryInterface,
     embedding_client: EmbeddingClientInterface,
 ) -> ProcessedNotebookResult:
-    # Create a Book instance
-    book = Book(title=result.book_title, author=result.authors_str)
+    # Create a BookCreate instance
+    book_create = BookCreate(title=result.book_title, author=result.authors_str)
 
     # Add the book to the repository
-    book = book_repo.add(book)
-
-    if book.id is None:
-        raise ValueError("Book ID is None after adding to repository")
+    book = book_repo.add(book_create)
 
     # Generate embeddings for all notes in parallel
     logger.info(f"Generating embeddings for {len(result.notes)} notes")

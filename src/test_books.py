@@ -1,7 +1,7 @@
 from fastapi.testclient import TestClient
-from .main import app, get_book_repository
+from .main import app, get_book_repository, get_note_repository
 from .repositories.models import Book, Note
-from .test_utils import StubBookRepository
+from .test_utils import StubBookRepository, StubNoteRepository
 
 client = TestClient(app)
 
@@ -23,6 +23,7 @@ def test_get_books_empty():
 
 def test_get_books_with_books():
     book_repo = StubBookRepository()
+    note_repo = StubNoteRepository()
 
     # Add books to the repository
     book1 = Book(title="Book 1", author="Author 1")
@@ -31,6 +32,7 @@ def test_get_books_with_books():
     book_repo.add(book2)
 
     app.dependency_overrides[get_book_repository] = lambda: book_repo
+    app.dependency_overrides[get_note_repository] = lambda: note_repo
 
     try:
         response = client.get("/books")
@@ -56,28 +58,30 @@ def test_get_books_with_books():
 
 def test_get_books_multiple_books_different_note_counts():
     book_repo = StubBookRepository()
+    note_repo = StubNoteRepository()
 
     # Book with no notes
     book1 = Book(title="Book No Notes", author="Author 1")
-    book1.notes = []
+    book_repo.add(book1)
 
     # Book with one note
     book2 = Book(title="Book One Note", author="Author 2")
+    book_repo.add(book2)
     note2 = Note(content="Note", content_hash="hash2", book_id=2)
-    book2.notes = [note2]
+    note_repo.add(note2)
 
     # Book with multiple notes
     book3 = Book(title="Book Many Notes", author="Author 3")
+    book_repo.add(book3)
     note3_1 = Note(content="Note 1", content_hash="hash3_1", book_id=3)
     note3_2 = Note(content="Note 2", content_hash="hash3_2", book_id=3)
     note3_3 = Note(content="Note 3", content_hash="hash3_3", book_id=3)
-    book3.notes = [note3_1, note3_2, note3_3]
-
-    book_repo.add(book1)
-    book_repo.add(book2)
-    book_repo.add(book3)
+    note_repo.add(note3_1)
+    note_repo.add(note3_2)
+    note_repo.add(note3_3)
 
     app.dependency_overrides[get_book_repository] = lambda: book_repo
+    app.dependency_overrides[get_note_repository] = lambda: note_repo
 
     try:
         response = client.get("/books")

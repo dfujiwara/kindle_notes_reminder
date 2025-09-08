@@ -170,16 +170,19 @@ async def parse_notebook_endpoint(
 )
 async def get_books(
     book_repository: BookRepositoryInterface = Depends(get_book_repository),
+    note_repository: NoteRepositoryInterface = Depends(get_note_repository),
 ):
     books = book_repository.list_books()
-
+    note_count_dict = note_repository.get_note_counts_by_book_ids(
+        [b.id for b in books if b.id is not None]
+    )
     return {
         "books": [
             {
                 "id": book.id,
                 "title": book.title,
                 "author": book.author,
-                "note_count": len(book.notes) if book.notes else 0,
+                "note_count": note_count_dict.get(book.id, 0) if book.id else 0,
             }
             for book in books
         ]

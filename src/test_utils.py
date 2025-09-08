@@ -92,6 +92,14 @@ class StubNoteRepository(NoteRepositoryInterface):
         """
         return self.notes[:limit]
 
+    def get_note_counts_by_book_ids(self, book_ids: list[int]) -> dict[int, int]:
+        result: dict[int, int] = {}
+        book_ids_set = set(book_ids)
+        for note in self.notes:
+            if note.book_id in book_ids_set:
+                result[note.book_id] = result.get(note.book_id, 0) + 1
+        return result
+
 
 class StubEvaluationRepository(EvaluationRepositoryInterface):
     def __init__(self):

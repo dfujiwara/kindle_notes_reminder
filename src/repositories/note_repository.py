@@ -1,7 +1,7 @@
 from sqlmodel import Session, select
 from src.repositories.models import Note, Book
 from src.repositories.interfaces import NoteRepositoryInterface
-from sqlalchemy import func
+from sqlalchemy import func, column, Integer
 from src.types import Embedding
 
 
@@ -122,3 +122,29 @@ class NoteRepository(NoteRepositoryInterface):
         )
 
         return list(self.session.exec(statement))
+
+    def get_note_counts_by_book_ids(self, book_ids: list[int]) -> dict[int, int]:
+        """
+        Get the count of notes for each book ID in the given list.
+
+        Args:
+            book_ids: List of book IDs to get note counts for
+
+        Returns:
+            Dictionary mapping book_id to note count. Books with no notes won't appear in the result.
+        """
+        if not book_ids:
+            return {}
+
+        # Create column expressions that work with the type system
+        book_id_col = column("book_id", Integer)
+
+        statement = (
+            select(book_id_col, func.count())
+            .select_from(Note)
+            .where(book_id_col.in_(book_ids))
+            .group_by(book_id_col)
+        )
+
+        results = self.session.exec(statement)
+        return {book_id: count for book_id, count in results}

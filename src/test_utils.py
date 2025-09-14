@@ -47,6 +47,9 @@ class StubBookRepository(BookRepositoryInterface):
     def list_books(self) -> list[BookRead]:
         return self.books
 
+    def get_by_ids(self, book_ids: list[int]) -> list[BookRead]:
+        return [b for b in self.books if b.id in book_ids]
+
     def delete(self, book_id: int) -> None:
         self.books = [book for book in self.books if book.id != book_id]
 

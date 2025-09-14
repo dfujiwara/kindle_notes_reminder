@@ -1,7 +1,6 @@
 from fastapi.testclient import TestClient
-from datetime import datetime, timezone
 from .main import app, get_note_repository, get_book_repository
-from .repositories.models import Note, BookCreate
+from .repositories.models import NoteCreate, BookCreate
 from .test_utils import StubNoteRepository, StubBookRepository
 
 client = TestClient(app)
@@ -11,14 +10,17 @@ def test_get_notes_by_book_with_notes():
     # Setup stub repository with test data
     book_repo = StubBookRepository(include_sample_book=True)
     note_repo = StubNoteRepository()
-    created_at = datetime.now(timezone.utc)
 
     # Add notes to the repository
-    note1 = Note(
-        content="Note 1", content_hash="hash1", book_id=1, created_at=created_at
+    note1 = NoteCreate(
+        content="Note 1",
+        content_hash="hash1",
+        book_id=1,
     )
-    note2 = Note(
-        content="Note 2", content_hash="hash2", book_id=1, created_at=created_at
+    note2 = NoteCreate(
+        content="Note 2",
+        content_hash="hash2",
+        book_id=1,
     )
     note_repo.add(note1)
     note_repo.add(note2)
@@ -86,14 +88,12 @@ def test_get_notes_by_book_nonexistent_book():
     # Setup stub repository with notes for different book
     book_repo = StubBookRepository(include_sample_book=False)
     note_repo = StubNoteRepository()
-    created_at = datetime.now(timezone.utc)
 
     # Add note for book_id=1, but we'll request book_id=999
-    note = Note(
+    note = NoteCreate(
         content="Note for book 1",
         content_hash="hash1",
         book_id=1,
-        created_at=created_at,
     )
     note_repo.add(note)
 
@@ -116,24 +116,29 @@ def test_get_notes_by_book_multiple_books():
     # Setup stub repository with notes for multiple books
     book_repo = StubBookRepository(include_sample_book=True)
     note_repo = StubNoteRepository()
-    created_at = datetime.now(timezone.utc)
 
     # Add additional book
     book_2 = BookCreate(author="Robert C. Martin", title="Clean Code")
     book_repo.add(book_2)
     # Add notes for book 1
-    note1_1 = Note(
-        content="Book 1 Note 1", content_hash="hash1", book_id=1, created_at=created_at
+    note1_1 = NoteCreate(
+        content="Book 1 Note 1",
+        content_hash="hash1",
+        book_id=1,
     )
-    note1_2 = Note(
-        content="Book 1 Note 2", content_hash="hash2", book_id=1, created_at=created_at
+    note1_2 = NoteCreate(
+        content="Book 1 Note 2",
+        content_hash="hash2",
+        book_id=1,
     )
     note_repo.add(note1_1)
     note_repo.add(note1_2)
 
     # Add note for book 2
-    note2_1 = Note(
-        content="Book 2 Note 1", content_hash="hash3", book_id=2, created_at=created_at
+    note2_1 = NoteCreate(
+        content="Book 2 Note 1",
+        content_hash="hash3",
+        book_id=2,
     )
     note_repo.add(note2_1)
 
@@ -171,14 +176,12 @@ def test_get_notes_by_book_response_structure():
     # Setup stub repository with test data including embedding
     book_repo = StubBookRepository(include_sample_book=True)
     note_repo = StubNoteRepository()
-    created_at = datetime.now(timezone.utc)
 
     # Add note with embedding to test that it's not exposed
-    note = Note(
+    note = NoteCreate(
         content="Test note",
         content_hash="hash1",
         book_id=1,
-        created_at=created_at,
         embedding=[0.1] * 1536,  # Should not be included in response
     )
     note_repo.add(note)

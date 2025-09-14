@@ -1,10 +1,10 @@
 from src.llm_interface import LLMClientInterface, LLMPromptResponse
-from src.repositories.models import Book, Note
+from src.repositories.models import BookRead, NoteRead
 from src.prompts import create_context_prompt, SYSTEM_INSTRUCTIONS
 
 
 async def get_additional_context(
-    llm_client: LLMClientInterface, book: Book, note: Note
+    llm_client: LLMClientInterface, book: BookRead, note: NoteRead
 ) -> LLMPromptResponse:
     """
     Get additional context from OpenAI based on the book and note models.

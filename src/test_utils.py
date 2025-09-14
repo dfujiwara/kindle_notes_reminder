@@ -5,7 +5,13 @@ This module provides reusable stub implementations of repositories and clients
 that can be used across different test files.
 """
 
-from src.repositories.models import BookCreate, BookRead, Note, Evaluation
+from src.repositories.models import (
+    BookCreate,
+    BookRead,
+    NoteCreate,
+    NoteRead,
+    Evaluation,
+)
 from src.repositories.interfaces import (
     BookRepositoryInterface,
     EvaluationRepositoryInterface,
@@ -58,35 +64,37 @@ class StubNoteRepository(NoteRepositoryInterface):
     """Stub implementation of NoteRepository for testing."""
 
     def __init__(self):
-        self.notes: list[Note] = []
+        self.notes: list[NoteRead] = []
 
-    def add(self, note: Note) -> Note:
-        note.id = len(self.notes) + 1  # Simulate auto-increment ID
-        self.notes.append(note)
-        return note
+    def add(self, note: NoteCreate) -> NoteRead:
+        note_read = NoteRead(
+            id=len(self.notes) + 1,
+            created_at=datetime.now(timezone.utc),
+            book_id=note.book_id,
+            content=note.content,
+            content_hash=note.content_hash,
+        )
+        self.notes.append(note_read)
+        return note_read
 
-    def get(self, note_id: int) -> Note | None:
+    def get(self, note_id: int) -> NoteRead | None:
         return next((note for note in self.notes if note.id == note_id), None)
 
-    def list_notes(self) -> list[Note]:
+    def list_notes(self) -> list[NoteRead]:
         return self.notes
 
-    def get_by_book_id(self, book_id: int) -> list[Note]:
+    def get_by_book_id(self, book_id: int) -> list[NoteRead]:
         return [note for note in self.notes if note.book_id == book_id]
 
     def delete(self, note_id: int) -> None:
         self.notes = [note for note in self.notes if note.id != note_id]
 
-    def get_random(self) -> Note | None:
+    def get_random(self) -> NoteRead | None:
         return self.notes[0] if self.notes else None
 
-    def update_embedding(self, note: Note, embedding: Embedding) -> Note:
-        note.embedding = embedding
-        return note
-
     def find_similar_notes(
-        self, note: Note, limit: int = 5, similarity_threshold: float = 0.3
-    ) -> list[Note]:
+        self, note: NoteRead, limit: int = 5, similarity_threshold: float = 0.3
+    ) -> list[NoteRead]:
         """
         Stub implementation of find_similar_notes.
         Returns first `limit` notes from the same book (excluding the input note).
@@ -97,7 +105,7 @@ class StubNoteRepository(NoteRepositoryInterface):
 
     def search_notes_by_embedding(
         self, embedding: Embedding, limit: int = 10, similarity_threshold: float = 0.5
-    ) -> list[Note]:
+    ) -> list[NoteRead]:
         """
         Stub implementation of search_notes_by_embedding.
         Returns first `limit` notes from all books.

@@ -1,5 +1,5 @@
 from sqlmodel import Session, select
-from src.repositories.models import Note, Book
+from src.repositories.models import Note, NoteCreate, NoteRead, Book
 from src.repositories.interfaces import NoteRepositoryInterface
 from sqlalchemy import func, column, Integer
 from src.types import Embedding
@@ -9,62 +9,61 @@ class NoteRepository(NoteRepositoryInterface):
     def __init__(self, session: Session):
         self.session = session
 
-    def add(self, note: Note) -> Note:
+    def add(self, note: NoteCreate) -> NoteRead:
         # Check if a note with the same content hash exists
         statement = select(Note).where(Note.content_hash == note.content_hash)
         existing_note = self.session.exec(statement).first()
 
         if existing_note:
-            return existing_note
+            return NoteRead.model_validate(existing_note)
 
         # If no existing note found, create a new one
-        self.session.add(note)
+        db_note = Note(
+            content=note.content,
+            content_hash=note.content_hash,
+            book_id=note.book_id,
+        )
+        self.session.add(db_note)
         self.session.commit()
-        self.session.refresh(note)
-        return note
+        self.session.refresh(db_note)
 
-    def get(self, note_id: int) -> Note | None:
-        return self.session.get(Note, note_id)
+        return NoteRead.model_validate(db_note)
 
-    def list_notes(self) -> list[Note]:
+    def get(self, note_id: int) -> NoteRead | None:
+        note = self.session.get(Note, note_id)
+        if not note:
+            return None
+
+        return NoteRead.model_validate(note)
+
+    def list_notes(self) -> list[NoteRead]:
         statement = select(Note)
-        return list(self.session.exec(statement))
+        notes = self.session.exec(statement)
+        return [NoteRead.model_validate(note) for note in notes]
 
-    def get_by_book_id(self, book_id: int) -> list[Note]:
+    def get_by_book_id(self, book_id: int) -> list[NoteRead]:
         statement = select(Note).where(Note.book_id == book_id)
-        return list(self.session.exec(statement))
+        notes = self.session.exec(statement)
+        return [NoteRead.model_validate(note) for note in notes]
 
     def delete(self, note_id: int) -> None:
-        note = self.get(note_id)
+        note = self.session.get(Note, note_id)
         if not note:
             return
         self.session.delete(note)
         self.session.commit()
 
-    def get_random(self) -> Note | None:
+    def get_random(self) -> NoteRead | None:
         statement = select(Note).join(Book).order_by(func.random()).limit(1)
-        return self.session.exec(statement).first()
+        note = self.session.exec(statement).first()
+        if not note:
+            return None
 
-    def update_embedding(self, note: Note, embedding: Embedding) -> Note:
-        """
-        Update the embedding for a note.
-
-        Args:
-            note: The note to update
-            embedding: The embedding vector to update the note with
-
-        Returns:
-            The updated note with the new embedding
-        """
-        note.embedding = embedding
-        self.session.add(note)
-        self.session.commit()
-        self.session.refresh(note)
-        return note
+        return NoteRead.model_validate(note)
 
     def find_similar_notes(
-        self, note: Note, limit: int = 5, similarity_threshold: float = 0.3
-    ) -> list[Note]:
+        self, note: NoteRead, limit: int = 5, similarity_threshold: float = 0.3
+    ) -> list[NoteRead]:
         """
         Find notes similar to the given note using vector similarity.
         Only searches within the same book as the input note.
@@ -93,11 +92,12 @@ class NoteRepository(NoteRepositoryInterface):
             .limit(limit)
         )
 
-        return list(self.session.exec(statement))
+        notes = self.session.exec(statement)
+        return [NoteRead.model_validate(note) for note in notes]
 
     def search_notes_by_embedding(
         self, embedding: Embedding, limit: int = 10, similarity_threshold: float = 0.5
-    ) -> list[Note]:
+    ) -> list[NoteRead]:
         """
         Search for notes similar to the given embedding across all books.
 
@@ -121,7 +121,8 @@ class NoteRepository(NoteRepositoryInterface):
             .limit(limit)
         )
 
-        return list(self.session.exec(statement))
+        notes = self.session.exec(statement)
+        return [NoteRead.model_validate(note) for note in notes]
 
     def get_note_counts_by_book_ids(self, book_ids: list[int]) -> dict[int, int]:
         """

@@ -1,17 +1,29 @@
 import pytest
 from typing import Callable, Generator
 from fastapi.testclient import TestClient
-from datetime import datetime, timezone
-from .main import app, get_note_repository, get_llm_client, get_evaluation_repository
-from .repositories.models import Note, Book
-from .test_utils import StubNoteRepository, StubEvaluationRepository, StubLLMClient
+from .main import (
+    app,
+    get_book_repository,
+    get_note_repository,
+    get_llm_client,
+    get_evaluation_repository,
+)
+from .repositories.models import NoteCreate, BookCreate
+from .test_utils import (
+    StubNoteRepository,
+    StubBookRepository,
+    StubEvaluationRepository,
+    StubLLMClient,
+)
 
 client = TestClient(app)
 
 # Type alias for the setup function returned by fixture
 SetupFunction = Callable[
     [list[str] | None],
-    tuple[StubNoteRepository, StubEvaluationRepository, StubLLMClient],
+    tuple[
+        StubNoteRepository, StubBookRepository, StubEvaluationRepository, StubLLMClient
+    ],
 ]
 
 
@@ -26,21 +38,25 @@ def setup_dependencies() -> Generator[SetupFunction, None, None]:
 
     def _setup(
         llm_responses: list[str] | None = None,
-    ) -> tuple[StubNoteRepository, StubEvaluationRepository, StubLLMClient]:
+    ) -> tuple[
+        StubNoteRepository, StubBookRepository, StubEvaluationRepository, StubLLMClient
+    ]:
         if llm_responses is None:
             llm_responses = ["Default additional context", evaluation_response]
 
         # Create fresh instances for each test call
+        book_repo = StubBookRepository()
         note_repo = StubNoteRepository()
         evaluation_repo = StubEvaluationRepository()
         llm_client = StubLLMClient(responses=llm_responses)
 
         # Override dependencies
+        app.dependency_overrides[get_book_repository] = lambda: book_repo
         app.dependency_overrides[get_note_repository] = lambda: note_repo
         app.dependency_overrides[get_llm_client] = lambda: llm_client
         app.dependency_overrides[get_evaluation_repository] = lambda: evaluation_repo
 
-        return note_repo, evaluation_repo, llm_client
+        return note_repo, book_repo, evaluation_repo, llm_client
 
     yield _setup
 
@@ -50,31 +66,24 @@ def setup_dependencies() -> Generator[SetupFunction, None, None]:
 
 def test_get_random_note_success(setup_dependencies: SetupFunction):
     # Setup with custom LLM responses
-    note_repo, _, _ = setup_dependencies(
+    note_repo, book_repo, _, _ = setup_dependencies(
         ["This is additional context about the note", evaluation_response]
     )
 
-    created_at = datetime.now(timezone.utc)
-
     # Create a book
-    book = Book(id=1, title="Test Book", author="Test Author")
+    book = BookCreate(title="Test Book", author="Test Author")
+    book = book_repo.add(book)
 
     # Add notes to the repository
-    note1 = Note(
-        id=1,
+    note1 = NoteCreate(
         content="Primary note content",
         content_hash="hash1",
-        book_id=1,
-        created_at=created_at,
-        book=book,
+        book_id=book.id,
     )
-    note2 = Note(
-        id=2,
+    note2 = NoteCreate(
         content="Related note content",
         content_hash="hash2",
-        book_id=1,
-        created_at=created_at,
-        book=book,
+        book_id=book.id,
     )
     note_repo.add(note1)
     note_repo.add(note2)
@@ -107,7 +116,7 @@ def test_get_random_note_success(setup_dependencies: SetupFunction):
 
 def test_get_random_note_no_notes(setup_dependencies: SetupFunction):
     # Setup empty stub repository
-    _, _, _ = setup_dependencies(["additional context", evaluation_response])
+    _, _, _, _ = setup_dependencies(["additional context", evaluation_response])
 
     # Make the request
     response = client.get("/random")
@@ -120,22 +129,19 @@ def test_get_random_note_no_notes(setup_dependencies: SetupFunction):
 
 def test_get_random_note_single_note(setup_dependencies: SetupFunction):
     # Setup stub repository with single note
-    note_repo, _, _ = setup_dependencies(
+    note_repo, book_repo, _, _ = setup_dependencies(
         ["Context for single note", evaluation_response]
     )
-    created_at = datetime.now(timezone.utc)
 
     # Create a book
-    book = Book(id=1, title="Solo Book", author="Solo Author")
+    book = BookCreate(title="Solo Book", author="Solo Author")
+    book = book_repo.add(book)
 
     # Add single note
-    note = Note(
-        id=1,
+    note = NoteCreate(
         content="Only note content",
         content_hash="hash1",
-        book_id=1,
-        created_at=created_at,
-        book=book,
+        book_id=book.id,
     )
     note_repo.add(note)
 
@@ -157,37 +163,31 @@ def test_get_random_note_single_note(setup_dependencies: SetupFunction):
 
 def test_get_random_note_multiple_books(setup_dependencies: SetupFunction):
     # Setup stub repository with notes from multiple books
-    note_repo, _, _ = setup_dependencies(["Cross-book context", evaluation_response])
-    created_at = datetime.now(timezone.utc)
+    note_repo, book_repo, _, _ = setup_dependencies(
+        ["Cross-book context", evaluation_response]
+    )
 
     # Create books
-    book1 = Book(id=1, title="Book One", author="Author One")
-    book2 = Book(id=2, title="Book Two", author="Author Two")
+    book1 = BookCreate(title="Book One", author="Author One")
+    book2 = BookCreate(title="Book Two", author="Author Two")
+    book1 = book_repo.add(book1)
+    book2 = book_repo.add(book2)
 
     # Add notes from different books
-    note1 = Note(
-        id=1,
+    note1 = NoteCreate(
         content="Note from book 1",
         content_hash="hash1",
-        book_id=1,
-        created_at=created_at,
-        book=book1,
+        book_id=book1.id,
     )
-    note2 = Note(
-        id=2,
+    note2 = NoteCreate(
         content="Another note from book 1",
         content_hash="hash2",
-        book_id=1,
-        created_at=created_at,
-        book=book1,
+        book_id=book1.id,
     )
-    note3 = Note(
-        id=3,
+    note3 = NoteCreate(
         content="Note from book 2",
         content_hash="hash3",
-        book_id=2,
-        created_at=created_at,
-        book=book2,
+        book_id=book2.id,
     )
 
     note_repo.add(note1)
@@ -213,18 +213,18 @@ def test_get_random_note_multiple_books(setup_dependencies: SetupFunction):
 
 def test_get_random_note_response_structure(setup_dependencies: SetupFunction):
     # Test that response doesn't expose sensitive fields
-    note_repo, _, _ = setup_dependencies(["Structure test", evaluation_response])
-    created_at = datetime.now(timezone.utc)
+    note_repo, book_repo, _, _ = setup_dependencies(
+        ["Structure test", evaluation_response]
+    )
 
     # Create book and note with all fields
-    book = Book(id=1, title="Structure Book", author="Structure Author")
-    note = Note(
-        id=1,
+    book = BookCreate(title="Structure Book", author="Structure Author")
+    book = book_repo.add(book)
+
+    note = NoteCreate(
         content="Structure note",
         content_hash="secret_hash",
-        book_id=1,
-        created_at=created_at,
-        book=book,
+        book_id=book.id,
         embedding=[0.1] * 1536,  # Should not be exposed
     )
     note_repo.add(note)

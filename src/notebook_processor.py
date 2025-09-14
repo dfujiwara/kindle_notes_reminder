@@ -1,5 +1,5 @@
 from src.notebook_parser import NotebookParseResult
-from src.repositories.models import BookCreate, Note
+from src.repositories.models import BookCreate, NoteCreate
 import hashlib
 from src.repositories.interfaces import BookRepositoryInterface, NoteRepositoryInterface
 from typing import Any, TypedDict
@@ -48,7 +48,7 @@ async def process_notebook_result(
         content_hash = hashlib.sha256(note_content.encode("utf-8")).hexdigest()
 
         # Create note with embedding
-        note = Note(
+        note = NoteCreate(
             content=note_content,
             content_hash=content_hash,
             book_id=book.id,

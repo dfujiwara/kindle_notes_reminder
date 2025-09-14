@@ -246,6 +246,7 @@ async def get_notes_by_book(
 )
 async def get_random_note_endpoint(
     background_tasks: BackgroundTasks,
+    book_repository: BookRepositoryInterface = Depends(get_book_repository),
     note_repository: NoteRepositoryInterface = Depends(get_note_repository),
     evaluation_repository: EvaluationRepositoryInterface = Depends(
         get_evaluation_repository
@@ -256,12 +257,16 @@ async def get_random_note_endpoint(
     if not random_note:
         raise HTTPException(status_code=404, detail="No notes found")
 
+    book = book_repository.get(random_note.book_id)
+    if not book:
+        raise HTTPException(status_code=404, detail="No notes found")
+
     # Find similar notes using vector similarity
     similar_notes = note_repository.find_similar_notes(random_note, limit=3)
 
     # Use OpenAI client for generating additional context
     additional_context_result = await get_additional_context(
-        llm_client, random_note.book, random_note
+        llm_client, book, random_note
     )
 
     async def evaluate_response(
@@ -286,8 +291,8 @@ async def get_random_note_endpoint(
         evaluate_response, additional_context_result, evaluation_repository
     )
     return {
-        "book": random_note.book.title,
-        "author": random_note.book.author,
+        "book": book.title,
+        "author": book.author,
         "note": random_note.content,
         "additional_context": additional_context_result.response,
         "related_notes": [
@@ -322,6 +327,7 @@ async def get_random_note_endpoint(
 async def search_notes(
     q: str,
     limit: int = 10,
+    book_repository: BookRepositoryInterface = Depends(get_book_repository),
     note_repository: NoteRepositoryInterface = Depends(get_note_repository),
     embedding_client: EmbeddingClientInterface = Depends(get_embedding_client),
 ) -> dict[str, Any]:
@@ -336,24 +342,22 @@ async def search_notes(
         query_embedding, limit=limit, similarity_threshold=0.7
     )
 
+    book_ids = [n.book_id for n in similar_notes]
+    fetched_books = book_repository.get_by_ids(book_ids)
+    fetched_books_dict = {b.id: b for b in fetched_books}
     # Group notes by book
     books_dict: dict[int, dict[str, Any]] = {}
 
     for note in similar_notes:
-        book_id = note.book.id
-        if book_id is None:
-            continue
+        book_id = note.book_id
         if book_id not in books_dict:
-            if note.book.id is None:
-                raise ValueError(
-                    f"Book {note.book.title} has no ID - database integrity issue"
-                )
+            fetched_book = fetched_books_dict[book_id]
             books_dict[book_id] = {
                 "book": BookResponse(
-                    id=note.book.id,
-                    title=note.book.title,
-                    author=note.book.author,
-                    created_at=note.book.created_at,
+                    id=note.book_id,
+                    title=fetched_book.title,
+                    author=fetched_book.author,
+                    created_at=fetched_book.created_at,
                 ),
                 "notes": [],
             }

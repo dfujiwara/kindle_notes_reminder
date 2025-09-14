@@ -5,7 +5,7 @@ from src.notebook_parser import parse_notebook_html, NotebookParseError
 from sqlmodel import Session
 from src.database import get_session
 from src.repositories.evaluation_repository import EvaluationRepository
-from src.repositories.models import Evaluation
+from src.repositories.models import Evaluation, BookResponse, BookWithNotesResponse
 from src.repositories.note_repository import NoteRepository
 from src.repositories.book_repository import BookRepository
 from src.repositories.interfaces import (
@@ -174,17 +174,18 @@ async def get_books(
 ):
     books = book_repository.list_books()
     note_count_dict = note_repository.get_note_counts_by_book_ids([b.id for b in books])
-    return {
-        "books": [
-            {
-                "id": book.id,
-                "title": book.title,
-                "author": book.author,
-                "note_count": note_count_dict.get(book.id, 0),
-            }
-            for book in books
-        ]
-    }
+    book_responses: list[BookWithNotesResponse] = []
+    for book in books:
+        book_responses.append(
+            BookWithNotesResponse(
+                id=book.id,
+                title=book.title,
+                author=book.author,
+                created_at=book.created_at,
+                note_count=note_count_dict.get(book.id, 0),
+            )
+        )
+    return {"books": book_responses}
 
 
 @app.get(
@@ -211,11 +212,12 @@ async def get_notes_by_book(
     notes = note_repository.get_by_book_id(book_id)
 
     return {
-        "book": {
-            "id": book.id,
-            "title": book.title,
-            "author": book.author,
-        },
+        "book": BookResponse(
+            id=book.id,
+            title=book.title,
+            author=book.author,
+            created_at=book.created_at,
+        ),
         "notes": [
             {"id": note.id, "content": note.content, "created_at": note.created_at}
             for note in notes
@@ -342,12 +344,17 @@ async def search_notes(
         if book_id is None:
             continue
         if book_id not in books_dict:
+            if note.book.id is None:
+                raise ValueError(
+                    f"Book {note.book.title} has no ID - database integrity issue"
+                )
             books_dict[book_id] = {
-                "book": {
-                    "id": note.book.id,
-                    "title": note.book.title,
-                    "author": note.book.author,
-                },
+                "book": BookResponse(
+                    id=note.book.id,
+                    title=note.book.title,
+                    author=note.book.author,
+                    created_at=note.book.created_at,
+                ),
                 "notes": [],
             }
 

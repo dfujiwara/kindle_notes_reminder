@@ -1,4 +1,4 @@
-from sqlmodel import Session, select
+from sqlmodel import Session, select, col
 from src.repositories.models import Book, BookCreate, BookRead
 from src.repositories.interfaces import BookRepositoryInterface
 
@@ -30,6 +30,11 @@ class BookRepository(BookRepositoryInterface):
 
     def list_books(self) -> list[BookRead]:
         statement = select(Book)
+        books = self.session.exec(statement).all()
+        return [BookRead.model_validate(book) for book in books]
+
+    def get_by_ids(self, book_ids: list[int]) -> list[BookRead]:
+        statement = select(Book).where(col(Book.id).in_(book_ids))
         books = self.session.exec(statement).all()
         return [BookRead.model_validate(book) for book in books]
 

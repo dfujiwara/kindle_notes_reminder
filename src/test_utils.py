@@ -77,8 +77,15 @@ class StubNoteRepository(NoteRepositoryInterface):
         self.notes.append(note_read)
         return note_read
 
-    def get(self, note_id: int) -> NoteRead | None:
-        return next((note for note in self.notes if note.id == note_id), None)
+    def get(self, note_id: int, book_id: int) -> NoteRead | None:
+        return next(
+            (
+                note
+                for note in self.notes
+                if note.id == note_id and note.book_id == book_id
+            ),
+            None,
+        )
 
     def list_notes(self) -> list[NoteRead]:
         return self.notes

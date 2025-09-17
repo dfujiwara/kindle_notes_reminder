@@ -29,8 +29,11 @@ class NoteRepository(NoteRepositoryInterface):
 
         return NoteRead.model_validate(db_note)
 
-    def get(self, note_id: int) -> NoteRead | None:
-        note = self.session.get(Note, note_id)
+    def get(self, note_id: int, book_id: int) -> NoteRead | None:
+        statement = (
+            select(Note).where(Note.id == note_id).where(Note.book_id == book_id)
+        )
+        note = self.session.exec(statement).first()
         if not note:
             return None
 

@@ -292,6 +292,77 @@ async def get_random_note_endpoint(
 
 
 @app.get(
+    "/books/{book_id}/notes/{note_id}",
+    tags=["books", "notes"],
+    summary="Get specific note with AI context",
+    description="""
+    Retrieve a specific note enhanced with AI-generated additional context and related notes.
+
+    This endpoint:
+    - Fetches the specified note by book_id and note_id
+    - Generates AI-powered additional context using OpenAI
+    - Finds related notes based on vector similarity
+    - Evaluates the AI response quality in the background
+    """,
+    response_description="Specific note with AI analysis and similar notes",
+    responses={
+        404: {"description": "Note not found or doesn't belong to the specified book"},
+        200: {"description": "Note with context retrieved successfully"},
+    },
+)
+async def get_note_with_context(
+    book_id: int,
+    note_id: int,
+    background_tasks: BackgroundTasks,
+    book_repository: BookRepositoryInterface = Depends(get_book_repository),
+    note_repository: NoteRepositoryInterface = Depends(get_note_repository),
+    evaluation_repository: EvaluationRepositoryInterface = Depends(
+        get_evaluation_repository
+    ),
+    llm_client: LLMClientInterface = Depends(get_llm_client),
+):
+    # Get the specific note, ensuring it belongs to the specified book
+    note = note_repository.get(book_id, note_id)
+    if not note:
+        raise HTTPException(
+            status_code=404,
+            detail="Note not found or doesn't belong to the specified book",
+        )
+
+    book = book_repository.get(book_id)
+    if not book:
+        raise HTTPException(status_code=404, detail="Book not found")
+
+    # Find similar notes using vector similarity
+    similar_notes = note_repository.find_similar_notes(note, limit=3)
+
+    # Use OpenAI client for generating additional context
+    additional_context_result = await get_additional_context(llm_client, book, note)
+
+    # Add evaluation task using consolidated function
+    background_tasks.add_task(
+        evaluate_response,
+        llm_client,
+        additional_context_result,
+        evaluation_repository,
+        note,
+    )
+    return {
+        "book": book.title,
+        "author": book.author,
+        "note": note.content,
+        "additional_context": additional_context_result.response,
+        "related_notes": [
+            {
+                "id": similar_note.id,
+                "content": similar_note.content,
+            }
+            for similar_note in similar_notes
+        ],
+    }
+
+
+@app.get(
     "/search",
     tags=["search"],
     summary="Semantic search across notes",

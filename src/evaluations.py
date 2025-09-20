@@ -9,8 +9,11 @@ Includes utilities for parsing evaluation responses and validating scores.
 """
 
 import logging
-from src.llm_interface import LLMClientInterface, LLMError
+from src.llm_interface import LLMClientInterface, LLMError, LLMPromptResponse
 from src.prompts import create_evaluation_prompt, SYSTEM_INSTRUCTIONS
+from src.repositories.interfaces import EvaluationRepositoryInterface
+from src.repositories.models import Evaluation, NoteRead
+
 
 logger = logging.getLogger(__name__)
 
@@ -135,3 +138,22 @@ async def evaluate_llm_response(
 
     # Parse the evaluation response to extract score and text
     return _parse_evaluation_response(evaluation_response)
+
+
+async def evaluate_response(
+    llm_client: LLMClientInterface,
+    llmInteraction: LLMPromptResponse,
+    repository: EvaluationRepositoryInterface,
+    note: NoteRead,
+):
+    result = await evaluate_llm_response(
+        llm_client, llmInteraction.prompt, llmInteraction.response
+    )
+    evaluation = Evaluation(
+        prompt=llmInteraction.prompt,
+        response=llmInteraction.response,
+        score=result[0],
+        analysis=result[1],
+        note_id=note.id,
+    )
+    repository.add(evaluation)

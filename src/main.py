@@ -5,7 +5,7 @@ from src.notebook_parser import parse_notebook_html, NotebookParseError
 from sqlmodel import Session
 from src.database import get_session
 from src.repositories.evaluation_repository import EvaluationRepository
-from src.repositories.models import Evaluation, BookResponse, BookWithNotesResponse
+from src.repositories.models import BookResponse, BookWithNotesResponse
 from src.repositories.note_repository import NoteRepository
 from src.repositories.book_repository import BookRepository
 from src.repositories.interfaces import (
@@ -17,8 +17,8 @@ from src.notebook_processor import process_notebook_result, ProcessedNotebookRes
 from src.additional_context import get_additional_context
 from src.openai_client import OpenAIClient, OpenAIEmbeddingClient
 from src.embedding_interface import EmbeddingClientInterface
-from src.llm_interface import LLMClientInterface, LLMPromptResponse
-from src.evaluations import evaluate_llm_response
+from src.llm_interface import LLMClientInterface
+from src.evaluations import evaluate_response
 
 app = FastAPI(
     title="Kindle Notes Archive and Notifier",
@@ -269,25 +269,12 @@ async def get_random_note_endpoint(
         llm_client, book, random_note
     )
 
-    async def evaluate_response(
-        llm_client: LLMClientInterface,
-        llmInteraction: LLMPromptResponse,
-        repository: EvaluationRepositoryInterface,
-    ):
-        result = await evaluate_llm_response(
-            llm_client, llmInteraction.prompt, llmInteraction.response
-        )
-        evaluation = Evaluation(
-            prompt=llmInteraction.prompt,
-            response=llmInteraction.response,
-            score=result[0],
-            analysis=result[1],
-            note_id=random_note.id,
-        )
-        repository.add(evaluation)
-
     background_tasks.add_task(
-        evaluate_response, llm_client, additional_context_result, evaluation_repository
+        evaluate_response,
+        llm_client,
+        additional_context_result,
+        evaluation_repository,
+        random_note,
     )
     return {
         "book": book.title,

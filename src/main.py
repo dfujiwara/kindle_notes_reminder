@@ -270,25 +270,24 @@ async def get_random_note_endpoint(
     )
 
     async def evaluate_response(
-        llmInteraction: LLMPromptResponse, repository: EvaluationRepositoryInterface
+        llm_client: LLMClientInterface,
+        llmInteraction: LLMPromptResponse,
+        repository: EvaluationRepositoryInterface,
     ):
         result = await evaluate_llm_response(
             llm_client, llmInteraction.prompt, llmInteraction.response
         )
-        note_id = random_note.id
-        if not note_id:
-            raise AssertionError("Random note ID should always be set at this point")
         evaluation = Evaluation(
             prompt=llmInteraction.prompt,
             response=llmInteraction.response,
             score=result[0],
             analysis=result[1],
-            note_id=note_id,
+            note_id=random_note.id,
         )
         repository.add(evaluation)
 
     background_tasks.add_task(
-        evaluate_response, additional_context_result, evaluation_repository
+        evaluate_response, llm_client, additional_context_result, evaluation_repository
     )
     return {
         "book": book.title,

@@ -5,7 +5,7 @@ from src.notebook_parser import parse_notebook_html, NotebookParseError
 from sqlmodel import Session
 from src.database import get_session
 from src.repositories.evaluation_repository import EvaluationRepository
-from src.repositories.models import BookResponse, BookWithNotesResponse
+from src.repositories.models import BookResponse, BookWithNotesResponse, NoteResponse
 from src.repositories.note_repository import NoteRepository
 from src.repositories.book_repository import BookRepository
 from src.repositories.interfaces import (
@@ -219,7 +219,7 @@ async def get_notes_by_book(
             created_at=book.created_at,
         ),
         "notes": [
-            {"id": note.id, "content": note.content, "created_at": note.created_at}
+            NoteResponse(id=note.id, content=note.content, created_at=note.created_at)
             for note in notes
         ],
     }
@@ -283,7 +283,11 @@ async def get_random_note_endpoint(
             author=book.author,
             created_at=book.created_at,
         ),
-        "note": random_note.content,
+        "note": NoteResponse(
+            id=random_note.id,
+            content=random_note.content,
+            created_at=random_note.created_at,
+        ),
         "additional_context": additional_context_result.response,
         "related_notes": [
             {
@@ -355,13 +359,16 @@ async def get_note_with_context(
         "book": BookResponse(
             id=book.id, title=book.title, author=book.author, created_at=book.created_at
         ),
-        "note": note.content,
+        "note": NoteResponse(
+            id=note.id, content=note.content, created_at=note.created_at
+        ),
         "additional_context": additional_context_result.response,
         "related_notes": [
-            {
-                "id": similar_note.id,
-                "content": similar_note.content,
-            }
+            NoteResponse(
+                id=similar_note.id,
+                content=similar_note.content,
+                created_at=similar_note.created_at,
+            )
             for similar_note in similar_notes
         ],
     }

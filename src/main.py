@@ -19,6 +19,9 @@ from src.openai_client import OpenAIClient, OpenAIEmbeddingClient
 from src.embedding_interface import EmbeddingClientInterface
 from src.llm_interface import LLMClientInterface
 from src.evaluations import evaluate_response
+import logging
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="Kindle Notes Archive and Notifier",
@@ -206,6 +209,7 @@ async def get_notes_by_book(
 ):
     book = book_repository.get(book_id)
     if not book:
+        logger.error(f"Error finding a book with an id of {book_id}")
         raise HTTPException(status_code=404, detail="Book not found")
 
     # Get all notes for the book
@@ -255,10 +259,12 @@ async def get_random_note_endpoint(
 ):
     random_note = note_repository.get_random()
     if not random_note:
+        logger.error("Error finding a random note")
         raise HTTPException(status_code=404, detail="No notes found")
 
     book = book_repository.get(random_note.book_id)
     if not book:
+        logger.error(f"Error finding a book with an id of {random_note.book_id}")
         raise HTTPException(status_code=404, detail="No notes found")
 
     # Find similar notes using vector similarity
@@ -330,8 +336,11 @@ async def get_note_with_context(
     llm_client: LLMClientInterface = Depends(get_llm_client),
 ):
     # Get the specific note, ensuring it belongs to the specified book
-    note = note_repository.get(book_id, note_id)
+    note = note_repository.get(book_id=book_id, note_id=note_id)
     if not note:
+        logger.error(
+            f"Error finding a note with an id of {note_id} in a book of {book_id}"
+        )
         raise HTTPException(
             status_code=404,
             detail="Note not found or doesn't belong to the specified book",
@@ -339,6 +348,7 @@ async def get_note_with_context(
 
     book = book_repository.get(book_id)
     if not book:
+        logger.error(f"Error finding a book with an id of {book_id}")
         raise HTTPException(status_code=404, detail="Book not found")
 
     # Find similar notes using vector similarity

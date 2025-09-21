@@ -277,8 +277,12 @@ async def get_random_note_endpoint(
         random_note,
     )
     return {
-        "book": book.title,
-        "author": book.author,
+        "book": BookResponse(
+            id=book.id,
+            title=book.title,
+            author=book.author,
+            created_at=book.created_at,
+        ),
         "note": random_note.content,
         "additional_context": additional_context_result.response,
         "related_notes": [
@@ -348,8 +352,9 @@ async def get_note_with_context(
         note,
     )
     return {
-        "book": book.title,
-        "author": book.author,
+        "book": BookResponse(
+            id=book.id, title=book.title, author=book.author, created_at=book.created_at
+        ),
         "note": note.content,
         "additional_context": additional_context_result.response,
         "related_notes": [

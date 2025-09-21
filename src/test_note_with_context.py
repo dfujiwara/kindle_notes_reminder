@@ -96,8 +96,12 @@ def test_get_note_with_context_success(setup_dependencies: SetupFunction):
     data = response.json()
 
     # Check content
-    assert data["book"] == "Test Book"
-    assert data["author"] == "Test Author"
+    assert data["book"] == {
+        "id": book.id,
+        "title": "Test Book",
+        "author": "Test Author",
+        "created_at": book.created_at.isoformat().replace("+00:00", "Z"),
+    }
     assert data["note"] == "Primary note content"
     assert (
         data["additional_context"]
@@ -192,8 +196,12 @@ def test_get_note_with_context_single_note(setup_dependencies: SetupFunction):
     assert response.status_code == 200
     data = response.json()
 
-    assert data["book"] == "Solo Book"
-    assert data["author"] == "Solo Author"
+    assert data["book"] == {
+        "id": book.id,
+        "title": "Solo Book",
+        "author": "Solo Author",
+        "created_at": book.created_at.isoformat().replace("+00:00", "Z"),
+    }
     assert data["note"] == "Only note content"
     assert data["additional_context"] == "Context for single note"
 
@@ -229,7 +237,6 @@ def test_get_note_with_context_response_structure(setup_dependencies: SetupFunct
     # Check that only expected fields are present at top level
     expected_fields = {
         "book",
-        "author",
         "note",
         "additional_context",
         "related_notes",

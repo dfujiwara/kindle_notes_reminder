@@ -97,14 +97,17 @@ def test_get_random_note_success(setup_dependencies: SetupFunction):
 
     # Check response structure
     assert "book" in data
-    assert "author" in data
     assert "note" in data
     assert "additional_context" in data
     assert "related_notes" in data
 
     # Check content
-    assert data["book"] == "Test Book"
-    assert data["author"] == "Test Author"
+    assert data["book"] == {
+        "id": book.id,
+        "title": "Test Book",
+        "author": "Test Author",
+        "created_at": book.created_at.isoformat().replace("+00:00", "Z"),
+    }
     assert data["note"] == "Primary note content"
     assert data["additional_context"] == "This is additional context about the note"
 
@@ -152,8 +155,12 @@ def test_get_random_note_single_note(setup_dependencies: SetupFunction):
     assert response.status_code == 200
     data = response.json()
 
-    assert data["book"] == "Solo Book"
-    assert data["author"] == "Solo Author"
+    assert data["book"] == {
+        "id": book.id,
+        "title": "Solo Book",
+        "author": "Solo Author",
+        "created_at": book.created_at.isoformat().replace("+00:00", "Z"),
+    }
     assert data["note"] == "Only note content"
     assert data["additional_context"] == "Context for single note"
 
@@ -201,8 +208,12 @@ def test_get_random_note_multiple_books(setup_dependencies: SetupFunction):
     assert response.status_code == 200
     data = response.json()
 
-    assert data["book"] == "Book One"
-    assert data["author"] == "Author One"
+    assert data["book"] == {
+        "id": book1.id,
+        "title": "Book One",
+        "author": "Author One",
+        "created_at": book1.created_at.isoformat().replace("+00:00", "Z"),
+    }
     assert data["note"] == "Note from book 1"
     assert data["additional_context"] == "Cross-book context"
 
@@ -239,7 +250,6 @@ def test_get_random_note_response_structure(setup_dependencies: SetupFunction):
     # Check that only expected fields are present at top level
     expected_fields = {
         "book",
-        "author",
         "note",
         "additional_context",
         "related_notes",

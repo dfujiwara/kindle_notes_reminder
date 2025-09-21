@@ -101,6 +101,12 @@ class NoteRead(NoteBase):
     created_at: datetime
 
 
+class NoteResponse(SQLModel):
+    id: int
+    content: str
+    created_at: datetime
+
+
 class Evaluation(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     score: float = Field(ge=0.0, le=1.0)

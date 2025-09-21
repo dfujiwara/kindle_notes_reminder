@@ -102,7 +102,11 @@ def test_get_note_with_context_success(setup_dependencies: SetupFunction):
         "author": "Test Author",
         "created_at": book.created_at.isoformat().replace("+00:00", "Z"),
     }
-    assert data["note"] == "Primary note content"
+    assert data["note"] == {
+        "id": added_note1.id,
+        "content": "Primary note content",
+        "created_at": added_note1.created_at.isoformat().replace("+00:00", "Z"),
+    }
     assert (
         data["additional_context"]
         == "This is additional context about the specific note"
@@ -202,7 +206,11 @@ def test_get_note_with_context_single_note(setup_dependencies: SetupFunction):
         "author": "Solo Author",
         "created_at": book.created_at.isoformat().replace("+00:00", "Z"),
     }
-    assert data["note"] == "Only note content"
+    assert data["note"] == {
+        "id": added_note.id,
+        "content": "Only note content",
+        "created_at": added_note.created_at.isoformat().replace("+00:00", "Z"),
+    }
     assert data["additional_context"] == "Context for single note"
 
     # Should have no related notes since there's only one note

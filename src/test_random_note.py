@@ -85,7 +85,7 @@ def test_get_random_note_success(setup_dependencies: SetupFunction):
         content_hash="hash2",
         book_id=book.id,
     )
-    note_repo.add(note1)
+    added_note1 = note_repo.add(note1)
     note_repo.add(note2)
 
     # Make the request
@@ -108,7 +108,11 @@ def test_get_random_note_success(setup_dependencies: SetupFunction):
         "author": "Test Author",
         "created_at": book.created_at.isoformat().replace("+00:00", "Z"),
     }
-    assert data["note"] == "Primary note content"
+    assert data["note"] == {
+        "id": added_note1.id,
+        "content": "Primary note content",
+        "created_at": added_note1.created_at.isoformat().replace("+00:00", "Z"),
+    }
     assert data["additional_context"] == "This is additional context about the note"
 
     # Check related notes (should be note2 since note1 is the primary)
@@ -146,7 +150,7 @@ def test_get_random_note_single_note(setup_dependencies: SetupFunction):
         content_hash="hash1",
         book_id=book.id,
     )
-    note_repo.add(note)
+    added_note = note_repo.add(note)
 
     # Make the request
     response = client.get("/random")
@@ -161,7 +165,11 @@ def test_get_random_note_single_note(setup_dependencies: SetupFunction):
         "author": "Solo Author",
         "created_at": book.created_at.isoformat().replace("+00:00", "Z"),
     }
-    assert data["note"] == "Only note content"
+    assert data["note"] == {
+        "id": added_note.id,
+        "content": "Only note content",
+        "created_at": added_note.created_at.isoformat().replace("+00:00", "Z"),
+    }
     assert data["additional_context"] == "Context for single note"
 
     # Should have no related notes since there's only one note
@@ -197,7 +205,7 @@ def test_get_random_note_multiple_books(setup_dependencies: SetupFunction):
         book_id=book2.id,
     )
 
-    note_repo.add(note1)
+    added_note1 = note_repo.add(note1)
     note_repo.add(note2)
     note_repo.add(note3)
 
@@ -214,7 +222,11 @@ def test_get_random_note_multiple_books(setup_dependencies: SetupFunction):
         "author": "Author One",
         "created_at": book1.created_at.isoformat().replace("+00:00", "Z"),
     }
-    assert data["note"] == "Note from book 1"
+    assert data["note"] == {
+        "id": added_note1.id,
+        "content": "Note from book 1",
+        "created_at": added_note1.created_at.isoformat().replace("+00:00", "Z"),
+    }
     assert data["additional_context"] == "Cross-book context"
 
     # Should only include related notes from the same book

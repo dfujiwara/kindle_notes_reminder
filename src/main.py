@@ -5,7 +5,12 @@ from src.notebook_parser import parse_notebook_html, NotebookParseError
 from sqlmodel import Session
 from src.database import get_session
 from src.repositories.evaluation_repository import EvaluationRepository
-from src.repositories.models import BookResponse, BookWithNotesResponse, NoteResponse
+from src.repositories.models import (
+    BookResponse,
+    BookWithNotesResponse,
+    NoteResponse,
+    NoteWithContextResponse,
+)
 from src.repositories.note_repository import NoteRepository
 from src.repositories.book_repository import BookRepository
 from src.repositories.interfaces import (
@@ -256,7 +261,7 @@ async def get_random_note_endpoint(
         get_evaluation_repository
     ),
     llm_client: LLMClientInterface = Depends(get_llm_client),
-):
+) -> NoteWithContextResponse:
     random_note = note_repository.get_random()
     if not random_note:
         logger.error("Error finding a random note")
@@ -282,27 +287,28 @@ async def get_random_note_endpoint(
         evaluation_repository,
         random_note,
     )
-    return {
-        "book": BookResponse(
+    return NoteWithContextResponse(
+        book=BookResponse(
             id=book.id,
             title=book.title,
             author=book.author,
             created_at=book.created_at,
         ),
-        "note": NoteResponse(
+        note=NoteResponse(
             id=random_note.id,
             content=random_note.content,
             created_at=random_note.created_at,
         ),
-        "additional_context": additional_context_result.response,
-        "related_notes": [
-            {
-                "id": note.id,
-                "content": note.content,
-            }
+        additional_context=additional_context_result.response,
+        related_notes=[
+            NoteResponse(
+                id=note.id,
+                content=note.content,
+                created_at=note.created_at,
+            )
             for note in similar_notes
         ],
-    }
+    )
 
 
 @app.get(
@@ -334,7 +340,7 @@ async def get_note_with_context(
         get_evaluation_repository
     ),
     llm_client: LLMClientInterface = Depends(get_llm_client),
-):
+) -> NoteWithContextResponse:
     # Get the specific note, ensuring it belongs to the specified book
     note = note_repository.get(book_id=book_id, note_id=note_id)
     if not note:
@@ -365,15 +371,13 @@ async def get_note_with_context(
         evaluation_repository,
         note,
     )
-    return {
-        "book": BookResponse(
+    return NoteWithContextResponse(
+        book=BookResponse(
             id=book.id, title=book.title, author=book.author, created_at=book.created_at
         ),
-        "note": NoteResponse(
-            id=note.id, content=note.content, created_at=note.created_at
-        ),
-        "additional_context": additional_context_result.response,
-        "related_notes": [
+        note=NoteResponse(id=note.id, content=note.content, created_at=note.created_at),
+        additional_context=additional_context_result.response,
+        related_notes=[
             NoteResponse(
                 id=similar_note.id,
                 content=similar_note.content,
@@ -381,7 +385,7 @@ async def get_note_with_context(
             )
             for similar_note in similar_notes
         ],
-    }
+    )
 
 
 @app.get(

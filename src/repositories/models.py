@@ -107,6 +107,13 @@ class NoteResponse(SQLModel):
     created_at: datetime
 
 
+class NoteWithContextResponse(SQLModel):
+    book: BookResponse
+    note: NoteResponse
+    additional_context: str
+    related_notes: list[NoteResponse]
+
+
 class Evaluation(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     score: float = Field(ge=0.0, le=1.0)

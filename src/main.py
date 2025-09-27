@@ -253,7 +253,7 @@ async def get_notes_by_book(
         200: {"description": "Random note with context retrieved successfully"},
     },
 )
-async def get_random_note_endpoint(
+async def get_random_note(
     background_tasks: BackgroundTasks,
     book_repository: BookRepositoryInterface = Depends(get_book_repository),
     note_repository: NoteRepositoryInterface = Depends(get_note_repository),

@@ -35,14 +35,9 @@ class Book(BookBase, table=True):
     notes: list["Note"] = Relationship(back_populates="book")
 
 
-class BookRead(BookBase):
-    """Model for reading books (id is guaranteed to exist)"""
-
-    id: int
-    created_at: datetime
-
-
 class BookResponse(SQLModel):
+    """Model for API responses (id is guaranteed to exist)"""
+
     id: int
     title: str
     author: str
@@ -95,13 +90,15 @@ class Note(NoteBase, table=True):
 
 
 class NoteRead(NoteBase):
-    """Model for reading notes (id is guaranteed to exist)"""
+    """Model for repository operations (id is guaranteed to exist)"""
 
     id: int
     created_at: datetime
 
 
 class NoteResponse(SQLModel):
+    """Model for API responses (id is guaranteed to exist)"""
+
     id: int
     content: str
     created_at: datetime

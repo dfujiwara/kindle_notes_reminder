@@ -114,6 +114,17 @@ class NoteWithContextResponse(SQLModel):
     related_notes: list[NoteResponse]
 
 
+class BookWithNoteResponses(SQLModel):
+    book: BookResponse
+    notes: list[NoteResponse]
+
+
+class SearchResult(SQLModel):
+    query: str
+    results: list[BookWithNoteResponses]
+    count: int
+
+
 class Evaluation(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     score: float = Field(ge=0.0, le=1.0)

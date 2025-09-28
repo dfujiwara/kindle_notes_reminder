@@ -3,7 +3,6 @@ from src.notebook_processor import process_notebook_result
 from src.notebook_parser import NotebookParseResult
 from src.test_utils import StubBookRepository, StubNoteRepository, StubEmbeddingClient
 from src.embedding_interface import EmbeddingError
-import hashlib
 
 
 @pytest.mark.asyncio
@@ -27,14 +26,11 @@ async def test_process_notebook_result_success():
     )
 
     # Assertions
-    assert processed_result["book"]["title"] == "Sample Book"
-    assert processed_result["book"]["author"] == "Author Name"
-    assert len(processed_result["notes"]) == 2
-    assert processed_result["notes"][0]["content"] == "Note 1"
-    assert processed_result["notes"][1]["content"] == "Note 2"
-    assert (
-        "embedding" not in processed_result["notes"][0]
-    )  # Embedding should be excluded
+    assert processed_result.book.title == "Sample Book"
+    assert processed_result.book.author == "Author Name"
+    assert len(processed_result.notes) == 2
+    assert processed_result.notes[0].content == "Note 1"
+    assert processed_result.notes[1].content == "Note 2"
 
 
 @pytest.mark.asyncio
@@ -58,31 +54,16 @@ async def test_process_notebook_result_return_value():
     )
 
     # Assertions for the book
-    assert returned_value["book"] == {
-        "id": 1,
-        "title": "Sample Book",
-        "author": "Author Name",
-    }
+    assert returned_value.book.id == 1
+    assert returned_value.book.title == "Sample Book"
+    assert returned_value.book.author == "Author Name"
 
     # Assertions for the notes
-    expected_notes = [
-        {
-            "id": 1,
-            "book_id": 1,
-            "content": "Note 1",
-            "content_hash": hashlib.sha256("Note 1".encode("utf-8")).hexdigest(),
-        },
-        {
-            "id": 2,
-            "book_id": 1,
-            "content": "Note 2",
-            "content_hash": hashlib.sha256("Note 2".encode("utf-8")).hexdigest(),
-        },
-    ]
-
-    assert len(returned_value["notes"]) == len(expected_notes)
-    for note, expected in zip(returned_value["notes"], expected_notes):
-        assert note == expected
+    assert len(returned_value.notes) == 2
+    assert returned_value.notes[0].id == 1
+    assert returned_value.notes[0].content == "Note 1"
+    assert returned_value.notes[1].id == 2
+    assert returned_value.notes[1].content == "Note 2"
 
 
 @pytest.mark.asyncio

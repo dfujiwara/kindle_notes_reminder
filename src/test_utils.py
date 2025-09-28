@@ -7,7 +7,7 @@ that can be used across different test files.
 
 from src.repositories.models import (
     BookCreate,
-    BookRead,
+    BookResponse,
     NoteCreate,
     NoteRead,
     Evaluation,
@@ -27,9 +27,9 @@ class StubBookRepository(BookRepositoryInterface):
     """Stub implementation of BookRepository for testing."""
 
     def __init__(self, include_sample_book: bool = False):
-        self.books: list[BookRead] = []
+        self.books: list[BookResponse] = []
         if include_sample_book:
-            sample_book = BookRead(
+            sample_book = BookResponse(
                 id=1,
                 title="The Pragmatic Programmer",
                 author="David Thomas",
@@ -37,8 +37,8 @@ class StubBookRepository(BookRepositoryInterface):
             )
             self.books.append(sample_book)
 
-    def add(self, book: BookCreate) -> BookRead:
-        book_read = BookRead(
+    def add(self, book: BookCreate) -> BookResponse:
+        book_read = BookResponse(
             id=len(self.books) + 1,
             title=book.title,
             author=book.author,
@@ -47,13 +47,13 @@ class StubBookRepository(BookRepositoryInterface):
         self.books.append(book_read)
         return book_read
 
-    def get(self, book_id: int) -> BookRead | None:
+    def get(self, book_id: int) -> BookResponse | None:
         return next((book for book in self.books if book.id == book_id), None)
 
-    def list_books(self) -> list[BookRead]:
+    def list_books(self) -> list[BookResponse]:
         return self.books
 
-    def get_by_ids(self, book_ids: list[int]) -> list[BookRead]:
+    def get_by_ids(self, book_ids: list[int]) -> list[BookResponse]:
         return [b for b in self.books if b.id in book_ids]
 
     def delete(self, book_id: int) -> None:

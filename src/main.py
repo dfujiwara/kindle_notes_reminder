@@ -19,7 +19,7 @@ from src.repositories.interfaces import (
     EvaluationRepositoryInterface,
     NoteRepositoryInterface,
 )
-from src.notebook_processor import process_notebook_result, ProcessedNotebookResult
+from src.notebook_processor import process_notebook_result
 from src.additional_context import get_additional_context
 from src.openai_client import OpenAIClient, OpenAIEmbeddingClient
 from src.embedding_interface import EmbeddingClientInterface
@@ -132,7 +132,7 @@ async def health_check():
 
 
 @app.post(
-    "/notebooks",
+    "/books",
     tags=["notebooks"],
     summary="Upload Kindle notebook",
     description="""
@@ -150,12 +150,12 @@ async def health_check():
         200: {"description": "Notebook processed successfully"},
     },
 )
-async def parse_notebook_endpoint(
+async def parse_notes(
     file: UploadFile = File(...),
     book_repository: BookRepositoryInterface = Depends(get_book_repository),
     note_repository: NoteRepositoryInterface = Depends(get_note_repository),
     embedding_client: EmbeddingClientInterface = Depends(get_embedding_client),
-) -> ProcessedNotebookResult:
+) -> BookWithNoteResponses:
     html_content = await file.read()
     try:
         # Attempt to parse the notebook HTML content

@@ -1,6 +1,5 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException, Depends, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
-from typing import Any
 from src.notebook_parser import parse_notebook_html, NotebookParseError
 from sqlmodel import Session
 from src.database import get_session
@@ -10,6 +9,8 @@ from src.repositories.models import (
     BookWithNotesResponse,
     NoteResponse,
     NoteWithContextResponse,
+    BookWithNoteResponses,
+    SearchResult,
 )
 from src.repositories.note_repository import NoteRepository
 from src.repositories.book_repository import BookRepository
@@ -413,7 +414,7 @@ async def search_notes(
     book_repository: BookRepositoryInterface = Depends(get_book_repository),
     note_repository: NoteRepositoryInterface = Depends(get_note_repository),
     embedding_client: EmbeddingClientInterface = Depends(get_embedding_client),
-) -> dict[str, Any]:
+) -> SearchResult:
     # Validate limit
     limit = min(limit, 50)
 
@@ -429,30 +430,25 @@ async def search_notes(
     fetched_books = book_repository.get_by_ids(book_ids)
     fetched_books_dict = {b.id: b for b in fetched_books}
     # Group notes by book
-    books_dict: dict[int, dict[str, Any]] = {}
+    books_dict: dict[int, BookWithNoteResponses] = {}
 
     for note in similar_notes:
         book_id = note.book_id
         if book_id not in books_dict:
             fetched_book = fetched_books_dict[book_id]
-            books_dict[book_id] = {
-                "book": BookResponse(
-                    id=note.book_id,
-                    title=fetched_book.title,
-                    author=fetched_book.author,
-                    created_at=fetched_book.created_at,
-                ),
-                "notes": [],
-            }
+            book_response = BookResponse(
+                id=note.book_id,
+                title=fetched_book.title,
+                author=fetched_book.author,
+                created_at=fetched_book.created_at,
+            )
 
-        books_dict[book_id]["notes"].append(
-            {
-                "id": note.id,
-                "content": note.content,
-            }
+            books_dict[book_id] = BookWithNoteResponses(book=book_response, notes=[])
+        books_dict[book_id].notes.append(
+            NoteResponse(id=note.id, content=note.content, created_at=note.created_at)
         )
 
     results = list(books_dict.values())
-    total_notes = sum(len(book["notes"]) for book in results)
+    total_notes = sum(len(book.notes) for book in results)
 
-    return {"query": q, "results": results, "count": total_notes}
+    return SearchResult(query=q, results=results, count=total_notes)

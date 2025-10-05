@@ -70,6 +70,7 @@ def parse_notebook_html(html_content: str) -> NotebookParseResult:
         for note in note_elements:
             notes.append(note.text.strip())
 
+        logger.info("Parsing of the notebook html successful")
         return NotebookParseResult(
             book_title=book_title,
             authors_str=authors_str,

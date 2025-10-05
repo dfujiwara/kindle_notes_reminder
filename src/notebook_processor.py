@@ -58,4 +58,5 @@ async def process_notebook_result(
         note = note_repo.add(note)
         notes.append(NoteResponse.model_validate(note))
 
+    logger.info("Successfully generated the processed book result")
     return BookWithNoteResponses(book=book_response, notes=notes)

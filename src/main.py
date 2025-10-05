@@ -26,6 +26,13 @@ from src.embedding_interface import EmbeddingClientInterface
 from src.llm_interface import LLMClientInterface
 from src.evaluations import evaluate_response
 import logging
+import os
+
+# Configure logging
+logging.basicConfig(
+    level=os.getenv("LOG_LEVEL", "INFO"),
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+)
 
 logger = logging.getLogger(__name__)
 

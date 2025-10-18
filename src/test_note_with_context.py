@@ -1,8 +1,8 @@
 import pytest
 from typing import Callable, Generator
 from fastapi.testclient import TestClient
-from .main import (
-    app,
+from .main import app
+from .dependencies import (
     get_book_repository,
     get_note_repository,
     get_llm_client,

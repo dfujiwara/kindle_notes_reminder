@@ -1,9 +1,6 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException, Depends, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from src.notebook_parser import parse_notebook_html, NotebookParseError
-from sqlmodel import Session
-from src.database import get_session
-from src.repositories.evaluation_repository import EvaluationRepository
 from src.repositories.models import (
     BookResponse,
     BookWithNotesResponse,
@@ -12,19 +9,23 @@ from src.repositories.models import (
     BookWithNoteResponses,
     SearchResult,
 )
-from src.repositories.note_repository import NoteRepository
-from src.repositories.book_repository import BookRepository
+from src.notebook_processor import process_notebook_result
+from src.additional_context import get_additional_context
+from src.evaluations import evaluate_response
+from src.dependencies import (
+    get_book_repository,
+    get_note_repository,
+    get_evaluation_repository,
+    get_embedding_client,
+    get_llm_client,
+)
 from src.repositories.interfaces import (
     BookRepositoryInterface,
     EvaluationRepositoryInterface,
     NoteRepositoryInterface,
 )
-from src.notebook_processor import process_notebook_result
-from src.additional_context import get_additional_context
-from src.openai_client import OpenAIClient, OpenAIEmbeddingClient
 from src.embedding_interface import EmbeddingClientInterface
 from src.llm_interface import LLMClientInterface
-from src.evaluations import evaluate_response
 import logging
 import os
 
@@ -98,33 +99,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
-# Dependency functions for repositories
-def get_book_repository(
-    session: Session = Depends(get_session),
-) -> BookRepositoryInterface:
-    return BookRepository(session)
-
-
-def get_note_repository(
-    session: Session = Depends(get_session),
-) -> NoteRepositoryInterface:
-    return NoteRepository(session)
-
-
-def get_evaluation_repository(
-    session: Session = Depends(get_session),
-) -> EvaluationRepositoryInterface:
-    return EvaluationRepository(session)
-
-
-def get_embedding_client() -> EmbeddingClientInterface:
-    return OpenAIEmbeddingClient()
-
-
-def get_llm_client() -> LLMClientInterface:
-    return OpenAIClient()
 
 
 @app.get(

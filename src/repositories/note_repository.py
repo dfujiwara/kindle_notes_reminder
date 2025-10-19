@@ -22,6 +22,7 @@ class NoteRepository(NoteRepositoryInterface):
             content=note.content,
             content_hash=note.content_hash,
             book_id=note.book_id,
+            embedding=note.embedding,
         )
         self.session.add(db_note)
         self.session.commit()

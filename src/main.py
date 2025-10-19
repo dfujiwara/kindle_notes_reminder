@@ -67,12 +67,17 @@ app = FastAPI(
 )
 
 # Configure CORS
+allowed_origins = [
+    "http://localhost:5173",  # Vite default dev server
+    "http://127.0.0.1:5173",  # IPv4 localhost variant
+]
+if production_origin := os.getenv("CORS_ALLOW_ORIGIN"):
+    allowed_origins = [production_origin]
+logger.info(f"CORS allowed_origins setting is {allowed_origins}")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",  # Vite default dev server
-        "http://127.0.0.1:5173",  # IPv4 localhost variant
-    ],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -101,10 +101,18 @@ This project uses `uv` for Python package management:
 ### Environment Setup
 - Requires `OPENAI_API_KEY` environment variable
 - Database URL configurable via `DATABASE_URL`
+- Optional `CORS_ALLOW_ORIGIN` environment variable for production CORS configuration
+- Optional `LOG_LEVEL` environment variable for logging configuration (defaults to INFO)
 - Docker Compose provides complete development environment
 
 ### Key Files
-- `src/main.py` - FastAPI application and 6 main endpoints
+- `src/main.py` - FastAPI application with router configuration and CORS setup
+- `src/routers/` - Modular API endpoint routers organized by domain
+  - `general.py` - Health check endpoints
+  - `notebooks.py` - Notebook upload and processing
+  - `books.py` - Book listing and notes retrieval
+  - `notes.py` - Random and specific note retrieval with AI context
+  - `search.py` - Semantic search functionality
 - `src/repositories/models.py` - SQLModel database models (Book, Note, Evaluation)
 - `src/notebook_parser.py` - HTML notebook parsing logic
 - `src/notebook_processor.py` - Business logic for processing parsed notebooks
@@ -113,6 +121,7 @@ This project uses `uv` for Python package management:
 - `src/evaluations.py` - LLM response evaluation system
 - `src/llm_interface.py` - LLM client interface abstraction
 - `src/embedding_interface.py` - Embedding client interface abstraction
+- `src/dependencies.py` - Dependency injection setup for repositories and clients
 - `src/prompts.py` - Prompt templates for LLM interactions
 - `src/database.py` - Database connection and session management
 - `src/types.py` - Type definitions and custom types
@@ -120,10 +129,21 @@ This project uses `uv` for Python package management:
 - `migrations/` - Alembic database migrations
 
 ### API Endpoints
-- `POST /notebooks` - Upload and process Kindle HTML notebook files
-- `GET /books` - List all processed books with note counts  
-- `GET /books/{book_id}/notes` - Get all notes for a specific book
-- `GET /random` - Get a random note with AI-generated additional context and similar notes
-- `GET /search?q={query}&limit={limit}` - Semantic search across all notes using embeddings
-- `GET /` - Welcome message
+The application provides 8 main endpoints organized across 5 routers:
+
+**General**
 - `GET /health` - Health check endpoint
+
+**Notebooks**
+- `POST /books` - Upload and process Kindle HTML notebook files
+
+**Books**
+- `GET /books` - List all processed books with note counts
+- `GET /books/{book_id}/notes` - Get all notes for a specific book
+
+**Notes**
+- `GET /random` - Get a random note with AI-generated additional context and similar notes
+- `GET /books/{book_id}/notes/{note_id}` - Get a specific note with AI-generated context and related notes
+
+**Search**
+- `GET /search?q={query}&limit={limit}` - Semantic search across all notes using embeddings (max limit: 50, similarity threshold: 0.7)

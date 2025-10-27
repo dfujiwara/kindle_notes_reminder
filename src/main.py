@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from src.routers import general, notebooks, books, notes, search
+from src.cors_config import get_cors_config
 import logging
 import os
 
@@ -67,23 +68,8 @@ app = FastAPI(
 )
 
 # Configure CORS
-allowed_origins = [
-    "http://localhost:5173",  # Vite default dev server
-    "http://127.0.0.1:5173",  # IPv4 localhost variant
-    "http://localhost:4173",  # Vite production preview server
-    "http://127.0.0.1:4173",  # IPv4 localhost variant
-]
-if production_origin := os.getenv("CORS_ALLOW_ORIGIN"):
-    allowed_origins = [production_origin]
-logger.info(f"CORS allowed_origins setting is {allowed_origins}")
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=allowed_origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+cors_config = get_cors_config(production_origin=os.getenv("CORS_ALLOW_ORIGIN"))
+app.add_middleware(CORSMiddleware, **cors_config)
 
 # Include routers
 app.include_router(general.router)

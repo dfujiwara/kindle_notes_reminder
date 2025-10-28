@@ -17,6 +17,10 @@ RUN uv venv && \
 # Copy application code
 COPY src/ ./src/
 
+# Copy migration files
+COPY alembic.ini ./
+COPY migrations/ ./migrations/
+
 # Set environment variables
 ENV PATH="/app/.venv/bin:$PATH"
 ENV PYTHONPATH="/app"

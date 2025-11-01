@@ -4,7 +4,7 @@ from sqlmodel import SQLModel, create_engine, Session
 
 # Read DATABASE_URL environment variable or use default psycopg2 URL
 DATABASE_URL: str = os.getenv(
-    "DATABASE_URL", "postgresql+psycopg2://postgres:postgres@localhost:5432/fastapi"
+    "DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/fastapi"
 )
 
 # Create synchronous engine

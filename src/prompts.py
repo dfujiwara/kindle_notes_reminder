@@ -12,14 +12,14 @@ SYSTEM_INSTRUCTIONS = {
 
 Your role is to:
 - Explain the key concept in 2-3 concise sentences
-- Provide a concrete real-world example or analogy
+- Provide 2-3 concrete real-world examples or analogies
 - Connect the idea to broader themes when relevant
 
-Keep responses focused, practical, and under 150 words.
+Keep responses focused, practical, and under 200 words.
 
 Format your response in markdown:
 - **Key Concept:** [2-3 sentence explanation]
-- **Example:** [Concrete real-world example or analogy]
+- **Examples:** [2-3 concrete real-world examples or analogies, as a bulleted list]
 - **Connection:** [Optional: Broader theme links]""",
 }
 

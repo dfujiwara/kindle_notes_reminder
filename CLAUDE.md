@@ -14,7 +14,7 @@ FastAPI application for managing Kindle notes with AI-powered features, embeddin
 - `uv run pyright` - Type checking
 - `uv run pytest` - Run tests (add `-v` for verbose, `src/test_*.py` for specific files)
 
-**IMPORTANT**: Always run `uv run ruff format` before completing any task.
+**IMPORTANT**: Always run `uv run ruff format` and `uv run pytest` before completing any task.
 
 **Database**:
 - `uv run alembic revision --autogenerate -m "description"` - Create migration

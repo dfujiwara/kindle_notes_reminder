@@ -8,7 +8,14 @@ utilities used throughout the application.
 # System instructions for different LLM roles
 SYSTEM_INSTRUCTIONS = {
     "evaluator": "You are an expert evaluator of AI responses. Provide objective, constructive evaluations.",
-    "context_provider": "You are helping a user remember the concept highlighted in a given book. Please provide some additional context and use some examples so that it will be easier for the user to understand it more.",
+    "context_provider": """You are a learning assistant helping readers deepen their understanding of highlighted book passages.
+
+Your role is to:
+- Explain the key concept in 2-3 concise sentences
+- Provide a concrete real-world example or analogy
+- Connect the idea to broader themes when relevant
+
+Keep responses focused, practical, and under 150 words.""",
 }
 
 
@@ -55,4 +62,9 @@ def create_context_prompt(book_title: str, note_content: str) -> str:
     Returns:
         A formatted context generation prompt string
     """
-    return f"Based on the following notes from the notebook titled '{book_title}': {note_content}, can you provide additional context or insights?"
+    return f"""Book: "{book_title}"
+
+Highlighted passage:
+"{note_content}"
+
+Explain this concept clearly and provide a practical example that makes it memorable."""

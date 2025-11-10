@@ -59,6 +59,8 @@ def test_context_prompt_structure():
     book_title = "Test Book"
     note_content = "Test note content"
     prompt = create_context_prompt(book_title, note_content)
-    assert "notebook titled" in prompt
-    assert "additional context" in prompt
-    assert "insights" in prompt
+    assert "Book:" in prompt
+    assert "Highlighted passage:" in prompt
+    assert "Explain this concept clearly" in prompt
+    assert "practical example" in prompt
+    assert "memorable" in prompt

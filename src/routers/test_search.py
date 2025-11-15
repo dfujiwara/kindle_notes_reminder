@@ -3,10 +3,14 @@ Unit tests for the /search endpoint.
 """
 
 from fastapi.testclient import TestClient
-from .main import app
-from .dependencies import get_book_repository, get_note_repository, get_embedding_client
-from .repositories.models import BookCreate, NoteCreate
-from .test_utils import StubBookRepository, StubNoteRepository, StubEmbeddingClient
+from ..main import app
+from ..dependencies import (
+    get_book_repository,
+    get_note_repository,
+    get_embedding_client,
+)
+from ..repositories.models import BookCreate, NoteCreate
+from ..test_utils import StubBookRepository, StubNoteRepository, StubEmbeddingClient
 
 client = TestClient(app)
 

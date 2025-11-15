@@ -1,8 +1,8 @@
 from fastapi.testclient import TestClient
-from .main import app
-from .dependencies import get_note_repository, get_book_repository
-from .repositories.models import NoteCreate, BookCreate
-from .test_utils import StubNoteRepository, StubBookRepository
+from ..main import app
+from ..dependencies import get_note_repository, get_book_repository
+from ..repositories.models import NoteCreate, BookCreate
+from ..test_utils import StubNoteRepository, StubBookRepository
 
 client = TestClient(app)
 

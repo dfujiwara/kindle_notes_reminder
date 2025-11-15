@@ -1,15 +1,15 @@
 import pytest
 from typing import Callable, Generator
 from fastapi.testclient import TestClient
-from .main import app
-from .dependencies import (
+from ..main import app
+from ..dependencies import (
     get_book_repository,
     get_note_repository,
     get_llm_client,
     get_evaluation_repository,
 )
-from .repositories.models import NoteCreate, BookCreate
-from .test_utils import (
+from ..repositories.models import NoteCreate, BookCreate
+from ..test_utils import (
     StubNoteRepository,
     StubBookRepository,
     StubEvaluationRepository,
@@ -64,10 +64,10 @@ def setup_dependencies() -> Generator[SetupFunction, None, None]:
     app.dependency_overrides.clear()
 
 
-def test_get_note_with_context_success(setup_dependencies: SetupFunction):
+def test_get_random_note_success(setup_dependencies: SetupFunction):
     # Setup with custom LLM responses
     note_repo, book_repo, _, _ = setup_dependencies(
-        ["This is additional context about the specific note", evaluation_response]
+        ["This is additional context about the note", evaluation_response]
     )
 
     # Create a book
@@ -88,12 +88,18 @@ def test_get_note_with_context_success(setup_dependencies: SetupFunction):
     added_note1 = note_repo.add(note1)
     note_repo.add(note2)
 
-    # Make the request for specific note
-    response = client.get(f"/books/{book.id}/notes/{added_note1.id}")
+    # Make the request
+    response = client.get("/random")
 
     # Assertions
     assert response.status_code == 200
     data = response.json()
+
+    # Check response structure
+    assert "book" in data
+    assert "note" in data
+    assert "additional_context" in data
+    assert "related_notes" in data
 
     # Check content
     assert data["book"] == {
@@ -107,10 +113,7 @@ def test_get_note_with_context_success(setup_dependencies: SetupFunction):
         "content": "Primary note content",
         "created_at": added_note1.created_at.isoformat().replace("+00:00", "Z"),
     }
-    assert (
-        data["additional_context"]
-        == "This is additional context about the specific note"
-    )
+    assert data["additional_context"] == "This is additional context about the note"
 
     # Check related notes (should be note2 since note1 is the primary)
     assert len(data["related_notes"]) == 1
@@ -118,64 +121,20 @@ def test_get_note_with_context_success(setup_dependencies: SetupFunction):
     assert data["related_notes"][0]["content"] == "Related note content"
 
 
-def test_get_note_with_context_note_not_found(setup_dependencies: SetupFunction):
-    # Setup stub repository
-    _, book_repo, _, _ = setup_dependencies(None)
+def test_get_random_note_no_notes(setup_dependencies: SetupFunction):
+    # Setup empty stub repository
+    _, _, _, _ = setup_dependencies(["additional context", evaluation_response])
 
-    # Create a book
-    book = BookCreate(title="Test Book", author="Test Author")
-    book = book_repo.add(book)
-
-    # Make the request for non-existent note
-    response = client.get(f"/books/{book.id}/notes/999")
+    # Make the request
+    response = client.get("/random")
 
     # Assertions
     assert response.status_code == 404
     data = response.json()
-    assert data["detail"] == "Note not found or doesn't belong to the specified book"
+    assert data["detail"] == "No notes found"
 
 
-def test_get_note_with_context_book_not_found(setup_dependencies: SetupFunction):
-    # Setup stub repository
-    _, _, _, _ = setup_dependencies(None)
-
-    # Make the request for non-existent book
-    response = client.get("/books/999/notes/1")
-
-    # Assertions
-    assert response.status_code == 404
-    data = response.json()
-    assert data["detail"] == "Note not found or doesn't belong to the specified book"
-
-
-def test_get_note_with_context_note_wrong_book(setup_dependencies: SetupFunction):
-    # Setup
-    note_repo, book_repo, _, _ = setup_dependencies(None)
-
-    # Create two books
-    book1 = BookCreate(title="Book 1", author="Author 1")
-    book2 = BookCreate(title="Book 2", author="Author 2")
-    book1 = book_repo.add(book1)
-    book2 = book_repo.add(book2)
-
-    # Add note to book1
-    note = NoteCreate(
-        content="Note in book 1",
-        content_hash="hash1",
-        book_id=book1.id,
-    )
-    added_note = note_repo.add(note)
-
-    # Try to access the note from book2 (should fail)
-    response = client.get(f"/books/{book2.id}/notes/{added_note.id}")
-
-    # Assertions
-    assert response.status_code == 404
-    data = response.json()
-    assert data["detail"] == "Note not found or doesn't belong to the specified book"
-
-
-def test_get_note_with_context_single_note(setup_dependencies: SetupFunction):
+def test_get_random_note_single_note(setup_dependencies: SetupFunction):
     # Setup stub repository with single note
     note_repo, book_repo, _, _ = setup_dependencies(
         ["Context for single note", evaluation_response]
@@ -194,7 +153,7 @@ def test_get_note_with_context_single_note(setup_dependencies: SetupFunction):
     added_note = note_repo.add(note)
 
     # Make the request
-    response = client.get(f"/books/{book.id}/notes/{added_note.id}")
+    response = client.get("/random")
 
     # Assertions
     assert response.status_code == 200
@@ -217,7 +176,65 @@ def test_get_note_with_context_single_note(setup_dependencies: SetupFunction):
     assert len(data["related_notes"]) == 0
 
 
-def test_get_note_with_context_response_structure(setup_dependencies: SetupFunction):
+def test_get_random_note_multiple_books(setup_dependencies: SetupFunction):
+    # Setup stub repository with notes from multiple books
+    note_repo, book_repo, _, _ = setup_dependencies(
+        ["Cross-book context", evaluation_response]
+    )
+
+    # Create books
+    book1 = BookCreate(title="Book One", author="Author One")
+    book2 = BookCreate(title="Book Two", author="Author Two")
+    book1 = book_repo.add(book1)
+    book2 = book_repo.add(book2)
+
+    # Add notes from different books
+    note1 = NoteCreate(
+        content="Note from book 1",
+        content_hash="hash1",
+        book_id=book1.id,
+    )
+    note2 = NoteCreate(
+        content="Another note from book 1",
+        content_hash="hash2",
+        book_id=book1.id,
+    )
+    note3 = NoteCreate(
+        content="Note from book 2",
+        content_hash="hash3",
+        book_id=book2.id,
+    )
+
+    added_note1 = note_repo.add(note1)
+    note_repo.add(note2)
+    note_repo.add(note3)
+
+    # Make the request (will return first note since StubNoteRepository.get_random() returns first note)
+    response = client.get("/random")
+
+    # Assertions
+    assert response.status_code == 200
+    data = response.json()
+
+    assert data["book"] == {
+        "id": book1.id,
+        "title": "Book One",
+        "author": "Author One",
+        "created_at": book1.created_at.isoformat().replace("+00:00", "Z"),
+    }
+    assert data["note"] == {
+        "id": added_note1.id,
+        "content": "Note from book 1",
+        "created_at": added_note1.created_at.isoformat().replace("+00:00", "Z"),
+    }
+    assert data["additional_context"] == "Cross-book context"
+
+    # Should only include related notes from the same book
+    assert len(data["related_notes"]) == 1
+    assert data["related_notes"][0]["content"] == "Another note from book 1"
+
+
+def test_get_random_note_response_structure(setup_dependencies: SetupFunction):
     # Test that response doesn't expose sensitive fields
     note_repo, book_repo, _, _ = setup_dependencies(
         ["Structure test", evaluation_response]
@@ -233,10 +250,10 @@ def test_get_note_with_context_response_structure(setup_dependencies: SetupFunct
         book_id=book.id,
         embedding=[0.1] * 1536,  # Should not be exposed
     )
-    added_note = note_repo.add(note)
+    note_repo.add(note)
 
     # Make the request
-    response = client.get(f"/books/{book.id}/notes/{added_note.id}")
+    response = client.get("/random")
 
     # Assertions
     assert response.status_code == 200

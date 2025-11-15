@@ -66,7 +66,7 @@ class NoteRepository(NoteRepositoryInterface):
         return NoteRead.model_validate(note)
 
     def find_similar_notes(
-        self, note: NoteRead, limit: int = 5, similarity_threshold: float = 0.3
+        self, note: NoteRead, limit: int = 5, similarity_threshold: float = 0.5
     ) -> list[NoteRead]:
         """
         Find notes similar to the given note using vector similarity.

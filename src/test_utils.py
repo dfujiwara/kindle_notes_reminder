@@ -21,6 +21,7 @@ from src.embedding_interface import EmbeddingClientInterface, EmbeddingError
 from src.llm_interface import LLMClientInterface, LLMError
 from src.types import Embedding
 from datetime import datetime, timezone
+from typing import AsyncGenerator
 
 
 class StubBookRepository(BookRepositoryInterface):
@@ -170,3 +171,13 @@ class StubLLMClient(LLMClientInterface):
         if self.should_fail:
             raise LLMError("Simulated LLM generation failure")
         return response
+
+    async def get_response_stream(
+        self, prompt: str, instruction: str
+    ) -> AsyncGenerator[str, None]:
+        """Stub streaming response that yields the response in chunks."""
+        response = await self.get_response(prompt, instruction)
+        # Yield response in chunks (simulate streaming)
+        chunk_size = 10
+        for i in range(0, len(response), chunk_size):
+            yield response[i : i + chunk_size]

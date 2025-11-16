@@ -2,6 +2,7 @@
 import openai
 import os
 import logging
+from typing import AsyncGenerator
 from openai import APIError, RateLimitError, AuthenticationError
 from src.llm_interface import LLMClientInterface, LLMError
 from src.types import Embedding
@@ -42,6 +43,36 @@ class OpenAIClient(LLMClientInterface):
         except Exception as e:
             logger.exception("Unexpected error during API call.")
             raise LLMError(f"Unexpected error during API call: {str(e)}")
+
+    async def get_response_stream(
+        self, prompt: str, instruction: str
+    ) -> AsyncGenerator[str, None]:
+        try:
+            response = await self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": instruction},
+                    {"role": "user", "content": prompt},
+                ],
+                stream=True,
+            )
+
+            async for chunk in response:
+                if chunk.choices[0].delta.content is not None:
+                    yield chunk.choices[0].delta.content
+
+        except RateLimitError:
+            logger.warning("Rate limit exceeded.")
+            raise LLMError("Rate limit exceeded. Please try again later.")
+        except AuthenticationError:
+            logger.error("Authentication failed.")
+            raise LLMError("Authentication failed. Please check your API key.")
+        except APIError as e:
+            logger.error(f"OpenAI API error: {str(e)}")
+            raise LLMError(f"OpenAI API error: {str(e)}")
+        except Exception as e:
+            logger.exception("Unexpected error during streaming API call.")
+            raise LLMError(f"Unexpected error during streaming API call: {str(e)}")
 
 
 class OpenAIEmbeddingClient(EmbeddingClientInterface):

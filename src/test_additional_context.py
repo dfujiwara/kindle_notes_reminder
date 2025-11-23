@@ -5,7 +5,10 @@ Tests both the regular and streaming versions of get_additional_context.
 """
 
 import pytest
-from src.additional_context import get_additional_context, get_additional_context_stream
+from src.additional_context import (
+    get_additional_context,
+    get_additional_context_stream,
+)
 from src.repositories.models import BookResponse, NoteRead
 from src.test_utils import StubLLMClient
 from datetime import datetime, timezone
@@ -62,8 +65,12 @@ async def test_get_additional_context_stream_success():
     )
 
     chunks: list[str] = []
+    final_chunk = None
     async for chunk in get_additional_context_stream(llm_client, book, note):
-        chunks.append(chunk)
+        if chunk.is_complete:
+            final_chunk = chunk
+        else:
+            chunks.append(chunk.content)
 
     # Verify streaming behavior: StubLLMClient splits into chunks of size 10
     assert len(chunks) == 10
@@ -71,6 +78,15 @@ async def test_get_additional_context_stream_success():
 
     # Verify chunks combine to the full response
     assert "".join(chunks) == long_response
+
+    # Verify we got the final chunk with metadata
+    assert final_chunk is not None
+    assert final_chunk.is_complete is True
+    assert final_chunk.content == long_response
+    assert final_chunk.llm_prompt_response is not None
+    assert final_chunk.llm_prompt_response.response == long_response
+    assert "Test Book" in final_chunk.llm_prompt_response.prompt
+    assert "Test content" in final_chunk.llm_prompt_response.prompt
 
     # Verify LLM was called
     assert llm_client.call_count == 1

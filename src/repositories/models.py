@@ -111,6 +111,14 @@ class NoteWithContextResponse(SQLModel):
     related_notes: list[NoteResponse]
 
 
+class NoteWithRelatedNotesResponse(SQLModel):
+    """Model for note with related notes (used in streaming endpoints before AI context is generated)"""
+
+    book: BookResponse
+    note: NoteResponse
+    related_notes: list[NoteResponse]
+
+
 class BookWithNoteResponses(SQLModel):
     book: BookResponse
     notes: list[NoteResponse]

@@ -5,7 +5,6 @@ Note-related endpoints for accessing and exploring notes with AI enhancements.
 from typing import AsyncGenerator
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from fastapi.responses import StreamingResponse
-from src.repositories.models import NoteWithContextResponse
 from src.repositories.interfaces import (
     BookRepositoryInterface,
     NoteRepositoryInterface,
@@ -13,7 +12,6 @@ from src.repositories.interfaces import (
 )
 from src.llm_interface import LLMClientInterface
 from src.additional_context import (
-    get_additional_context,
     get_additional_context_stream,
 )
 from src.evaluations import evaluate_response
@@ -25,7 +23,6 @@ from src.dependencies import (
     get_llm_client,
 )
 from src.routers.response_builders import (
-    build_note_response,
     build_note_with_related_notes_response,
 )
 import logging
@@ -36,73 +33,6 @@ router = APIRouter(tags=["notes"])
 
 # Constants
 RELATED_NOTES_LIMIT = 3
-
-
-@router.get(
-    "/books/{book_id}/notes/{note_id}",
-    summary="Get specific note with AI context",
-    description="""
-    Retrieve a specific note enhanced with AI-generated additional context and related notes.
-
-    This endpoint:
-    - Fetches the specified note by book_id and note_id
-    - Generates AI-powered additional context using OpenAI
-    - Finds related notes based on vector similarity
-    - Evaluates the AI response quality in the background
-    """,
-    response_description="Specific note with AI analysis and similar notes",
-    responses={
-        404: {"description": "Note not found or doesn't belong to the specified book"},
-        200: {"description": "Note with context retrieved successfully"},
-    },
-)
-async def get_note_with_context(
-    book_id: int,
-    note_id: int,
-    background_tasks: BackgroundTasks,
-    book_repository: BookRepositoryInterface = Depends(get_book_repository),
-    note_repository: NoteRepositoryInterface = Depends(get_note_repository),
-    evaluation_repository: EvaluationRepositoryInterface = Depends(
-        get_evaluation_repository
-    ),
-    llm_client: LLMClientInterface = Depends(get_llm_client),
-) -> NoteWithContextResponse:
-    # Get the specific note, ensuring it belongs to the specified book
-    note = note_repository.get(book_id=book_id, note_id=note_id)
-    if not note:
-        logger.error(
-            f"Error finding a note with an id of {note_id} in a book of {book_id}"
-        )
-        raise HTTPException(
-            status_code=404,
-            detail="Note not found or doesn't belong to the specified book",
-        )
-
-    book = book_repository.get(book_id)
-    if not book:
-        logger.error(f"Error finding a book with an id of {book_id}")
-        raise HTTPException(status_code=404, detail="Book not found")
-
-    # Find similar notes using vector similarity
-    similar_notes = note_repository.find_similar_notes(note, limit=RELATED_NOTES_LIMIT)
-
-    # Use OpenAI client for generating additional context
-    additional_context_result = await get_additional_context(llm_client, book, note)
-
-    # Add evaluation task using consolidated function
-    background_tasks.add_task(
-        evaluate_response,
-        llm_client,
-        additional_context_result,
-        evaluation_repository,
-        note,
-    )
-    return NoteWithContextResponse(
-        book=book,
-        note=build_note_response(note),
-        additional_context=additional_context_result.response,
-        related_notes=[build_note_response(n) for n in similar_notes],
-    )
 
 
 @router.get(

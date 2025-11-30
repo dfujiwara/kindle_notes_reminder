@@ -104,13 +104,6 @@ class NoteResponse(SQLModel):
     created_at: datetime
 
 
-class NoteWithContextResponse(SQLModel):
-    book: BookResponse
-    note: NoteResponse
-    additional_context: str
-    related_notes: list[NoteResponse]
-
-
 class NoteWithRelatedNotesResponse(SQLModel):
     """Model for note with related notes (used in streaming endpoints before AI context is generated)"""
 

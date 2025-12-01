@@ -35,14 +35,10 @@ router = APIRouter(tags=["notes"])
 RELATED_NOTES_LIMIT = 3
 
 
-@router.get("/random")
 @router.get(
-    "/random/stream",
-    deprecated=True,
-    summary="Get random note with streaming AI context (deprecated, use /random)",
+    "/random",
+    summary="Get random note with streaming AI context",
     description="""
-    **DEPRECATED: Use /random instead. This endpoint is kept for backward compatibility.**
-
     Retrieve a random note with AI-generated context streamed as Server-Sent Events.
 
     This endpoint:
@@ -139,14 +135,10 @@ async def get_random_note_stream(
     )
 
 
-@router.get("/books/{book_id}/notes/{note_id}")
 @router.get(
-    "/books/{book_id}/notes/{note_id}/stream",
-    deprecated=True,
-    summary="Get specific note with streaming AI context (deprecated, use /books/{book_id}/notes/{note_id})",
+    "/books/{book_id}/notes/{note_id}",
+    summary="Get specific note with streaming AI context",
     description="""
-    **DEPRECATED: Use /books/{book_id}/notes/{note_id} instead. This endpoint is kept for backward compatibility.**
-
     Retrieve a specific note with AI-generated context streamed as Server-Sent Events.
 
     This endpoint:

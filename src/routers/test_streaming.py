@@ -95,11 +95,11 @@ async def test_get_random_note_stream_success(setup_dependencies: SetupFunction)
     added_note1 = note_repo.add(note1)
     note_repo.add(note2)
 
-    # Make streaming request - note the correct path is /random/stream
+    # Make streaming request
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         async with client.stream(
-            "GET", "/random/stream", headers={"Accept": "text/event-stream"}
+            "GET", "/random", headers={"Accept": "text/event-stream"}
         ) as response:
             assert response.status_code == 200
             assert (
@@ -146,7 +146,7 @@ async def test_get_random_note_stream_no_notes(setup_dependencies: SetupFunction
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.get("/random/stream")
+        response = await client.get("/random")
         assert response.status_code == 404
         data = response.json()
         assert data["detail"] == "No notes found"
@@ -177,12 +177,12 @@ async def test_get_note_with_context_stream_success(setup_dependencies: SetupFun
     added_note1 = note_repo.add(note1)
     note_repo.add(note2)
 
-    # Make streaming request for specific note - note the correct path
+    # Make streaming request for specific note
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         async with client.stream(
             "GET",
-            f"/books/{book.id}/notes/{added_note1.id}/stream",
+            f"/books/{book.id}/notes/{added_note1.id}",
             headers={"Accept": "text/event-stream"},
         ) as response:
             assert response.status_code == 200
@@ -231,7 +231,7 @@ async def test_get_note_with_context_stream_note_not_found(
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.get(f"/books/{book.id}/notes/999/stream")
+        response = await client.get(f"/books/{book.id}/notes/999")
         assert response.status_code == 404
         data = response.json()
         assert (
@@ -263,7 +263,7 @@ async def test_get_note_with_context_stream_wrong_book(
     # Try to access the note from book2 (should fail)
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.get(f"/books/{book2.id}/notes/{added_note.id}/stream")
+        response = await client.get(f"/books/{book2.id}/notes/{added_note.id}")
         assert response.status_code == 404
 
 
@@ -286,7 +286,7 @@ async def test_streaming_error_handling(setup_dependencies: SetupFunction):
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         async with client.stream(
-            "GET", "/random/stream", headers={"Accept": "text/event-stream"}
+            "GET", "/random", headers={"Accept": "text/event-stream"}
         ) as response:
             assert response.status_code == 200
 

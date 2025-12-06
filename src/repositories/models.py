@@ -136,3 +136,10 @@ class Evaluation(SQLModel, table=True):
     note_id: int = Field(foreign_key="note.id")
     # Relationship
     note: Note = Relationship(back_populates="evaluations")
+
+
+class NoteEvaluationHistory(SQLModel):
+    """Historical evaluations for a single note"""
+
+    note_id: int
+    evaluations: list[Evaluation]

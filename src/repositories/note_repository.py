@@ -40,6 +40,13 @@ class NoteRepository(NoteRepositoryInterface):
 
         return NoteRead.model_validate(note)
 
+    def get_by_id(self, note_id: int) -> NoteRead | None:
+        note = self.session.get(Note, note_id)
+        if not note:
+            return None
+
+        return NoteRead.model_validate(note)
+
     def list_notes(self) -> list[NoteRead]:
         statement = select(Note)
         notes = self.session.exec(statement)

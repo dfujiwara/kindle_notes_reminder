@@ -88,6 +88,9 @@ class StubNoteRepository(NoteRepositoryInterface):
             None,
         )
 
+    def get_by_id(self, note_id: int) -> NoteRead | None:
+        return next((note for note in self.notes if note.id == note_id), None)
+
     def list_notes(self) -> list[NoteRead]:
         return self.notes
 

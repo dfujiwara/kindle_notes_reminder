@@ -2,12 +2,12 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from src.routers import general, notebooks, books, notes, search, evaluations
 from src.cors_config import get_cors_config
+from src.config import settings
 import logging
-import os
 
 # Configure logging
 logging.basicConfig(
-    level=os.getenv("LOG_LEVEL", "INFO"),
+    level=settings.log_level,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 
@@ -72,7 +72,7 @@ app = FastAPI(
 )
 
 # Configure CORS
-cors_config = get_cors_config(production_origin=os.getenv("CORS_ALLOW_ORIGIN"))
+cors_config = get_cors_config(production_origin=settings.cors_allow_origin)
 app.add_middleware(CORSMiddleware, **cors_config)
 
 # Include routers

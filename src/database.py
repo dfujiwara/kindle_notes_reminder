@@ -1,16 +1,11 @@
-import os
 from typing import Generator
 from sqlmodel import SQLModel, create_engine, Session
+from src.config import settings
 
-# Read DATABASE_URL environment variable or use default psycopg2 URL
-DATABASE_URL: str = os.getenv(
-    "DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/fastapi"
-)
-
-# Create synchronous engine
+# Create synchronous engine using settings
 engine = create_engine(
-    DATABASE_URL,
-    echo=True,  # set to False in production
+    settings.database_url,
+    echo=settings.db_echo,
 )
 
 

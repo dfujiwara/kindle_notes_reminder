@@ -20,6 +20,12 @@ class Settings(BaseSettings):
         db_echo: Whether to echo SQL queries (useful for debugging)
         log_level: Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
         cors_allow_origin: Production CORS origin (if None, uses dev defaults)
+
+    OpenAI Model Configuration:
+        openai_llm_model: Model for context generation (default: gpt-4o-mini)
+        openai_embedding_model: Model for embeddings (default: text-embedding-3-small)
+        embedding_dimension: Vector dimension for embeddings (default: 1536)
+        default_evaluation_model: Model name stored in evaluations (default: gpt-4)
     """
 
     model_config = SettingsConfigDict(
@@ -36,6 +42,12 @@ class Settings(BaseSettings):
     db_echo: bool = True  # Set to False in production via DB_ECHO=false
     log_level: str = "INFO"
     cors_allow_origin: str | None = None
+
+    # OpenAI Model Configuration
+    openai_llm_model: str = "gpt-4o-mini"
+    openai_embedding_model: str = "text-embedding-3-small"
+    embedding_dimension: int = 1536
+    default_evaluation_model: str = "gpt-4"
 
 
 # Create global settings instance

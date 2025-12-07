@@ -11,6 +11,7 @@ from ..dependencies import (
 )
 from ..repositories.models import BookCreate, NoteCreate
 from ..test_utils import StubBookRepository, StubNoteRepository, StubEmbeddingClient
+from ..config import settings
 
 client = TestClient(app)
 
@@ -50,13 +51,13 @@ def test_search_notes_single_book():
         content="Introduction to machine learning algorithms",
         content_hash="hash1",
         book_id=book1.id,
-        embedding=[0.1] * 1536,
+        embedding=[0.1] * settings.embedding_dimension,
     )
     note2 = NoteCreate(
         content="Neural networks and deep learning",
         content_hash="hash2",
         book_id=book1.id,
-        embedding=[0.2] * 1536,
+        embedding=[0.2] * settings.embedding_dimension,
     )
 
     note_repo.add(note1)
@@ -107,20 +108,20 @@ def test_search_notes_multiple_books():
         content="Machine learning basics",
         content_hash="hash1",
         book_id=book1.id,
-        embedding=[0.1] * 1536,
+        embedding=[0.1] * settings.embedding_dimension,
     )
     note2 = NoteCreate(
         content="Supervised learning techniques",
         content_hash="hash2",
         book_id=book1.id,
-        embedding=[0.2] * 1536,
+        embedding=[0.2] * settings.embedding_dimension,
     )
     # Note from second book
     note3 = NoteCreate(
         content="Artificial intelligence overview",
         content_hash="hash3",
         book_id=book2.id,
-        embedding=[0.3] * 1536,
+        embedding=[0.3] * settings.embedding_dimension,
     )
     note_repo.add(note1)
     note_repo.add(note2)

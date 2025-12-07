@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from src.routers import general, notebooks, books, notes, search
+from src.routers import general, notebooks, books, notes, search, evaluations
 from src.cors_config import get_cors_config
 import logging
 import os
@@ -64,6 +64,10 @@ app = FastAPI(
             "name": "search",
             "description": "Semantic search across all your notes using AI embeddings",
         },
+        {
+            "name": "evaluations",
+            "description": "Analytics and insights from AI quality evaluations",
+        },
     ],
 )
 
@@ -77,3 +81,4 @@ app.include_router(notebooks.router)
 app.include_router(books.router)
 app.include_router(notes.router)
 app.include_router(search.router)
+app.include_router(evaluations.router)

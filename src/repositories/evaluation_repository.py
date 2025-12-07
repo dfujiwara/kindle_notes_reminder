@@ -14,5 +14,9 @@ class EvaluationRepository(EvaluationRepositoryInterface):
         return evaluation
 
     def get_by_note_id(self, note_id: int) -> list[Evaluation]:
-        statement = select(Evaluation).where(Evaluation.note_id == note_id)
+        statement = (
+            select(Evaluation)
+            .where(Evaluation.note_id == note_id)
+            .order_by(Evaluation.created_at.desc())  # type: ignore
+        )
         return list(self.session.exec(statement))

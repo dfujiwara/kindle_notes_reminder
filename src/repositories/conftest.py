@@ -6,6 +6,7 @@ import pytest
 from sqlmodel import Session, SQLModel, create_engine
 from .book_repository import BookRepository
 from .note_repository import NoteRepository
+from .evaluation_repository import EvaluationRepository
 
 
 @pytest.fixture(name="session")
@@ -27,3 +28,9 @@ def book_repo_fixture(session: Session) -> BookRepository:
 def note_repo_fixture(session: Session) -> NoteRepository:
     """Create a NoteRepository instance with an in-memory database session."""
     return NoteRepository(session)
+
+
+@pytest.fixture(name="evaluation_repo")
+def evaluation_repo_fixture(session: Session) -> EvaluationRepository:
+    """Create an EvaluationRepository instance with an in-memory database session."""
+    return EvaluationRepository(session)

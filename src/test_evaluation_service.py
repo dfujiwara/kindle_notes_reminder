@@ -5,7 +5,7 @@ Tests public evaluation functions and error handling through the public API.
 """
 
 import pytest
-from .evaluations import (
+from .evaluation_service import (
     evaluate_llm_response,
     EvaluationError,
 )

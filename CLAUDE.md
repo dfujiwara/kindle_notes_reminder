@@ -13,6 +13,8 @@ FastAPI application for managing Kindle notes with AI-powered features, embeddin
 - `uv run ruff check` / `ruff format` - Lint and format code
 - `uv run pyright` - Type checking
 - `uv run pytest` - Run tests (add `-v` for verbose)
+- `uv run pytest --cov` - Run tests with coverage report
+- `uv run pytest --cov --cov-report=html` - Generate HTML coverage report (open with `open htmlcov/index.html`)
   - Unit tests: `src/test_*.py`
   - Router tests: `src/routers/test_*.py`
 

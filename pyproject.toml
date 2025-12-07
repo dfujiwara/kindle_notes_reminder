@@ -21,4 +21,53 @@ dev = [
     "pytest==8.3.5",
     "pytest-asyncio==0.23.5",
     "pyright==1.1.402",
+    "pytest-cov==6.0.0",
 ]
+
+[tool.pytest.ini_options]
+testpaths = ["src"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+asyncio_mode = "auto"
+
+[tool.coverage.run]
+source = ["src"]
+branch = true
+parallel = true
+concurrency = ["thread"]
+
+omit = [
+    "src/test_*.py",
+    "src/*/test_*.py",
+    "src/__init__.py",
+    "src/*/__init__.py",
+    "src/test_utils.py",
+    "migrations/*",
+]
+
+[tool.coverage.report]
+precision = 2
+show_missing = true
+skip_covered = false
+skip_empty = true
+
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "def __str__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+    "^\\s*\\.\\.\\.$",
+    "pass",
+]
+
+[tool.coverage.html]
+directory = "htmlcov"
+
+[tool.coverage.xml]
+output = "coverage.xml"

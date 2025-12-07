@@ -1,12 +1,12 @@
 # src/openai_client.py
 import openai
-import os
 import logging
 from typing import AsyncGenerator
 from openai import APIError, RateLimitError, AuthenticationError
 from src.llm_interface import LLMClientInterface, LLMError
 from src.types import Embedding
 from src.embedding_interface import EmbeddingClientInterface, EmbeddingError
+from src.config import settings
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -14,8 +14,15 @@ logger = logging.getLogger(__name__)
 
 class OpenAIClient(LLMClientInterface):
     def __init__(self, model: str = "gpt-4o-mini"):
+        if settings.openai_api_key is None:
+            raise ValueError(
+                "OPENAI_API_KEY environment variable is required but not set. "
+                "Please set it in your .env file or environment."
+            )
         self.model = model
-        self.client = openai.AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        self.client = openai.AsyncOpenAI(
+            api_key=settings.openai_api_key.get_secret_value()
+        )
 
     async def get_response(self, prompt: str, instruction: str) -> str:
         try:
@@ -77,8 +84,15 @@ class OpenAIClient(LLMClientInterface):
 
 class OpenAIEmbeddingClient(EmbeddingClientInterface):
     def __init__(self, model: str = "text-embedding-3-small"):
+        if settings.openai_api_key is None:
+            raise ValueError(
+                "OPENAI_API_KEY environment variable is required but not set. "
+                "Please set it in your .env file or environment."
+            )
         self.model = model
-        self.client = openai.AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        self.client = openai.AsyncOpenAI(
+            api_key=settings.openai_api_key.get_secret_value()
+        )
 
     async def generate_embedding(self, content: str) -> Embedding:
         """

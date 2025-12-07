@@ -4,9 +4,9 @@ import logging
 from sqlalchemy import pool, create_engine
 from sqlalchemy.engine import Engine
 from src.repositories import models
+from src.config import settings
 
 from alembic import context
-import os
 
 logger = logging.getLogger("alembic.env")
 
@@ -18,8 +18,6 @@ config = context.config
 # This line sets up loggers basically.
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
-
-default_database_url = "postgresql://postgres:postgres@localhost:5432/fastapi_db"
 # add your model's MetaData object here
 # for 'autogenerate' support
 # from myapp import mymodel
@@ -44,7 +42,7 @@ def run_migrations_offline() -> None:
     script output.
 
     """
-    url: str = os.getenv("DATABASE_URL", default_database_url)
+    url: str = settings.database_url
     logger.info(f"Running migrations in offline mode with database URL: {url}")
     context.configure(
         url=url,
@@ -58,7 +56,7 @@ def run_migrations_offline() -> None:
 
 def run_migrations_online() -> None:
     """Run migrations in 'online' mode."""
-    url: str = os.getenv("DATABASE_URL", default_database_url)
+    url: str = settings.database_url
     logger.info(f"Running migrations in online mode with database URL: {url}")
     connectable: Engine = create_engine(
         url,

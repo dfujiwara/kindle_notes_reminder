@@ -18,3 +18,10 @@ venv/
 Thumbs.db.env
 
 data/
+
+# Coverage reports
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+.pytest_cache/

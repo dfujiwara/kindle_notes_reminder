@@ -20,6 +20,7 @@ from src.repositories.interfaces import (
 from src.embedding_interface import EmbeddingClientInterface, EmbeddingError
 from src.llm_interface import LLMClientInterface, LLMError
 from src.types import Embedding
+from src.config import settings
 from datetime import datetime, timezone
 from typing import AsyncGenerator
 
@@ -154,8 +155,8 @@ class StubEmbeddingClient(EmbeddingClientInterface):
     async def generate_embedding(self, content: str) -> list[float]:
         if self.should_fail:
             raise EmbeddingError("Simulated embedding generation failure")
-        # Return a simple mock embedding
-        return [0.1] * 1536  # OpenAI embeddings are 1536 dimensions
+        # Return a simple mock embedding using configured dimension
+        return [0.1] * settings.embedding_dimension
 
 
 class StubLLMClient(LLMClientInterface):

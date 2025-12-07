@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from pgvector.sqlalchemy import Vector
 from typing import Optional, TYPE_CHECKING, cast
 from src.types import Embedding
+from src.config import settings
 
 if TYPE_CHECKING:
     from sqlalchemy.sql.elements import ColumnElement
@@ -129,7 +130,7 @@ class Evaluation(SQLModel, table=True):
     prompt: str
     response: str
     analysis: str
-    model_name: str = Field(default="gpt-4")
+    model_name: str = Field(default_factory=lambda: settings.default_evaluation_model)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     # Foreign key to Note

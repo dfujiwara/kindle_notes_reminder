@@ -3,6 +3,7 @@ from ..main import app
 from ..dependencies import get_note_repository, get_book_repository
 from ..repositories.models import NoteCreate, BookCreate
 from ..test_utils import StubNoteRepository, StubBookRepository
+from ..config import settings
 
 client = TestClient(app)
 
@@ -183,7 +184,8 @@ def test_get_notes_by_book_response_structure():
         content="Test note",
         content_hash="hash1",
         book_id=1,
-        embedding=[0.1] * 1536,  # Should not be included in response
+        embedding=[0.1]
+        * settings.embedding_dimension,  # Should not be included in response
     )
     note_repo.add(note)
 

@@ -13,13 +13,13 @@ logger = logging.getLogger(__name__)
 
 
 class OpenAIClient(LLMClientInterface):
-    def __init__(self, model: str = "gpt-4o-mini"):
+    def __init__(self, model: str | None = None):
         if settings.openai_api_key is None:
             raise ValueError(
                 "OPENAI_API_KEY environment variable is required but not set. "
                 "Please set it in your .env file or environment."
             )
-        self.model = model
+        self.model = model or settings.openai_llm_model
         self.client = openai.AsyncOpenAI(
             api_key=settings.openai_api_key.get_secret_value()
         )
@@ -83,13 +83,13 @@ class OpenAIClient(LLMClientInterface):
 
 
 class OpenAIEmbeddingClient(EmbeddingClientInterface):
-    def __init__(self, model: str = "text-embedding-3-small"):
+    def __init__(self, model: str | None = None):
         if settings.openai_api_key is None:
             raise ValueError(
                 "OPENAI_API_KEY environment variable is required but not set. "
                 "Please set it in your .env file or environment."
             )
-        self.model = model
+        self.model = model or settings.openai_embedding_model
         self.client = openai.AsyncOpenAI(
             api_key=settings.openai_api_key.get_secret_value()
         )

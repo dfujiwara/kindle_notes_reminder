@@ -160,3 +160,20 @@ class NoteRepository(NoteRepositoryInterface):
 
         results = self.session.exec(statement)
         return {book_id: count for book_id, count in results}
+
+    def count_with_embeddings(self) -> int:
+        """
+        Count notes that have embeddings.
+
+        Used for weighted random selection to ensure proportional distribution
+        between notes and URL chunks in the unified /random endpoint.
+
+        Returns:
+            Number of notes with non-null embeddings
+        """
+        statement = (
+            select(func.count()).select_from(Note).where(Note.embedding_is_not_null())
+        )
+
+        count = self.session.exec(statement).first()
+        return count or 0

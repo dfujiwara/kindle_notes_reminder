@@ -1,4 +1,4 @@
-# Kindle Notes Archive and Notifier
+# Kindle Notes Reminder
 
 A FastAPI application for managing and exploring Kindle notes with AI-powered semantic search and context generation.
 

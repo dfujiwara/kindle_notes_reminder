@@ -14,7 +14,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 app = FastAPI(
-    title="Kindle Notes Archive and Notifier",
+    title="Kindle Notes Reminder",
     description="""
     A sophisticated FastAPI application for managing and exploring Kindle notes with AI-powered features.
 

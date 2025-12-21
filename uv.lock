@@ -320,7 +320,7 @@ wheels = [
 ]
 
 [[package]]
-name = "kindle-notes-archive"
+name = "kindle-notes-reminder"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [

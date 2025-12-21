@@ -132,6 +132,9 @@ class StubNoteRepository(NoteRepositoryInterface):
                 result[note.book_id] = result.get(note.book_id, 0) + 1
         return result
 
+    def count_with_embeddings(self) -> int:
+        return len([n for n in self.notes if n.embedding is not None])
+
 
 class StubEvaluationRepository(EvaluationRepositoryInterface):
     def __init__(self):

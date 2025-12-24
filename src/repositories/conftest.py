@@ -7,6 +7,8 @@ from sqlmodel import Session, SQLModel, create_engine
 from .book_repository import BookRepository
 from .note_repository import NoteRepository
 from .evaluation_repository import EvaluationRepository
+from .url_repository import URLRepository
+from .urlchunk_repository import URLChunkRepository
 
 
 @pytest.fixture(name="session")
@@ -34,3 +36,15 @@ def note_repo_fixture(session: Session) -> NoteRepository:
 def evaluation_repo_fixture(session: Session) -> EvaluationRepository:
     """Create an EvaluationRepository instance with an in-memory database session."""
     return EvaluationRepository(session)
+
+
+@pytest.fixture(name="url_repo")
+def url_repo_fixture(session: Session) -> URLRepository:
+    """Create a URLRepository instance with an in-memory database session."""
+    return URLRepository(session)
+
+
+@pytest.fixture(name="urlchunk_repo")
+def urlchunk_repo_fixture(session: Session) -> URLChunkRepository:
+    """Create a URLChunkRepository instance with an in-memory database session."""
+    return URLChunkRepository(session)

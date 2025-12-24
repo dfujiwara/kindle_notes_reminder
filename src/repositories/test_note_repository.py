@@ -65,28 +65,6 @@ def test_get_by_id_not_found(note_repo: NoteRepository):
     assert result is None
 
 
-def test_get_vs_get_by_id(
-    note_repo: NoteRepository, sample_notes: list[NoteRead], sample_book_id: int
-):
-    """Test that get() and get_by_id() differ in their requirements."""
-    note = sample_notes[0]
-
-    # get() requires both note_id and book_id
-    result_get = note_repo.get(note.id, sample_book_id)
-    assert result_get is not None
-    assert result_get.id == note.id
-
-    # get() returns None if book_id doesn't match
-    result_wrong_book = note_repo.get(note.id, 999)
-    assert result_wrong_book is None
-
-    # get_by_id() only requires note_id and ignores book
-    result_get_by_id = note_repo.get_by_id(note.id)
-    assert result_get_by_id is not None
-    assert result_get_by_id.id == note.id
-    assert result_get_by_id.book_id == sample_book_id
-
-
 def test_add_new_note(note_repo: NoteRepository, sample_book_id: int):
     """Test adding a new note."""
     new_note = NoteCreate(

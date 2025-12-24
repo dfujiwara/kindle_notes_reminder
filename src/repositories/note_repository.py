@@ -18,12 +18,7 @@ class NoteRepository(NoteRepositoryInterface):
             return NoteRead.model_validate(existing_note)
 
         # If no existing note found, create a new one
-        db_note = Note(
-            content=note.content,
-            content_hash=note.content_hash,
-            book_id=note.book_id,
-            embedding=note.embedding,
-        )
+        db_note = Note.model_validate(note)
         self.session.add(db_note)
         self.session.commit()
         self.session.refresh(db_note)

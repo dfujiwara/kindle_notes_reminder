@@ -25,7 +25,9 @@ async def test_fetch_url_success():
     """
 
     respx.get("https://example.com/article").mock(
-        return_value=Response(200, content=html_content)
+        return_value=Response(
+            200, content=html_content, headers={"content-type": "text/html"}
+        )
     )
 
     result = await fetch_url_content("https://example.com/article")
@@ -318,7 +320,9 @@ async def test_fetch_url_complex_html():
     """
 
     respx.get("https://example.com/article").mock(
-        return_value=Response(200, content=html_content)
+        return_value=Response(
+            200, content=html_content, headers={"content-type": "text/html"}
+        )
     )
 
     result = await fetch_url_content("https://example.com/article")

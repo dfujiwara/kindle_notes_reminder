@@ -11,11 +11,17 @@ from src.repositories.models import (
     NoteCreate,
     NoteRead,
     Evaluation,
+    URLCreate,
+    URLResponse,
+    URLChunkCreate,
+    URLChunkRead,
 )
 from src.repositories.interfaces import (
     BookRepositoryInterface,
     EvaluationRepositoryInterface,
     NoteRepositoryInterface,
+    URLRepositoryInterface,
+    URLChunkRepositoryInterface,
 )
 from src.embedding_interface import EmbeddingClientInterface, EmbeddingError
 from src.llm_interface import LLMClientInterface, LLMError
@@ -147,6 +153,119 @@ class StubEvaluationRepository(EvaluationRepositoryInterface):
 
     def get_by_note_id(self, note_id: int) -> list[Evaluation]:
         return [eval for eval in self.evaluations if eval.note_id == note_id]
+
+
+class StubURLRepository(URLRepositoryInterface):
+    """Stub implementation of URLRepository for testing."""
+
+    def __init__(self):
+        self.urls: list[URLResponse] = []
+
+    def add(self, url: URLCreate) -> URLResponse:
+        # Check for duplicate URL
+        existing = self.get_by_url(url.url)
+        if existing:
+            return existing
+
+        url_response = URLResponse(
+            id=len(self.urls) + 1,
+            url=url.url,
+            title=url.title,
+            fetched_at=datetime.now(timezone.utc),
+            created_at=datetime.now(timezone.utc),
+        )
+        self.urls.append(url_response)
+        return url_response
+
+    def get(self, url_id: int) -> URLResponse | None:
+        return next((url for url in self.urls if url.id == url_id), None)
+
+    def get_by_url(self, url: str) -> URLResponse | None:
+        return next((u for u in self.urls if u.url == url), None)
+
+    def list_urls(self) -> list[URLResponse]:
+        return self.urls
+
+    def delete(self, url_id: int) -> None:
+        self.urls = [url for url in self.urls if url.id != url_id]
+
+
+class StubURLChunkRepository(URLChunkRepositoryInterface):
+    """Stub implementation of URLChunkRepository for testing."""
+
+    def __init__(self):
+        self.chunks: list[URLChunkRead] = []
+
+    def add(self, chunk: URLChunkCreate) -> URLChunkRead:
+        # Check for duplicate content_hash
+        existing = next(
+            (c for c in self.chunks if c.content_hash == chunk.content_hash), None
+        )
+        if existing:
+            return existing
+
+        chunk_read = URLChunkRead(
+            id=len(self.chunks) + 1,
+            created_at=datetime.now(timezone.utc),
+            url_id=chunk.url_id,
+            content=chunk.content,
+            content_hash=chunk.content_hash,
+            chunk_order=chunk.chunk_order,
+            is_summary=chunk.is_summary,
+            embedding=chunk.embedding,
+        )
+        self.chunks.append(chunk_read)
+        return chunk_read
+
+    def get(self, chunk_id: int, url_id: int) -> URLChunkRead | None:
+        return next(
+            (
+                chunk
+                for chunk in self.chunks
+                if chunk.id == chunk_id and chunk.url_id == url_id
+            ),
+            None,
+        )
+
+    def get_by_id(self, chunk_id: int) -> URLChunkRead | None:
+        return next((chunk for chunk in self.chunks if chunk.id == chunk_id), None)
+
+    def get_random(self) -> URLChunkRead | None:
+        return self.chunks[0] if self.chunks else None
+
+    def get_by_url_id(self, url_id: int) -> list[URLChunkRead]:
+        return [chunk for chunk in self.chunks if chunk.url_id == url_id]
+
+    def find_similar_chunks(
+        self, chunk: URLChunkRead, limit: int = 5
+    ) -> list[URLChunkRead]:
+        """
+        Stub implementation of find_similar_chunks.
+        Returns first `limit` chunks from the same URL (excluding the input chunk).
+        """
+        return [
+            c for c in self.chunks if c.id != chunk.id and c.url_id == chunk.url_id
+        ][:limit]
+
+    def search_chunks_by_embedding(
+        self, embedding: Embedding, limit: int = 10, similarity_threshold: float = 0.5
+    ) -> list[URLChunkRead]:
+        """
+        Stub implementation of search_chunks_by_embedding.
+        Returns first `limit` chunks from all URLs.
+        """
+        return self.chunks[:limit]
+
+    def get_chunk_counts_by_url_ids(self, url_ids: list[int]) -> dict[int, int]:
+        result: dict[int, int] = {}
+        url_ids_set = set(url_ids)
+        for chunk in self.chunks:
+            if chunk.url_id in url_ids_set:
+                result[chunk.url_id] = result.get(chunk.url_id, 0) + 1
+        return result
+
+    def count_with_embeddings(self) -> int:
+        return len([c for c in self.chunks if c.embedding is not None])
 
 
 class StubEmbeddingClient(EmbeddingClientInterface):

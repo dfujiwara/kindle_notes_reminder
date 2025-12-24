@@ -49,6 +49,10 @@ class Settings(BaseSettings):
     embedding_dimension: int = 1536
     default_evaluation_model: str = "gpt-4"
 
+    # URL ingestion configuration
+    max_url_content_size: int = 500_000  # 500KB HTML limit
+    url_fetch_timeout: int = 30  # seconds
+
 
 # Create global settings instance
 # This will validate and fail-fast on import if required config is missing

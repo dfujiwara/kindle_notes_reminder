@@ -7,7 +7,7 @@ from sqlmodel import Session
 
 from .url_repository import URLRepository
 from .urlchunk_repository import URLChunkRepository
-from .models import URLCreate, URLChunkCreate, URLChunkRead
+from src.repositories.models import URLCreate, URLChunkCreate, URLChunkRead
 
 
 @pytest.fixture(name="sample_url_id")

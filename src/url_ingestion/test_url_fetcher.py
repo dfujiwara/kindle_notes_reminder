@@ -7,7 +7,7 @@ import pytest
 import respx
 from httpx import Response
 
-from src.url_fetcher import fetch_url_content, URLFetchError
+from src.url_ingestion.url_fetcher import fetch_url_content, URLFetchError
 
 
 @pytest.mark.asyncio

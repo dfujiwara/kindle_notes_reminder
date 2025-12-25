@@ -1,6 +1,6 @@
 """Tests for content chunking functionality."""
 
-from src.content_chunker import chunk_text_by_paragraphs
+from src.url_ingestion.content_chunker import chunk_text_by_paragraphs
 
 
 def test_chunk_text_empty_string():

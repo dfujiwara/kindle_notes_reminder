@@ -4,7 +4,7 @@ Tests for URLRepository methods using in-memory database.
 
 import pytest
 from .url_repository import URLRepository
-from .models import URLCreate, URLResponse
+from src.repositories.models import URLCreate, URLResponse
 
 
 @pytest.fixture(name="sample_urls")

@@ -1,4 +1,4 @@
-from src.notebook_parser import NotebookParseResult
+from .notebook_parser import NotebookParseResult
 from src.repositories.models import (
     BookCreate,
     NoteCreate,

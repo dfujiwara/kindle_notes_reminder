@@ -1,6 +1,6 @@
 # test_notebook_parser.py
 import pytest
-from src.notebook_parser import parse_notebook_html, NotebookParseError
+from .notebook_parser import parse_notebook_html, NotebookParseError
 
 
 def test_parse_notebook_html_valid():

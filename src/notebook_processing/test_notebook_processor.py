@@ -1,6 +1,6 @@
 import pytest
-from src.notebook_processor import process_notebook_result
-from src.notebook_parser import NotebookParseResult
+from .notebook_processor import process_notebook_result
+from .notebook_parser import NotebookParseResult
 from src.test_utils import StubBookRepository, StubNoteRepository, StubEmbeddingClient
 from src.embedding_interface import EmbeddingError
 

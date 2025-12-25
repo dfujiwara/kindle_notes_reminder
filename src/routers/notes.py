@@ -11,7 +11,7 @@ from src.repositories.interfaces import (
     EvaluationRepositoryInterface,
 )
 from src.llm_interface import LLMClientInterface
-from src.additional_context import (
+from src.context_generation.additional_context import (
     get_additional_context_stream,
 )
 from src.evaluation_service import evaluate_response

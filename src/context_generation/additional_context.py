@@ -1,8 +1,6 @@
 from dataclasses import dataclass
 from typing import AsyncGenerator
 from src.llm_interface import LLMClientInterface, LLMPromptResponse
-from src.repositories.models import BookResponse, NoteRead
-from src.prompts import create_context_prompt, SYSTEM_INSTRUCTIONS
 
 
 @dataclass
@@ -21,10 +19,10 @@ class StreamedContextChunk:
 
 
 async def get_additional_context_stream(
-    llm_client: LLMClientInterface, book: BookResponse, note: NoteRead
+    llm_client: LLMClientInterface, prompt: str, system_instruction: str
 ) -> AsyncGenerator[StreamedContextChunk, None]:
     """
-    Stream additional context and return final result with metadata.
+    Stream additional context from an LLM given a prompt and system instruction.
 
     This function yields StreamedContextChunk objects. Each chunk has:
     - content: The text content (chunk or full response)
@@ -32,21 +30,18 @@ async def get_additional_context_stream(
     - llm_prompt_response: Only present when is_complete=True
 
     :param llm_client: An instance of LLMClientInterface to get responses.
-    :param book: The Book model containing the book information.
-    :param note: The Note model containing the note content.
+    :param prompt: The prompt to send to the LLM.
+    :param system_instruction: The system instruction for the LLM.
     :yield: StreamedContextChunk objects for each chunk and final result.
     """
-    prompt = create_context_prompt(book.title, note.content)
-    instruction = SYSTEM_INSTRUCTIONS["context_provider"]
-
     full_response = ""
-    async for chunk in llm_client.get_response_stream(prompt, instruction):
+    async for chunk in llm_client.get_response_stream(prompt, system_instruction):
         full_response += chunk
         yield StreamedContextChunk(content=chunk, is_complete=False)
 
     # Yield the final result with metadata
     llm_prompt_response = LLMPromptResponse(
-        response=full_response, prompt=prompt, system=instruction
+        response=full_response, prompt=prompt, system=system_instruction
     )
     yield StreamedContextChunk(
         content=full_response,

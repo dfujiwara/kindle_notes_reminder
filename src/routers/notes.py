@@ -14,6 +14,7 @@ from src.llm_interface import LLMClientInterface
 from src.context_generation.additional_context import (
     get_additional_context_stream,
 )
+from src.prompts import create_context_prompt, SYSTEM_INSTRUCTIONS
 from src.evaluation_service import evaluate_response
 from src.sse_utils import format_sse
 from src.dependencies import (
@@ -94,11 +95,15 @@ async def get_random_note_stream(
         # Send metadata first
         yield format_sse("metadata", metadata.model_dump(mode="json"))
 
+        # Prepare prompt and instruction
+        prompt = create_context_prompt(book.title, random_note.content)
+        instruction = SYSTEM_INSTRUCTIONS["context_provider"]
+
         # Stream context chunks and collect result
         llm_prompt_response = None
         try:
             async for chunk in get_additional_context_stream(
-                llm_client, book, random_note
+                llm_client, prompt, instruction
             ):
                 if chunk.is_complete:
                     # Final result with metadata
@@ -199,10 +204,16 @@ async def get_note_with_context_stream(
         # Send metadata first
         yield format_sse("metadata", metadata.model_dump(mode="json"))
 
+        # Prepare prompt and instruction
+        prompt = create_context_prompt(book.title, note.content)
+        instruction = SYSTEM_INSTRUCTIONS["context_provider"]
+
         # Stream context chunks and collect result
         llm_prompt_response = None
         try:
-            async for chunk in get_additional_context_stream(llm_client, book, note):
+            async for chunk in get_additional_context_stream(
+                llm_client, prompt, instruction
+            ):
                 if chunk.is_complete:
                     # Final result with metadata
                     llm_prompt_response = chunk.llm_prompt_response

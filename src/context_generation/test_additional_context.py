@@ -5,7 +5,7 @@ Tests the streaming version of get_additional_context.
 """
 
 import pytest
-from src.additional_context import get_additional_context_stream
+from .additional_context import get_additional_context_stream
 from src.repositories.models import BookResponse, NoteRead
 from src.test_utils import StubLLMClient
 from datetime import datetime, timezone

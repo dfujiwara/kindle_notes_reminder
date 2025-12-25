@@ -3,13 +3,16 @@ Notebook processing endpoints for uploading and parsing Kindle HTML notebooks.
 """
 
 from fastapi import APIRouter, UploadFile, File, HTTPException, Depends
-from src.notebook_parser import parse_notebook_html, NotebookParseError
+from src.notebook_processing.notebook_parser import (
+    parse_notebook_html,
+    NotebookParseError,
+)
 from src.repositories.models import BookWithNoteResponses
 from src.repositories.interfaces import (
     BookRepositoryInterface,
     NoteRepositoryInterface,
 )
-from src.notebook_processor import process_notebook_result
+from src.notebook_processing.notebook_processor import process_notebook_result
 from src.embedding_interface import EmbeddingClientInterface
 from src.dependencies import (
     get_book_repository,

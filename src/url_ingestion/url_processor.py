@@ -9,6 +9,7 @@ import asyncio
 import hashlib
 import logging
 
+from src.prompts import SYSTEM_INSTRUCTIONS, create_summary_prompt
 from src.types import Embedding
 from src.url_ingestion.content_chunker import TextChunk, chunk_text_by_paragraphs
 from src.embedding_interface import EmbeddingClientInterface
@@ -25,14 +26,17 @@ from src.repositories.models import (
     URLResponse,
     URLWithChunksResponses,
 )
-from src.url_ingestion.url_fetcher import URLFetchError, fetch_url_content
+from src.url_ingestion.url_fetcher import (
+    URLFetchError,
+    URLFetcherInterface,
+    fetch_url_content,
+)
 
 # Configure logging
 logger = logging.getLogger(__name__)
 
 # Summary generation settings
 SUMMARY_CONTENT_LIMIT = 3000  # Characters to send to LLM for summary
-MAX_CHUNK_SIZE = 1000  # Characters per chunk
 
 
 async def process_url_content(
@@ -41,6 +45,7 @@ async def process_url_content(
     chunk_repo: URLChunkRepositoryInterface,
     llm_client: LLMClientInterface,
     embedding_client: EmbeddingClientInterface,
+    fetch_fn: URLFetcherInterface = fetch_url_content,
 ) -> URLWithChunksResponses:
     """
     Process URL content: fetch, chunk, summarize, embed, and store.
@@ -55,6 +60,7 @@ async def process_url_content(
         chunk_repo: URLChunk repository for database operations
         llm_client: LLM client for generating summaries
         embedding_client: Embedding client for generating vector embeddings
+        fetch_fn: URL fetcher function (defaults to fetch_url_content)
 
     Returns:
         URLWithChunksResponses containing the URL and all chunks
@@ -66,12 +72,13 @@ async def process_url_content(
     # Step 1: Check if URL already exists (deduplication)
     existing_result = _handle_existing_url(url, url_repo, chunk_repo)
     if existing_result:
+        logger.info(f"URL already exists: {url}")
         return existing_result
 
     # Step 2: Fetch URL content
     logger.info(f"Fetching URL content: {url}")
     try:
-        fetched = await fetch_url_content(url)
+        fetched = await fetch_fn(url)
     except URLFetchError as e:
         logger.error(f"Failed to fetch URL {url}: {str(e)}")
         raise
@@ -82,7 +89,7 @@ async def process_url_content(
     logger.info(f"Saved URL record with ID {saved_url.id}")
 
     # Step 4: Chunk content and generate summary
-    chunks = chunk_text_by_paragraphs(fetched.content, max_chunk_size=MAX_CHUNK_SIZE)
+    chunks = chunk_text_by_paragraphs(fetched.content)
     logger.info(f"Created {len(chunks)} text chunks from {url}")
 
     summary = await _generate_summary(
@@ -96,9 +103,11 @@ async def process_url_content(
 
     # Step 6: Save chunks and return response
     saved_chunks = _save_chunks_to_database(
-        chunk_repo, saved_url.id, content_to_embed, embeddings
+        chunk_repo, saved_url, content_to_embed, embeddings
     )
-    return _build_response(saved_url, saved_chunks, url)
+    result = _build_response(saved_url, saved_chunks, url)
+    logger.info(f"Successfully processed URL {url} with {len(result.chunks)} chunks")
+    return result
 
 
 def _handle_existing_url(
@@ -111,39 +120,48 @@ def _handle_existing_url(
     if not existing_url:
         return None
 
-    logger.info(f"URL already exists: {url}")
     chunks_read = chunk_repo.get_by_url_id(existing_url.id)
-    chunk_responses = [URLChunkResponse.model_validate(chunk) for chunk in chunks_read]
-    url_response = URLResponse.model_validate(existing_url)
-
-    return URLWithChunksResponses(url=url_response, chunks=chunk_responses)
+    return _build_response(existing_url, chunks_read, url)
 
 
 def _prepare_chunks_for_embedding(
     summary: str,
     chunks: list[TextChunk],
-) -> list[tuple[str, int, bool, str | None]]:
+) -> list[TextChunk]:
     """Prepare summary and text chunks for embedding in proper order."""
-    content_to_embed: list[tuple[str, int, bool, str | None]] = [
-        (summary, 0, True, None),  # (content, chunk_order, is_summary, content_hash)
+    content_hash = hashlib.sha256(summary.encode("utf-8")).hexdigest()
+    content_to_embed: list[TextChunk] = [
+        TextChunk(
+            content=summary,
+            chunk_order=0,
+            is_summary=True,
+            content_hash=content_hash,
+        ),
     ]
 
     for i, chunk in enumerate(chunks):
-        content_to_embed.append((chunk.content, i + 1, False, chunk.content_hash))
+        content_to_embed.append(
+            TextChunk(
+                content=chunk.content,
+                chunk_order=i + 1,
+                is_summary=False,
+                content_hash=chunk.content_hash,
+            )
+        )
 
     return content_to_embed
 
 
 async def _generate_all_embeddings(
     embedding_client: EmbeddingClientInterface,
-    content_to_embed: list[tuple[str, int, bool, str | None]],
+    content_to_embed: list[TextChunk],
 ) -> list[Embedding]:
     """Generate embeddings for all content in parallel."""
     logger.info(f"Generating {len(content_to_embed)} embeddings")
     try:
         embedding_tasks = [
-            embedding_client.generate_embedding(content)
-            for content, _, _, _ in content_to_embed
+            embedding_client.generate_embedding(chunk.content)
+            for chunk in content_to_embed
         ]
         embeddings = await asyncio.gather(*embedding_tasks)
         logger.info("Successfully generated all embeddings")
@@ -155,30 +173,27 @@ async def _generate_all_embeddings(
 
 def _save_chunks_to_database(
     chunk_repo: URLChunkRepositoryInterface,
-    url_id: int,
-    content_to_embed: list[tuple[str, int, bool, str | None]],
+    saved_url: URLResponse,
+    content_to_embed: list[TextChunk],
     embeddings: list[Embedding],
 ) -> list[URLChunkRead]:
     """Save all chunks to database with their embeddings."""
     saved_chunks: list[URLChunkRead] = []
 
-    for (content, chunk_order, is_summary, content_hash), embedding in zip(
-        content_to_embed, embeddings
-    ):
-        if content_hash is None:
-            content_hash = hashlib.sha256(content.encode("utf-8")).hexdigest()
-
+    for chunk, embedding in zip(content_to_embed, embeddings):
         chunk_create = URLChunkCreate(
-            content=content,
-            content_hash=content_hash,
-            url_id=url_id,
-            chunk_order=chunk_order,
-            is_summary=is_summary,
+            content=chunk.content,
+            content_hash=chunk.content_hash,
+            url_id=saved_url.id,
+            chunk_order=chunk.chunk_order,
+            is_summary=chunk.is_summary,
             embedding=embedding,
         )
         saved_chunk = chunk_repo.add(chunk_create)
         saved_chunks.append(saved_chunk)
-        logger.info(f"Saved chunk {chunk_order} (summary={is_summary}) to database")
+        logger.info(
+            f"Saved chunk {chunk.chunk_order} (summary={chunk.is_summary}) to database"
+        )
 
     return saved_chunks
 
@@ -188,11 +203,9 @@ def _build_response(
     saved_chunks: list[URLChunkRead],
     url: str,
 ) -> URLWithChunksResponses:
-    """Build and return the response."""
+    """Build response from URL and chunks."""
     url_response = URLResponse.model_validate(saved_url)
     chunk_responses = [URLChunkResponse.model_validate(chunk) for chunk in saved_chunks]
-    logger.info(f"Successfully processed URL {url} with {len(chunk_responses)} chunks")
-
     return URLWithChunksResponses(
         url=url_response,
         chunks=chunk_responses,
@@ -213,16 +226,8 @@ async def _generate_summary(llm_client: LLMClientInterface, content: str) -> str
     Raises:
         Exception: If summary generation fails
     """
-    prompt = f"""Please provide a concise 2-3 sentence summary of the following content:
-
-{content}
-
-Summary:"""
-
-    system_instruction = (
-        "You are a skilled summarizer. Generate clear, concise summaries that capture "
-        "the most important information."
-    )
+    prompt = create_summary_prompt(content)
+    system_instruction = SYSTEM_INSTRUCTIONS["summarizer"]
 
     try:
         summary = await llm_client.get_response(prompt, system_instruction)

@@ -2,13 +2,13 @@
 
 import pytest
 from src.url_ingestion.url_processor import process_url_content
+from src.url_ingestion.url_fetcher import FetchedContent
 from src.test_utils import (
     StubURLRepository,
     StubURLChunkRepository,
     StubEmbeddingClient,
     StubLLMClient,
 )
-from unittest.mock import patch
 
 from src.embedding_interface import EmbeddingError
 from src.llm_interface import LLMError
@@ -25,40 +25,45 @@ async def test_process_url_content_success():
 
     test_url = "https://example.com/article"
 
-    # Mock fetch_url_content to return test content
-    with patch("src.url_ingestion.url_processor.fetch_url_content") as mock_fetch:
-        from src.url_ingestion.url_fetcher import FetchedContent
-
-        mock_fetch.return_value = FetchedContent(
+    # Create a mock fetch function
+    async def mock_fetch(
+        url: str, max_content_size: int | None = None
+    ) -> FetchedContent:
+        return FetchedContent(
             url=test_url,
             title="Test Article",
             content="First paragraph with some content.\n\nSecond paragraph with more content.",
         )
 
-        # Call the function
-        result = await process_url_content(
-            test_url, url_repo, chunk_repo, llm_client, embedding_client
-        )
+    # Call the function with injected mock
+    result = await process_url_content(
+        test_url,
+        url_repo,
+        chunk_repo,
+        llm_client,
+        embedding_client,
+        fetch_fn=mock_fetch,
+    )
 
-        # Assertions on URL
-        assert result.url.url == test_url
-        assert result.url.title == "Test Article"
-        assert result.url.id == 1
+    # Assertions on URL
+    assert result.url.url == test_url
+    assert result.url.title == "Test Article"
+    assert result.url.id == 1
 
-        # Assertions on chunks
-        assert len(result.chunks) >= 2  # At least 1 summary + 1 text chunk
+    # Assertions on chunks
+    assert len(result.chunks) >= 2  # At least 1 summary + 1 text chunk
 
-        # Check summary chunk (chunk_order=0, is_summary=True)
-        summary_chunk = result.chunks[0]
-        assert summary_chunk.chunk_order == 0
-        assert summary_chunk.is_summary is True
-        assert summary_chunk.content == "This is a test summary."
+    # Check summary chunk (chunk_order=0, is_summary=True)
+    summary_chunk = result.chunks[0]
+    assert summary_chunk.chunk_order == 0
+    assert summary_chunk.is_summary is True
+    assert summary_chunk.content == "This is a test summary."
 
-        # Check that remaining chunks are text chunks with proper ordering
-        for i, chunk in enumerate(result.chunks[1:], start=1):
-            assert chunk.chunk_order == i
-            assert chunk.is_summary is False
-            assert len(chunk.content) > 0
+    # Check that remaining chunks are text chunks with proper ordering
+    for i, chunk in enumerate(result.chunks[1:], start=1):
+        assert chunk.chunk_order == i
+        assert chunk.is_summary is False
+        assert len(chunk.content) > 0
 
 
 @pytest.mark.asyncio
@@ -95,19 +100,32 @@ async def test_process_url_content_duplicate_url_returns_existing():
         )
     )
 
-    # Call the function - fetch_url_content should NOT be called
-    with patch("src.url_ingestion.url_processor.fetch_url_content") as mock_fetch:
-        result = await process_url_content(
-            test_url, url_repo, chunk_repo, llm_client, embedding_client
-        )
+    # Create a mock fetch that should not be called
+    fetch_called = False
 
-        # fetch_url_content should not have been called
-        mock_fetch.assert_not_called()
+    async def mock_fetch(
+        url: str, max_content_size: int | None = None
+    ) -> FetchedContent:
+        nonlocal fetch_called
+        fetch_called = True
+        raise AssertionError("fetch should not be called for existing URLs")
 
-        # Should return existing URL
-        assert result.url.url == test_url
-        assert result.url.title == "Existing Article"
-        assert len(result.chunks) == 2
+    result = await process_url_content(
+        test_url,
+        url_repo,
+        chunk_repo,
+        llm_client,
+        embedding_client,
+        fetch_fn=mock_fetch,
+    )
+
+    # fetch_url_content should not have been called
+    assert not fetch_called
+
+    # Should return existing URL
+    assert result.url.url == test_url
+    assert result.url.title == "Existing Article"
+    assert len(result.chunks) == 2
 
 
 @pytest.mark.asyncio
@@ -121,20 +139,26 @@ async def test_process_url_content_embedding_failure():
 
     test_url = "https://example.com/article"
 
-    with patch("src.url_ingestion.url_processor.fetch_url_content") as mock_fetch:
-        from src.url_ingestion.url_fetcher import FetchedContent
-
-        mock_fetch.return_value = FetchedContent(
+    # Create a mock fetch function
+    async def mock_fetch(
+        url: str, max_content_size: int | None = None
+    ) -> FetchedContent:
+        return FetchedContent(
             url=test_url,
             title="Test Article",
             content="Content paragraph.",
         )
 
-        # Should raise EmbeddingError
-        with pytest.raises(EmbeddingError):
-            await process_url_content(
-                test_url, url_repo, chunk_repo, llm_client, embedding_client
-            )
+    # Should raise EmbeddingError
+    with pytest.raises(EmbeddingError):
+        await process_url_content(
+            test_url,
+            url_repo,
+            chunk_repo,
+            llm_client,
+            embedding_client,
+            fetch_fn=mock_fetch,
+        )
 
 
 @pytest.mark.asyncio
@@ -148,20 +172,26 @@ async def test_process_url_content_llm_failure():
 
     test_url = "https://example.com/article"
 
-    with patch("src.url_ingestion.url_processor.fetch_url_content") as mock_fetch:
-        from src.url_ingestion.url_fetcher import FetchedContent
-
-        mock_fetch.return_value = FetchedContent(
+    # Create a mock fetch function
+    async def mock_fetch(
+        url: str, max_content_size: int | None = None
+    ) -> FetchedContent:
+        return FetchedContent(
             url=test_url,
             title="Test Article",
             content="Content paragraph.",
         )
 
-        # Should raise LLMError
-        with pytest.raises(LLMError):
-            await process_url_content(
-                test_url, url_repo, chunk_repo, llm_client, embedding_client
-            )
+    # Should raise LLMError
+    with pytest.raises(LLMError):
+        await process_url_content(
+            test_url,
+            url_repo,
+            chunk_repo,
+            llm_client,
+            embedding_client,
+            fetch_fn=mock_fetch,
+        )
 
 
 @pytest.mark.asyncio
@@ -180,46 +210,50 @@ async def test_process_url_content_return_value_structure():
         "Paragraph three completing the thought."
     )
 
-    with patch("src.url_ingestion.url_processor.fetch_url_content") as mock_fetch:
-        from src.url_ingestion.url_fetcher import FetchedContent
+    # Create a mock fetch function
+    async def mock_fetch(
+        url: str, max_content_size: int | None = None
+    ) -> FetchedContent:
+        return FetchedContent(url=test_url, title="Test Page", content=test_content)
 
-        mock_fetch.return_value = FetchedContent(
-            url=test_url, title="Test Page", content=test_content
-        )
+    result = await process_url_content(
+        test_url,
+        url_repo,
+        chunk_repo,
+        llm_client,
+        embedding_client,
+        fetch_fn=mock_fetch,
+    )
 
-        result = await process_url_content(
-            test_url, url_repo, chunk_repo, llm_client, embedding_client
-        )
+    # Verify URLWithChunksResponses structure
+    assert hasattr(result, "url")
+    assert hasattr(result, "chunks")
 
-        # Verify URLWithChunksResponses structure
-        assert hasattr(result, "url")
-        assert hasattr(result, "chunks")
+    # Verify URL response structure
+    url_resp = result.url
+    assert hasattr(url_resp, "id")
+    assert hasattr(url_resp, "url")
+    assert hasattr(url_resp, "title")
+    assert hasattr(url_resp, "fetched_at")
+    assert hasattr(url_resp, "created_at")
 
-        # Verify URL response structure
-        url_resp = result.url
-        assert hasattr(url_resp, "id")
-        assert hasattr(url_resp, "url")
-        assert hasattr(url_resp, "title")
-        assert hasattr(url_resp, "fetched_at")
-        assert hasattr(url_resp, "created_at")
+    # Verify chunk response structure
+    assert len(result.chunks) > 0
+    for chunk in result.chunks:
+        assert hasattr(chunk, "id")
+        assert hasattr(chunk, "content")
+        assert hasattr(chunk, "chunk_order")
+        assert hasattr(chunk, "is_summary")
+        assert hasattr(chunk, "created_at")
 
-        # Verify chunk response structure
-        assert len(result.chunks) > 0
-        for chunk in result.chunks:
-            assert hasattr(chunk, "id")
-            assert hasattr(chunk, "content")
-            assert hasattr(chunk, "chunk_order")
-            assert hasattr(chunk, "is_summary")
-            assert hasattr(chunk, "created_at")
+    # Verify summary is first chunk
+    assert result.chunks[0].is_summary is True
+    assert result.chunks[0].chunk_order == 0
 
-        # Verify summary is first chunk
-        assert result.chunks[0].is_summary is True
-        assert result.chunks[0].chunk_order == 0
-
-        # Verify text chunks are ordered
-        for i, chunk in enumerate(result.chunks[1:], start=1):
-            assert chunk.chunk_order == i
-            assert chunk.is_summary is False
+    # Verify text chunks are ordered
+    for i, chunk in enumerate(result.chunks[1:], start=1):
+        assert chunk.chunk_order == i
+        assert chunk.is_summary is False
 
 
 @pytest.mark.asyncio
@@ -237,20 +271,24 @@ async def test_process_url_content_with_multiple_paragraphs():
         ["Paragraph " + str(i) + " with content." for i in range(1, 6)]
     )
 
-    with patch("src.url_ingestion.url_processor.fetch_url_content") as mock_fetch:
-        from src.url_ingestion.url_fetcher import FetchedContent
+    # Create a mock fetch function
+    async def mock_fetch(
+        url: str, max_content_size: int | None = None
+    ) -> FetchedContent:
+        return FetchedContent(url=test_url, title="Test", content=test_content)
 
-        mock_fetch.return_value = FetchedContent(
-            url=test_url, title="Test", content=test_content
-        )
+    result = await process_url_content(
+        test_url,
+        url_repo,
+        chunk_repo,
+        llm_client,
+        embedding_client,
+        fetch_fn=mock_fetch,
+    )
 
-        result = await process_url_content(
-            test_url, url_repo, chunk_repo, llm_client, embedding_client
-        )
-
-        # Should have summary + at least 1 text chunk
-        assert len(result.chunks) >= 2
-        assert result.chunks[0].is_summary is True
+    # Should have summary + at least 1 text chunk
+    assert len(result.chunks) >= 2
+    assert result.chunks[0].is_summary is True
 
 
 @pytest.mark.asyncio
@@ -272,24 +310,28 @@ async def test_process_url_content_chunk_ordering():
         ]
     )
 
-    with patch("src.url_ingestion.url_processor.fetch_url_content") as mock_fetch:
-        from src.url_ingestion.url_fetcher import FetchedContent
+    # Create a mock fetch function
+    async def mock_fetch(
+        url: str, max_content_size: int | None = None
+    ) -> FetchedContent:
+        return FetchedContent(url=test_url, title="Test", content=test_content)
 
-        mock_fetch.return_value = FetchedContent(
-            url=test_url, title="Test", content=test_content
-        )
+    result = await process_url_content(
+        test_url,
+        url_repo,
+        chunk_repo,
+        llm_client,
+        embedding_client,
+        fetch_fn=mock_fetch,
+    )
 
-        result = await process_url_content(
-            test_url, url_repo, chunk_repo, llm_client, embedding_client
-        )
+    # Verify chunk ordering
+    chunk_orders = [chunk.chunk_order for chunk in result.chunks]
+    expected_orders = list(range(len(result.chunks)))
+    assert chunk_orders == expected_orders
 
-        # Verify chunk ordering
-        chunk_orders = [chunk.chunk_order for chunk in result.chunks]
-        expected_orders = list(range(len(result.chunks)))
-        assert chunk_orders == expected_orders
-
-        # Verify first chunk is summary
-        assert result.chunks[0].is_summary is True
+    # Verify first chunk is summary
+    assert result.chunks[0].is_summary is True
 
 
 @pytest.mark.asyncio
@@ -304,20 +346,24 @@ async def test_process_url_content_content_hash_generation():
     test_url = "https://example.com/article"
     test_content = "Single paragraph of content."
 
-    with patch("src.url_ingestion.url_processor.fetch_url_content") as mock_fetch:
-        from src.url_ingestion.url_fetcher import FetchedContent
+    # Create a mock fetch function
+    async def mock_fetch(
+        url: str, max_content_size: int | None = None
+    ) -> FetchedContent:
+        return FetchedContent(url=test_url, title="Test", content=test_content)
 
-        mock_fetch.return_value = FetchedContent(
-            url=test_url, title="Test", content=test_content
-        )
+    result = await process_url_content(
+        test_url,
+        url_repo,
+        chunk_repo,
+        llm_client,
+        embedding_client,
+        fetch_fn=mock_fetch,
+    )
 
-        result = await process_url_content(
-            test_url, url_repo, chunk_repo, llm_client, embedding_client
-        )
-
-        # All chunks should have content_hash in the repository
-        # (We can't directly access it from URLChunkResponse, but we verify chunks were saved)
-        assert len(result.chunks) >= 2  # At least summary + one text chunk
-        for chunk in result.chunks:
-            assert chunk.content is not None
-            assert len(chunk.content) > 0
+    # All chunks should have content_hash in the repository
+    # (We can't directly access it from URLChunkResponse, but we verify chunks were saved)
+    assert len(result.chunks) >= 2  # At least summary + one text chunk
+    for chunk in result.chunks:
+        assert chunk.content is not None
+        assert len(chunk.content) > 0

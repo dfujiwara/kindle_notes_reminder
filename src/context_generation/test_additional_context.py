@@ -6,9 +6,8 @@ Tests the streaming version of get_additional_context.
 
 import pytest
 from .additional_context import get_additional_context_stream
-from src.repositories.models import BookResponse, NoteRead
+from src.prompts import create_context_prompt, SYSTEM_INSTRUCTIONS
 from src.test_utils import StubLLMClient
-from datetime import datetime, timezone
 
 
 @pytest.mark.asyncio
@@ -18,23 +17,13 @@ async def test_get_additional_context_stream_success():
     long_response = "A" * 100  # 100 characters
     llm_client = StubLLMClient(responses=[long_response])
 
-    book = BookResponse(
-        id=1,
-        title="Test Book",
-        author="Test Author",
-        created_at=datetime.now(timezone.utc),
-    )
-    note = NoteRead(
-        id=1,
-        book_id=1,
-        content="Test content",
-        content_hash="abc123",
-        created_at=datetime.now(timezone.utc),
-    )
+    # Prepare prompt and instruction
+    prompt = create_context_prompt("Test Book", "Test content")
+    instruction = SYSTEM_INSTRUCTIONS["context_provider"]
 
     chunks: list[str] = []
     final_chunk = None
-    async for chunk in get_additional_context_stream(llm_client, book, note):
+    async for chunk in get_additional_context_stream(llm_client, prompt, instruction):
         if chunk.is_complete:
             final_chunk = chunk
         else:

@@ -57,9 +57,11 @@ def test_basic_context_prompt():
 
 def test_basic_chunk_context_prompt():
     """Test basic chunk context prompt generation."""
+    url = "https://example.com/python-guide"
     url_title = "Python Tutorials"
     chunk_content = "Functions are reusable code blocks"
 
-    prompt = create_chunk_context_prompt(url_title, chunk_content)
+    prompt = create_chunk_context_prompt(url, url_title, chunk_content)
+    assert url in prompt
     assert url_title in prompt
     assert chunk_content in prompt

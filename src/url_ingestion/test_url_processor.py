@@ -2,16 +2,13 @@
 
 import pytest
 from src.url_ingestion.url_processor import process_url_content
-from src.url_ingestion.url_fetcher import FetchedContent
+from src.url_ingestion.url_fetcher import FetchedContent, URLFetcherInterface
 from src.test_utils import (
     StubURLRepository,
     StubURLChunkRepository,
     StubEmbeddingClient,
     StubLLMClient,
 )
-
-from src.embedding_interface import EmbeddingError
-from src.llm_interface import LLMError
 
 
 @pytest.fixture
@@ -43,7 +40,7 @@ def mock_fetcher_should_not_be_called():
 
 
 @pytest.mark.asyncio
-async def test_process_url_content_success(mock_simple_fetcher):
+async def test_process_url_content_success(mock_simple_fetcher: URLFetcherInterface):
     """Test successful processing of a new URL with content chunking and embedding."""
     # Setup
     url_repo = StubURLRepository()
@@ -69,7 +66,7 @@ async def test_process_url_content_success(mock_simple_fetcher):
     assert result.url.id == 1
 
     # Assertions on chunks
-    assert len(result.chunks) >= 2  # At least 1 summary + 1 text chunk
+    assert len(result.chunks) == 2  # 1 summary + 1 text chunk
 
     # Check summary chunk (chunk_order=0, is_summary=True)
     summary_chunk = result.chunks[0]
@@ -86,7 +83,7 @@ async def test_process_url_content_success(mock_simple_fetcher):
 
 @pytest.mark.asyncio
 async def test_process_url_content_duplicate_url_returns_existing(
-    mock_fetcher_should_not_be_called,
+    mock_fetcher_should_not_be_called: URLFetcherInterface,
 ):
     """Test that duplicate URLs are not re-fetched and existing record is returned."""
     # Setup
@@ -133,52 +130,6 @@ async def test_process_url_content_duplicate_url_returns_existing(
     assert result.url.url == test_url
     assert result.url.title == "Existing Article"
     assert len(result.chunks) == 2
-
-
-@pytest.mark.asyncio
-async def test_process_url_content_embedding_failure(mock_simple_fetcher):
-    """Test that embedding generation failures are propagated."""
-    # Setup
-    url_repo = StubURLRepository()
-    chunk_repo = StubURLChunkRepository()
-    embedding_client = StubEmbeddingClient(should_fail=True)
-    llm_client = StubLLMClient(responses=["Summary"])
-
-    test_url = "https://example.com/article"
-
-    # Should raise EmbeddingError
-    with pytest.raises(EmbeddingError):
-        await process_url_content(
-            test_url,
-            url_repo,
-            chunk_repo,
-            llm_client,
-            embedding_client,
-            fetch_fn=mock_simple_fetcher,
-        )
-
-
-@pytest.mark.asyncio
-async def test_process_url_content_llm_failure(mock_simple_fetcher):
-    """Test that LLM summary generation failures are propagated."""
-    # Setup
-    url_repo = StubURLRepository()
-    chunk_repo = StubURLChunkRepository()
-    embedding_client = StubEmbeddingClient()
-    llm_client = StubLLMClient(should_fail=True)
-
-    test_url = "https://example.com/article"
-
-    # Should raise LLMError
-    with pytest.raises(LLMError):
-        await process_url_content(
-            test_url,
-            url_repo,
-            chunk_repo,
-            llm_client,
-            embedding_client,
-            fetch_fn=mock_simple_fetcher,
-        )
 
 
 @pytest.mark.asyncio

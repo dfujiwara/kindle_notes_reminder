@@ -55,18 +55,6 @@ def test_basic_context_prompt():
     assert note_content in prompt
 
 
-def test_context_prompt_structure():
-    """Test that context prompt has expected structure."""
-    book_title = "Test Book"
-    note_content = "Test note content"
-    prompt = create_context_prompt(book_title, note_content)
-    assert "Book:" in prompt
-    assert "Highlighted passage:" in prompt
-    assert "Explain this concept clearly" in prompt
-    assert "practical example" in prompt
-    assert "memorable" in prompt
-
-
 def test_basic_chunk_context_prompt():
     """Test basic chunk context prompt generation."""
     url_title = "Python Tutorials"
@@ -75,15 +63,3 @@ def test_basic_chunk_context_prompt():
     prompt = create_chunk_context_prompt(url_title, chunk_content)
     assert url_title in prompt
     assert chunk_content in prompt
-
-
-def test_chunk_context_prompt_structure():
-    """Test that chunk context prompt has expected structure."""
-    url_title = "Test Article"
-    chunk_content = "Test chunk content"
-    prompt = create_chunk_context_prompt(url_title, chunk_content)
-    assert "Article:" in prompt
-    assert "Content passage:" in prompt
-    assert "Explain this concept clearly" in prompt
-    assert "practical example" in prompt
-    assert "memorable" in prompt

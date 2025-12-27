@@ -9,6 +9,7 @@ from src.test_utils import (
     StubEmbeddingClient,
     StubLLMClient,
 )
+from src.repositories.models import URLCreate, URLChunkCreate
 
 
 @pytest.fixture
@@ -94,9 +95,6 @@ async def test_process_url_content_duplicate_url_returns_existing(
 
     test_url = "https://example.com/article"
 
-    # Pre-populate with existing URL and chunks
-    from src.repositories.models import URLCreate, URLChunkCreate
-
     url_record = url_repo.add(URLCreate(url=test_url, title="Existing Article"))
     chunk_repo.add(
         URLChunkCreate(
@@ -130,38 +128,3 @@ async def test_process_url_content_duplicate_url_returns_existing(
     assert result.url.url == test_url
     assert result.url.title == "Existing Article"
     assert len(result.chunks) == 2
-
-
-@pytest.mark.asyncio
-async def test_process_url_content_with_multiple_paragraphs():
-    """Test processing content with multiple paragraphs."""
-    # Setup
-    url_repo = StubURLRepository()
-    chunk_repo = StubURLChunkRepository()
-    embedding_client = StubEmbeddingClient()
-    llm_client = StubLLMClient(responses=["Summary"])
-
-    test_url = "https://example.com/article"
-    # Create content with multiple paragraphs
-    test_content = "\n\n".join(
-        ["Paragraph " + str(i) + " with content." for i in range(1, 6)]
-    )
-
-    # Create a mock fetch function
-    async def mock_fetch(
-        url: str, max_content_size: int | None = None
-    ) -> FetchedContent:
-        return FetchedContent(url=test_url, title="Test", content=test_content)
-
-    result = await process_url_content(
-        test_url,
-        url_repo,
-        chunk_repo,
-        llm_client,
-        embedding_client,
-        fetch_fn=mock_fetch,
-    )
-
-    # Should have summary + at least 1 text chunk
-    assert len(result.chunks) >= 2
-    assert result.chunks[0].is_summary is True

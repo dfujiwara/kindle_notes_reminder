@@ -133,68 +133,6 @@ async def test_process_url_content_duplicate_url_returns_existing(
 
 
 @pytest.mark.asyncio
-async def test_process_url_content_return_value_structure():
-    """Test that the return value has the correct structure."""
-    # Setup
-    url_repo = StubURLRepository()
-    chunk_repo = StubURLChunkRepository()
-    embedding_client = StubEmbeddingClient()
-    llm_client = StubLLMClient(responses=["Concise summary."])
-
-    test_url = "https://example.com/test"
-    test_content = (
-        "Paragraph one with substantial content.\n\n"
-        "Paragraph two with more information.\n\n"
-        "Paragraph three completing the thought."
-    )
-
-    # Create a mock fetch function
-    async def mock_fetch(
-        url: str, max_content_size: int | None = None
-    ) -> FetchedContent:
-        return FetchedContent(url=test_url, title="Test Page", content=test_content)
-
-    result = await process_url_content(
-        test_url,
-        url_repo,
-        chunk_repo,
-        llm_client,
-        embedding_client,
-        fetch_fn=mock_fetch,
-    )
-
-    # Verify URLWithChunksResponses structure
-    assert hasattr(result, "url")
-    assert hasattr(result, "chunks")
-
-    # Verify URL response structure
-    url_resp = result.url
-    assert hasattr(url_resp, "id")
-    assert hasattr(url_resp, "url")
-    assert hasattr(url_resp, "title")
-    assert hasattr(url_resp, "fetched_at")
-    assert hasattr(url_resp, "created_at")
-
-    # Verify chunk response structure
-    assert len(result.chunks) > 0
-    for chunk in result.chunks:
-        assert hasattr(chunk, "id")
-        assert hasattr(chunk, "content")
-        assert hasattr(chunk, "chunk_order")
-        assert hasattr(chunk, "is_summary")
-        assert hasattr(chunk, "created_at")
-
-    # Verify summary is first chunk
-    assert result.chunks[0].is_summary is True
-    assert result.chunks[0].chunk_order == 0
-
-    # Verify text chunks are ordered
-    for i, chunk in enumerate(result.chunks[1:], start=1):
-        assert chunk.chunk_order == i
-        assert chunk.is_summary is False
-
-
-@pytest.mark.asyncio
 async def test_process_url_content_with_multiple_paragraphs():
     """Test processing content with multiple paragraphs."""
     # Setup

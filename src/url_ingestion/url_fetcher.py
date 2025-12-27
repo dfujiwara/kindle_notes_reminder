@@ -8,6 +8,7 @@ import httpx
 import logging
 from bs4 import BeautifulSoup
 from dataclasses import dataclass
+from typing import Protocol
 import re
 
 from src.config import settings
@@ -28,6 +29,28 @@ class FetchedContent:
     url: str
     title: str
     content: str
+
+
+class URLFetcherInterface(Protocol):
+    """Protocol for URL fetching implementations."""
+
+    async def __call__(
+        self, url: str, max_content_size: int | None = None
+    ) -> FetchedContent:
+        """
+        Fetch a URL and extract clean text content.
+
+        Args:
+            url: The URL to fetch
+            max_content_size: Maximum allowed content size in bytes (optional)
+
+        Returns:
+            FetchedContent: The fetched URL, title, and clean text content
+
+        Raises:
+            URLFetchError: If fetching or parsing fails
+        """
+        ...
 
 
 supported_content_type = {"text/html", "application/xhtml", "text/plain"}

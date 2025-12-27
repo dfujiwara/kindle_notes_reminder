@@ -16,6 +16,7 @@ class TextChunk:
     content: str
     content_hash: str
     chunk_order: int
+    is_summary: bool = False
 
 
 def chunk_text_by_paragraphs(text: str, max_chunk_size: int = 1000) -> list[TextChunk]:

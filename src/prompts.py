@@ -21,6 +21,7 @@ Format your response in markdown:
 - **Key Concept:** [2-3 sentence explanation]
 - **Examples:** [2-3 concrete real-world examples or analogies, as a bulleted list]
 - **Connection:** [Optional: Broader theme links]""",
+    "summarizer": "You are a skilled summarizer. Generate clear, concise summaries that capture the most important information.",
 }
 
 
@@ -73,3 +74,20 @@ Highlighted passage:
 "{note_content}"
 
 Explain this concept clearly and provide a practical example that makes it memorable."""
+
+
+def create_summary_prompt(content: str) -> str:
+    """
+    Create a prompt for generating a concise summary of content.
+
+    Args:
+        content: The content to summarize
+
+    Returns:
+        A formatted summary prompt string
+    """
+    return f"""Please provide a concise 2-3 sentence summary of the following content:
+
+{content}
+
+Summary:"""

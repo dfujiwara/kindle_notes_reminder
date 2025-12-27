@@ -81,6 +81,7 @@ class StubNoteRepository(NoteRepositoryInterface):
             book_id=note.book_id,
             content=note.content,
             content_hash=note.content_hash,
+            embedding=note.embedding,
         )
         self.notes.append(note_read)
         return note_read

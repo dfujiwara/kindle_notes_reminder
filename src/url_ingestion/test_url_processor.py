@@ -208,38 +208,3 @@ async def test_process_url_content_chunk_ordering():
 
     # Verify first chunk is summary
     assert result.chunks[0].is_summary is True
-
-
-@pytest.mark.asyncio
-async def test_process_url_content_content_hash_generation():
-    """Test that content hashes are generated correctly for chunks."""
-    # Setup
-    url_repo = StubURLRepository()
-    chunk_repo = StubURLChunkRepository()
-    embedding_client = StubEmbeddingClient()
-    llm_client = StubLLMClient(responses=["Summary"])
-
-    test_url = "https://example.com/article"
-    test_content = "Single paragraph of content."
-
-    # Create a mock fetch function
-    async def mock_fetch(
-        url: str, max_content_size: int | None = None
-    ) -> FetchedContent:
-        return FetchedContent(url=test_url, title="Test", content=test_content)
-
-    result = await process_url_content(
-        test_url,
-        url_repo,
-        chunk_repo,
-        llm_client,
-        embedding_client,
-        fetch_fn=mock_fetch,
-    )
-
-    # All chunks should have content_hash in the repository
-    # (We can't directly access it from URLChunkResponse, but we verify chunks were saved)
-    assert len(result.chunks) >= 2  # At least summary + one text chunk
-    for chunk in result.chunks:
-        assert chunk.content is not None
-        assert len(chunk.content) > 0

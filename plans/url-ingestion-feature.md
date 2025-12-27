@@ -345,17 +345,20 @@ similar_chunks = chunk_repository.search_chunks_by_embedding(embedding, limit=li
 # Combine into response
 ```
 
-### Phase 7: Dependency Injection & Configuration - ❌ NOT STARTED
+### Phase 7: Dependency Injection & Configuration - ✅ COMPLETE
 
-**7.1 Update `src/dependencies.py`:** ❌ NOT STARTED
-- Add: `get_url_repository()`, `get_urlchunk_repository()`
+**7.1 Update `src/dependencies.py`:** ✅ COMPLETE
+- ✅ Add: `get_url_repository()`, `get_urlchunk_repository()`
+- Both functions follow existing patterns (depend on session, return interface)
 
-**7.2 Update `src/config.py`:** ❌ NOT STARTED
-- Add setting: `max_url_content_size: int = 500_000  # 500KB HTML limit`
-- Optional settings: `url_fetch_timeout`, `max_chunk_size`
+**7.2 Update `src/config.py`:** ✅ COMPLETE
+- ✅ Add setting: `max_url_content_size: int = 500_000  # 500KB HTML limit`
+- ✅ All URL-related settings configured
 
-**7.3 Update `src/test_utils.py`:** ❌ NOT STARTED
-- Add: `StubURLRepository`, `StubURLChunkRepository`
+**7.3 Update `src/test_utils.py`:** ✅ COMPLETE
+- ✅ Add: `StubURLRepository` with full interface implementation
+- ✅ Add: `StubURLChunkRepository` with full interface implementation
+- Includes deduplication logic and stub methods for all repository operations
 
 ### Phase 8: Testing - ❌ NOT STARTED
 
@@ -398,7 +401,7 @@ uv run pyright      # Type checking
 4. ⚠️ **Phase 4** (Unified /random) - Response builders & context streaming COMPLETE, **4.4 endpoint rewrite NEXT**
 5. ❌ **Phase 5** (URL Endpoints) - New API surface NOT STARTED
 6. ❌ **Phase 6** (Search) - Enhanced search NOT STARTED
-7. ❌ **Phase 7** (DI & Config) - Wire everything together NOT STARTED
+7. ✅ **Phase 7** (DI & Config) - Wire everything together COMPLETE
 8. ❌ **Phase 8** (Testing) - Ensure quality throughout NOT STARTED
 9. ❌ **Phase 9** (Documentation) - Update docs NOT STARTED
 

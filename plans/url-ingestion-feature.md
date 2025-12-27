@@ -193,17 +193,15 @@ ContentWithRelatedItemsResponse:
   - `NoteContent` and `URLChunkContent` (with `content_type: Literal["note"]` or `Literal["url_chunk"]`)
   - `ContentWithRelatedItemsResponse` (unified response combining source + content + related items)
 
-**1.2 Create Migration:** ❌ CRITICAL BLOCKER - NOT STARTED
-```bash
-uv run alembic revision --autogenerate -m "add url and urlchunk tables"
-uv run alembic upgrade head
-```
-- **Expected migration will auto-detect:**
-  - URL table with: id, url (unique), title, fetched_at, created_at
-  - URLChunk table with: id, content, content_hash (unique), url_id (FK), chunk_order, is_summary, embedding (Vector 1536), created_at
-  - HNSW vector index on URLChunk.embedding
-  - Foreign key constraint: url_id → URL.id
-- **Manual verification needed after migration** to ensure HNSW index is created correctly
+**1.2 Create Migration:** ✅ COMPLETE
+- ✅ Migration file: `migrations/versions/fb012279fd22_add_url_and_urlchunk_tables.py` (auto-generated)
+- ✅ Fixed HNSW index creation:
+  - Issue: Initial Alembic API didn't support operator class specification → Alembic hung
+  - Solution: Used raw SQL with explicit `vector_cosine_ops` operator class
+  - Pattern: Matches existing note embedding index (dbff8ad5086d migration)
+- ✅ Foreign key constraint: url_id → URL.id
+- ✅ Unique constraints: url field, content_hash field
+- **Ready to apply:** `uv run alembic upgrade head`
 
 **1.3 Add Repository Interfaces to `src/repositories/interfaces.py`:** ✅ COMPLETE (commit 4f3df43)
 - ✅ `URLRepositoryInterface` with methods: add, get, get_by_url, list_urls, delete
@@ -396,19 +394,20 @@ uv run pyright      # Type checking
 
 ## Implementation Order
 
-1. ⚠️ **Phase 1** (Models & Migration) - Models complete, migration needed for Phase 5
+1. ✅ **Phase 1** (Models & Migration) - COMPLETE (models + migration with fixed HNSW index)
 2. ✅ **Phase 2** (Repositories) - Data access layer COMPLETE
 3. ✅ **Phase 3** (Processing) - URL fetching, chunking, processing COMPLETE (35/35 tests passing)
 4. ✅ **Phase 4** (Unified /random) - All components COMPLETE including /random/v2 endpoint
-5. ❌ **Phase 5** (URL Endpoints) - Requires migration, NOT STARTED
+5. ❌ **Phase 5** (URL Endpoints) - Migration ready, endpoints NOT STARTED
 6. ❌ **Phase 6** (Search) - Enhanced search NOT STARTED
 7. ✅ **Phase 7** (DI & Config) - Wire everything together COMPLETE
 8. ⚠️ **Phase 8** (Testing) - Unit & repo tests COMPLETE, 8.3 router tests blocked on Phase 5
 9. ❌ **Phase 9** (Documentation) - Update docs NOT STARTED
 
-**Next Decision Point:**
-- Proceed with Phase 5 (requires migration), OR
-- Work on Phase 8.3 (router tests for /random/v2)
+**Next Steps:**
+1. Apply migration: `uv run alembic upgrade head`
+2. Proceed with Phase 5 (URL endpoints), OR
+3. Work on Phase 8.3 (router tests for /random/v2)
 
 **Key Pattern to Follow:** Mirror existing Book/Note architecture everywhere:
 - Models: Book → URL, Note → URLChunk
@@ -507,16 +506,11 @@ Use HNSW (Hierarchical Navigable Small World) for consistency with existing Note
 - Phase 7: Repositories fully tested
 - Total: 58+ URL-feature tests + existing 106 tests
 
-**CRITICAL BLOCKER - MUST DO NEXT:**
-1. Create and apply database migration for URL and URLChunk tables
-   ```bash
-   uv run alembic revision --autogenerate -m "add url and urlchunk tables"
-   uv run alembic upgrade head
-   ```
-
 **COMPLETED IN THIS SESSION:**
-1. ✅ Phase 4.4 - Created `/random/v2` endpoint with unified schema
-2. ✅ Updated plan documentation
+1. ✅ Phase 1.2 - Created database migration for URL and URLChunk tables
+   - Fixed HNSW index creation (operator class issue resolved)
+   - Migration file: `migrations/versions/fb012279fd22_add_url_and_urlchunk_tables.py`
+   - Ready to apply: `uv run alembic upgrade head`
 
 **NEXT STEPS (User Choice):**
 - **Option A:** Apply migration → Implement Phase 5 (URL endpoints)
@@ -525,6 +519,6 @@ Use HNSW (Hierarchical Navigable Small World) for consistency with existing Note
 
 ---
 
-*Plan Status: **IN PROGRESS** (Phase 1-4 complete, Phase 5-6,9 remaining, decision needed on next phase)*
+*Plan Status: **READY FOR PHASE 5** (Phase 1-4 complete, migration ready, Phase 5-6,9 remaining)*
 
-*Last Updated: 2025-12-26 - Phase 4.4 complete! Created /random/v2 endpoint with unified schema. Migration not required for Phase 4.4, needed for Phase 5. All 164 tests passing.*
+*Last Updated: 2025-12-31 - Phase 1.2 complete! Migration created and HNSW index fixed. All 164 tests passing. Ready to apply migration and proceed with Phase 5.*

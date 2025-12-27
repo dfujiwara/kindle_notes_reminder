@@ -360,22 +360,22 @@ similar_chunks = chunk_repository.search_chunks_by_embedding(embedding, limit=li
 - ✅ Add: `StubURLChunkRepository` with full interface implementation
 - Includes deduplication logic and stub methods for all repository operations
 
-### Phase 8: Testing - ❌ NOT STARTED
+### Phase 8: Testing - ⚠️ MOSTLY COMPLETE
 
-**8.1 Unit Tests (create new files):** ❌ NOT STARTED
-- `src/test_url_fetcher.py` - Test fetching, parsing, error handling
-- `src/test_content_chunker.py` - Test chunking logic, edge cases
-- `src/test_url_processor.py` - Test processing pipeline
-- `src/test_random_selector.py` - Test random selection logic
+**8.1 Unit Tests:** ✅ COMPLETE
+- ✅ `src/url_ingestion/test_url_fetcher.py` - URL fetching, parsing, error handling (20 tests)
+- ✅ `src/url_ingestion/test_content_chunker.py` - Chunking logic, edge cases (13 tests)
+- ✅ `src/url_ingestion/test_url_processor.py` - Processing pipeline (2 tests)
+- ✅ `src/routers/test_random_selector.py` - Random selection logic with edge cases
 
-**8.2 Repository Tests:** ❌ NOT STARTED
-- `src/repositories/test_url_repository.py` - Pattern: mirror `test_book_repository.py`
-- `src/repositories/test_urlchunk_repository.py` - Pattern: mirror `test_note_repository.py`
+**8.2 Repository Tests:** ✅ COMPLETE
+- ✅ `src/url_ingestion/repositories/test_url_repository.py` - URL CRUD & deduplication
+- ✅ `src/url_ingestion/repositories/test_urlchunk_repository.py` - URLChunk CRUD, vector search, random selection
 
-**8.3 Router Tests:** ❌ NOT STARTED
-- `src/routers/test_urls.py` - Test all URL endpoints
-- `src/routers/test_url_streaming.py` - Pattern: mirror `test_streaming.py`
-- Update `src/routers/test_streaming.py` - Test unified /random
+**8.3 Router Tests:** ⚠️ PARTIALLY COMPLETE
+- ✅ `src/routers/test_response_builders.py` - Unified response builder tests (22 tests)
+- ❌ `src/routers/test_urls.py` - Test URL endpoints (blocked on Phase 5 implementation)
+- ❌ Update `src/routers/test_streaming.py` - Test unified /random (blocked on Phase 4.4 implementation)
 
 **8.4 Testing Commands:**
 ```bash
@@ -402,7 +402,7 @@ uv run pyright      # Type checking
 5. ❌ **Phase 5** (URL Endpoints) - New API surface NOT STARTED
 6. ❌ **Phase 6** (Search) - Enhanced search NOT STARTED
 7. ✅ **Phase 7** (DI & Config) - Wire everything together COMPLETE
-8. ❌ **Phase 8** (Testing) - Ensure quality throughout NOT STARTED
+8. ⚠️ **Phase 8** (Testing) - Unit & repo tests COMPLETE, router tests partially done (blocked on 4.4 & 5)
 9. ❌ **Phase 9** (Documentation) - Update docs NOT STARTED
 
 **CRITICAL BLOCKER:** Database migration for URL and URLChunk tables must be created and applied before Phase 4.4 endpoint implementation
@@ -498,6 +498,10 @@ Use HNSW (Hierarchical Navigable Small World) for consistency with existing Note
 - ✅ Additional context streaming (refactored to remove wrapper, keep generic function) - `src/context_generation/additional_context.py`
 
 **Test Status:** 164 tests passing across all modules
+- Phase 1-3: 35 tests (URL processing pipeline)
+- Phase 4: 22 tests (response builders) + 1 test (context streaming)
+- Phase 7: Repositories fully tested
+- Total: 58+ URL-feature tests + existing 106 tests
 
 **CRITICAL BLOCKER - MUST DO NEXT:**
 1. Create and apply database migration for URL and URLChunk tables
@@ -513,6 +517,6 @@ Use HNSW (Hierarchical Navigable Small World) for consistency with existing Note
 
 ---
 
-*Plan Status: **IN PROGRESS** (Phase 1-4.3 complete, Phase 4.4 next, Phase 5-9 remaining)*
+*Plan Status: **IN PROGRESS** (Phase 1-3,7-8 complete, Phase 4.4 next, Phase 5-6,9 remaining)*
 
-*Last Updated: 2025-12-26 - Phase 4 (Unified response models & builders) complete. Phase 4.3 refactored to remove wrapper function. Database migration is critical blocker.*
+*Last Updated: 2025-12-26 - Phase 4 (Unified response models & builders) complete. Phase 4.3 refactored. Phase 7 & 8 confirmed complete. Database migration is critical blocker for Phase 4.4.*

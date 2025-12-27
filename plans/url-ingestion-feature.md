@@ -217,29 +217,31 @@ uv run alembic revision --autogenerate -m "add url and urlchunk tables"
   - Vector similarity search: `find_similar_chunks()`, `search_chunks_by_embedding()`
   - Random selection: `get_random()` using `func.random()`
 
-### Phase 3: URL Fetching & Content Processing - ❌ NOT STARTED
+### Phase 3: URL Fetching & Content Processing - ✅ COMPLETE (commit TBD)
 
-**3.1 Create `src/url_fetcher.py`:** ❌ NOT STARTED
-- Function: `async fetch_url_content(url: str) -> FetchedContent`
-- Use `httpx.AsyncClient` for HTTP requests (timeout: 30s, follow redirects)
-- Use `BeautifulSoup` to parse HTML and extract text
-- Remove script/style/nav/footer/header tags
-- Clean excessive whitespace
-- Extract title from `<title>` tag
-- Raise `URLFetchError` on failures
+**3.1 Create `src/url_ingestion/url_fetcher.py`:** ✅ COMPLETE
+- ✅ Function: `async fetch_url_content(url: str) -> FetchedContent`
+- ✅ Use `httpx.AsyncClient` for HTTP requests (timeout: 30s, follow redirects)
+- ✅ Use `BeautifulSoup` to parse HTML and extract text
+- ✅ Remove script/style/nav/footer/header tags
+- ✅ Clean excessive whitespace
+- ✅ Extract title from `<title>` tag
+- ✅ Raise `URLFetchError` on failures
+- ✅ Tests: 20/20 passing
 
-**3.2 Create `src/content_chunker.py`:** ❌ NOT STARTED
-- Function: `chunk_text_by_paragraphs(text: str, max_chunk_size: int = 1000) -> list[TextChunk]`
-- Split by double newlines (paragraphs)
-- Combine small paragraphs up to max size
-- Split large paragraphs if they exceed max size
-- Return chunks with content, SHA-256 hash, and order
+**3.2 Create `src/url_ingestion/content_chunker.py`:** ✅ COMPLETE
+- ✅ Function: `chunk_text_by_paragraphs(text: str, max_chunk_size: int = 1000) -> list[TextChunk]`
+- ✅ Split by double newlines (paragraphs)
+- ✅ Combine small paragraphs up to max size
+- ✅ Split large paragraphs if they exceed max size
+- ✅ Return chunks with content, SHA-256 hash, and order
+- ✅ Tests: 13/13 passing
 
-**3.3 Create `src/url_processor.py`:** ❌ NOT STARTED
-- Pattern: Mirror `notebook_processor.py` structure
-- Function: `async process_url_content(...) -> URLWithChunksResponse`
-- **Processing:** Synchronous (blocks until complete)
-- Steps:
+**3.3 Create `src/url_ingestion/url_processor.py`:** ✅ COMPLETE
+- ✅ Pattern: Mirror `notebook_processor.py` structure
+- ✅ Function: `async process_url_content(...) -> URLWithChunksResponse`
+- ✅ **Processing:** Synchronous (blocks until complete)
+- ✅ Steps:
   1. **Check if URL exists** → return existing URL with chunks if found (no re-fetching)
   2. Fetch URL content with `fetch_url_content()` (enforces size limit)
   3. Chunk content using `chunk_text_by_paragraphs(max_chunk_size=1000)`
@@ -248,12 +250,13 @@ uv run alembic revision --autogenerate -m "add url and urlchunk tables"
   6. Save summary as chunk_order=0, is_summary=True
   7. Save text chunks starting from chunk_order=1
   8. Each chunk deduplicated by content_hash in repository.add()
+- ✅ Tests: 2/2 passing
 
-**Summary Generation Detail:**
-- Truncate full content to ~3000 chars for LLM input
-- Generate 2-3 sentence summary using LLM
-- Store summary as special URLChunk (is_summary=True, chunk_order=0)
-- Summary gets its own embedding for URL-level discovery
+**Phase 3 Test Summary:**
+- Total: 35/35 tests passing
+- url_fetcher.py: 20 tests
+- content_chunker.py: 13 tests
+- url_processor.py: 2 tests
 
 ### Phase 4: Unified Random Endpoint - ❌ NOT STARTED
 
@@ -382,7 +385,7 @@ uv run pyright      # Type checking
 
 1. ⚠️ **Phase 1** (Models & Migration) - Partially complete, need unified response models + migration
 2. ✅ **Phase 2** (Repositories) - Data access layer COMPLETE
-3. ❌ **Phase 3** (Processing) - URL fetching, chunking, processing NOT STARTED
+3. ✅ **Phase 3** (Processing) - URL fetching, chunking, processing COMPLETE (35/35 tests passing)
 4. ❌ **Phase 4** (Unified /random) - Update existing endpoint NOT STARTED
 5. ❌ **Phase 5** (URL Endpoints) - New API surface NOT STARTED
 6. ❌ **Phase 6** (Search) - Enhanced search NOT STARTED
@@ -472,14 +475,17 @@ Use HNSW (Hierarchical Navigable Small World) for consistency with existing Note
 - ✅ URL and URLChunk models (commit b060b83)
 - ✅ Repository interfaces with count_with_embeddings (commit 4f3df43)
 - ✅ URL and URLChunk repository implementations (commit 02b37bc)
+- ✅ URL fetcher module with full HTTP/HTML handling (20/20 tests) - `src/url_ingestion/url_fetcher.py`
+- ✅ Content chunker module with paragraph-based splitting (13/13 tests) - `src/url_ingestion/content_chunker.py`
+- ✅ URL processor module with complete pipeline (2/2 tests) - `src/url_ingestion/url_processor.py`
 
 **NEXT STEPS:**
 1. Add unified response models (SourceResponse, ContentItemResponse, ContentWithRelatedItemsResponse)
 2. Create and apply database migration
-3. Begin Phase 3 (URL fetching & content processing)
+3. Begin Phase 4 (Unified Random Endpoint)
 
 ---
 
-*Plan Status: **IN PROGRESS** (Phase 1-2 complete, Phase 3+ remaining)*
+*Plan Status: **IN PROGRESS** (Phase 1-3 complete, Phase 4+ remaining)*
 
-*Last Updated: 2025-12-23 - Updated with completion status for Phases 1-2*
+*Last Updated: 2025-12-26 - Phase 3 (URL Fetching & Content Processing) complete with 35/35 tests passing*

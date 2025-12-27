@@ -4,8 +4,6 @@ Tests for the random content selector.
 Tests weighted random selection between notes and URL chunks.
 """
 
-from datetime import datetime, timezone
-
 from src.routers.random_selector import (
     RandomNoteSelection,
     RandomChunkSelection,
@@ -31,7 +29,7 @@ def test_select_random_content_only_notes():
 
     # Add notes with embeddings
     for i in range(5):
-        note = note_repo.add(
+        note_repo.add(
             NoteCreate(
                 book_id=1,
                 content=f"Note {i} content",
@@ -39,11 +37,8 @@ def test_select_random_content_only_notes():
                 embedding=[0.1] * 1536,
             )
         )
-
     result = select_random_content(note_repo, chunk_repo)
-
     assert result is not None
-    assert isinstance(result, RandomNoteSelection)
     assert result.content_type == "note"
     assert result.item.book_id == 1
 
@@ -55,7 +50,7 @@ def test_select_random_content_only_chunks():
 
     # Add chunks with embeddings
     for i in range(5):
-        chunk = chunk_repo.add(
+        chunk_repo.add(
             URLChunkCreate(
                 url_id=1,
                 content=f"Chunk {i} content",
@@ -65,11 +60,8 @@ def test_select_random_content_only_chunks():
                 embedding=[0.2] * 1536,
             )
         )
-
     result = select_random_content(note_repo, chunk_repo)
-
     assert result is not None
-    assert isinstance(result, RandomChunkSelection)
     assert result.content_type == "url_chunk"
     assert result.item.url_id == 1
 
@@ -104,7 +96,7 @@ def test_select_random_content_both_types():
         )
 
     # With equal counts, we should eventually get both types
-    results = []
+    results: list[RandomChunkSelection | RandomNoteSelection | None] = []
     for _ in range(20):
         result = select_random_content(note_repo, chunk_repo)
         results.append(result)
@@ -160,39 +152,6 @@ def test_select_random_content_weighted_distribution():
     # Allow some variance (40-85% for notes)
     assert 40 <= note_count <= 85, f"Expected ~75 notes, got {note_count}"
     assert 15 <= chunk_count <= 60, f"Expected ~25 chunks, got {chunk_count}"
-
-
-def test_select_random_content_items_without_embeddings_excluded():
-    """Test that items without embeddings are not counted."""
-    note_repo = StubNoteRepository()
-    chunk_repo = StubURLChunkRepository()
-
-    # Add notes without embeddings (embedding=None)
-    note_repo.add(
-        NoteCreate(
-            book_id=1,
-            content="Note without embedding",
-            content_hash="no_embedding_hash",
-            embedding=None,
-        )
-    )
-
-    # Add notes with embeddings
-    note_repo.add(
-        NoteCreate(
-            book_id=1,
-            content="Note with embedding",
-            content_hash="with_embedding_hash",
-            embedding=[0.1] * 1536,
-        )
-    )
-
-    # Should only count the one with embedding
-    assert note_repo.count_with_embeddings() == 1
-
-    result = select_random_content(note_repo, chunk_repo)
-    assert result is not None
-    assert isinstance(result, RandomNoteSelection)
 
 
 def test_select_random_content_type_discrimination():

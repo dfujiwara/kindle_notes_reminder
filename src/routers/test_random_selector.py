@@ -5,108 +5,105 @@ Tests weighted random selection between notes and URL chunks.
 """
 
 from datetime import datetime, timezone
-from unittest.mock import MagicMock
 
 from src.routers.random_selector import (
     RandomNoteSelection,
     RandomChunkSelection,
     select_random_content,
 )
-from src.repositories.models import NoteRead, URLChunkRead
+from src.repositories.models import NoteRead, NoteCreate, URLChunkRead, URLChunkCreate
+from src.test_utils import StubNoteRepository, StubURLChunkRepository
 
 
 def test_select_random_content_empty_database():
     """Test that None is returned when no content exists."""
-    note_repo = MagicMock()
-    chunk_repo = MagicMock()
-
-    note_repo.count_with_embeddings.return_value = 0
-    chunk_repo.count_with_embeddings.return_value = 0
+    note_repo = StubNoteRepository()
+    chunk_repo = StubURLChunkRepository()
 
     result = select_random_content(note_repo, chunk_repo)
     assert result is None
 
 
-def _create_test_note() -> NoteRead:
-    """Create a test note with embeddings."""
-    return NoteRead(
-        id=1,
-        book_id=1,
-        content="Test note content",
-        content_hash="test_hash_1",
-        embedding=[0.1] * 1536,
-        created_at=datetime.now(timezone.utc),
-    )
-
-
-def _create_test_chunk() -> URLChunkRead:
-    """Create a test URL chunk with embeddings."""
-    return URLChunkRead(
-        id=1,
-        url_id=1,
-        content="Test chunk content",
-        content_hash="test_chunk_hash_1",
-        chunk_order=1,
-        is_summary=False,
-        embedding=[0.2] * 1536,
-        created_at=datetime.now(timezone.utc),
-    )
-
-
 def test_select_random_content_only_notes():
     """Test selection when only notes exist."""
-    note = _create_test_note()
-    note_repo = MagicMock()
-    chunk_repo = MagicMock()
+    note_repo = StubNoteRepository()
+    chunk_repo = StubURLChunkRepository()
 
-    note_repo.count_with_embeddings.return_value = 5
-    chunk_repo.count_with_embeddings.return_value = 0
-    note_repo.get_random.return_value = note
+    # Add notes with embeddings
+    for i in range(5):
+        note = note_repo.add(
+            NoteCreate(
+                book_id=1,
+                content=f"Note {i} content",
+                content_hash=f"hash_{i}",
+                embedding=[0.1] * 1536,
+            )
+        )
 
     result = select_random_content(note_repo, chunk_repo)
 
     assert result is not None
     assert isinstance(result, RandomNoteSelection)
     assert result.content_type == "note"
-    assert result.item == note
-    note_repo.get_random.assert_called_once()
-    chunk_repo.get_random.assert_not_called()
+    assert result.item.book_id == 1
 
 
 def test_select_random_content_only_chunks():
     """Test selection when only chunks exist."""
-    chunk = _create_test_chunk()
-    note_repo = MagicMock()
-    chunk_repo = MagicMock()
+    note_repo = StubNoteRepository()
+    chunk_repo = StubURLChunkRepository()
 
-    note_repo.count_with_embeddings.return_value = 0
-    chunk_repo.count_with_embeddings.return_value = 5
-    chunk_repo.get_random.return_value = chunk
+    # Add chunks with embeddings
+    for i in range(5):
+        chunk = chunk_repo.add(
+            URLChunkCreate(
+                url_id=1,
+                content=f"Chunk {i} content",
+                content_hash=f"chunk_hash_{i}",
+                chunk_order=i,
+                is_summary=False,
+                embedding=[0.2] * 1536,
+            )
+        )
 
     result = select_random_content(note_repo, chunk_repo)
 
     assert result is not None
     assert isinstance(result, RandomChunkSelection)
     assert result.content_type == "url_chunk"
-    assert result.item == chunk
-    chunk_repo.get_random.assert_called_once()
-    note_repo.get_random.assert_not_called()
+    assert result.item.url_id == 1
 
 
 def test_select_random_content_both_types():
     """Test selection when both notes and chunks exist."""
-    note = _create_test_note()
-    chunk = _create_test_chunk()
-    note_repo = MagicMock()
-    chunk_repo = MagicMock()
+    note_repo = StubNoteRepository()
+    chunk_repo = StubURLChunkRepository()
 
-    note_repo.count_with_embeddings.return_value = 10
-    chunk_repo.count_with_embeddings.return_value = 10
-    note_repo.get_random.return_value = note
-    chunk_repo.get_random.return_value = chunk
+    # Add notes
+    for i in range(10):
+        note_repo.add(
+            NoteCreate(
+                book_id=1,
+                content=f"Note {i}",
+                content_hash=f"note_hash_{i}",
+                embedding=[0.1] * 1536,
+            )
+        )
+
+    # Add chunks
+    for i in range(10):
+        chunk_repo.add(
+            URLChunkCreate(
+                url_id=1,
+                content=f"Chunk {i}",
+                content_hash=f"chunk_hash_{i}",
+                chunk_order=i,
+                is_summary=False,
+                embedding=[0.2] * 1536,
+            )
+        )
 
     # With equal counts, we should eventually get both types
-    # (though individual calls are random)
     results = []
     for _ in range(20):
         result = select_random_content(note_repo, chunk_repo)
@@ -122,16 +119,31 @@ def test_select_random_content_both_types():
 
 def test_select_random_content_weighted_distribution():
     """Test that distribution is roughly proportional to counts."""
-    note = _create_test_note()
-    chunk = _create_test_chunk()
-    note_repo = MagicMock()
-    chunk_repo = MagicMock()
+    note_repo = StubNoteRepository()
+    chunk_repo = StubURLChunkRepository()
 
-    # 3:1 ratio - notes are 3x more likely
-    note_repo.count_with_embeddings.return_value = 3
-    chunk_repo.count_with_embeddings.return_value = 1
-    note_repo.get_random.return_value = note
-    chunk_repo.get_random.return_value = chunk
+    # Add 3 notes with embeddings
+    for i in range(3):
+        note_repo.add(
+            NoteCreate(
+                book_id=1,
+                content=f"Note {i}",
+                content_hash=f"note_hash_{i}",
+                embedding=[0.1] * 1536,
+            )
+        )
+
+    # Add 1 chunk with embeddings
+    chunk_repo.add(
+        URLChunkCreate(
+            url_id=1,
+            content="Chunk",
+            content_hash="chunk_hash_0",
+            chunk_order=0,
+            is_summary=False,
+            embedding=[0.2] * 1536,
+        )
+    )
 
     note_count = 0
     chunk_count = 0
@@ -150,30 +162,64 @@ def test_select_random_content_weighted_distribution():
     assert 15 <= chunk_count <= 60, f"Expected ~25 chunks, got {chunk_count}"
 
 
-def test_select_random_content_get_random_returns_none():
-    """Test that None is returned if get_random() returns None."""
-    note_repo = MagicMock()
-    chunk_repo = MagicMock()
+def test_select_random_content_items_without_embeddings_excluded():
+    """Test that items without embeddings are not counted."""
+    note_repo = StubNoteRepository()
+    chunk_repo = StubURLChunkRepository()
 
-    note_repo.count_with_embeddings.return_value = 5
-    chunk_repo.count_with_embeddings.return_value = 0
-    note_repo.get_random.return_value = None
+    # Add notes without embeddings (embedding=None)
+    note_repo.add(
+        NoteCreate(
+            book_id=1,
+            content="Note without embedding",
+            content_hash="no_embedding_hash",
+            embedding=None,
+        )
+    )
+
+    # Add notes with embeddings
+    note_repo.add(
+        NoteCreate(
+            book_id=1,
+            content="Note with embedding",
+            content_hash="with_embedding_hash",
+            embedding=[0.1] * 1536,
+        )
+    )
+
+    # Should only count the one with embedding
+    assert note_repo.count_with_embeddings() == 1
 
     result = select_random_content(note_repo, chunk_repo)
-    assert result is None
+    assert result is not None
+    assert isinstance(result, RandomNoteSelection)
 
 
 def test_select_random_content_type_discrimination():
     """Test that content_type field correctly discriminates types."""
-    note = _create_test_note()
-    chunk = _create_test_chunk()
-    note_repo = MagicMock()
-    chunk_repo = MagicMock()
+    note_repo = StubNoteRepository()
+    chunk_repo = StubURLChunkRepository()
 
-    note_repo.count_with_embeddings.return_value = 100
-    chunk_repo.count_with_embeddings.return_value = 100
-    note_repo.get_random.return_value = note
-    chunk_repo.get_random.return_value = chunk
+    # Add multiple notes and chunks
+    for i in range(10):
+        note_repo.add(
+            NoteCreate(
+                book_id=1,
+                content=f"Note {i}",
+                content_hash=f"note_{i}",
+                embedding=[0.1] * 1536,
+            )
+        )
+        chunk_repo.add(
+            URLChunkCreate(
+                url_id=1,
+                content=f"Chunk {i}",
+                content_hash=f"chunk_{i}",
+                chunk_order=i,
+                is_summary=False,
+                embedding=[0.2] * 1536,
+            )
+        )
 
     for _ in range(50):
         result = select_random_content(note_repo, chunk_repo)

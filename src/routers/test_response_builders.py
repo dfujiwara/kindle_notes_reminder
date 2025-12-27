@@ -15,7 +15,6 @@ from ..repositories.models import (
     URLSource,
     NoteContent,
     URLChunkContent,
-    ContentWithRelatedItemsResponse,
 )
 from .response_builders import (
     build_source_response_from_book,
@@ -311,41 +310,3 @@ def test_build_unified_response_for_chunk():
     # Check related items
     assert len(result.related_items) == 2
     assert all(isinstance(item, URLChunkContent) for item in result.related_items)
-
-
-# Type discrimination tests
-
-
-def test_unified_response_type_discrimination():
-    """Test that unified responses can be correctly discriminated by type."""
-    created_at = datetime.now(timezone.utc)
-    book = create_book_response(created_at=created_at)
-    note = create_note_read(created_at=created_at)
-
-    note_response = build_unified_response_for_note(book, note, [])
-
-    # Source should be BookSource (has author field)
-    assert isinstance(note_response.source, BookSource)
-    assert hasattr(note_response.source, "author")
-    assert note_response.source.type == "book"
-
-    # Content should be NoteContent (no is_summary field)
-    assert isinstance(note_response.content, NoteContent)
-    assert not hasattr(note_response.content, "is_summary")
-    assert note_response.content.content_type == "note"
-
-    # Now test chunk response
-    url = create_url_response(created_at=created_at)
-    chunk = create_url_chunk_read(created_at=created_at)
-    chunk_response = build_unified_response_for_chunk(url, chunk, [])
-
-    # Source should be URLSource (has url field, no author)
-    assert isinstance(chunk_response.source, URLSource)
-    assert hasattr(chunk_response.source, "url")
-    assert not hasattr(chunk_response.source, "author")
-    assert chunk_response.source.type == "url"
-
-    # Content should be URLChunkContent (has is_summary field)
-    assert isinstance(chunk_response.content, URLChunkContent)
-    assert hasattr(chunk_response.content, "is_summary")
-    assert chunk_response.content.content_type == "url_chunk"

@@ -14,6 +14,34 @@ from src.embedding_interface import EmbeddingError
 from src.llm_interface import LLMError
 
 
+@pytest.fixture
+def mock_simple_fetcher():
+    """Mock URL fetcher returning simple content."""
+
+    async def _mock_fetch(
+        url: str, max_content_size: int | None = None
+    ) -> FetchedContent:
+        return FetchedContent(
+            url=url,
+            title="Test Article",
+            content="Content paragraph.",
+        )
+
+    return _mock_fetch
+
+
+@pytest.fixture
+def mock_fetcher_should_not_be_called():
+    """Mock URL fetcher that fails if called."""
+
+    async def _mock_fetch(
+        url: str, max_content_size: int | None = None
+    ) -> FetchedContent:
+        raise AssertionError("fetch should not be called for existing URLs")
+
+    return _mock_fetch
+
+
 @pytest.mark.asyncio
 async def test_process_url_content_success():
     """Test successful processing of a new URL with content chunking and embedding."""
@@ -67,7 +95,9 @@ async def test_process_url_content_success():
 
 
 @pytest.mark.asyncio
-async def test_process_url_content_duplicate_url_returns_existing():
+async def test_process_url_content_duplicate_url_returns_existing(
+    mock_fetcher_should_not_be_called,
+):
     """Test that duplicate URLs are not re-fetched and existing record is returned."""
     # Setup
     url_repo = StubURLRepository()
@@ -100,27 +130,14 @@ async def test_process_url_content_duplicate_url_returns_existing():
         )
     )
 
-    # Create a mock fetch that should not be called
-    fetch_called = False
-
-    async def mock_fetch(
-        url: str, max_content_size: int | None = None
-    ) -> FetchedContent:
-        nonlocal fetch_called
-        fetch_called = True
-        raise AssertionError("fetch should not be called for existing URLs")
-
     result = await process_url_content(
         test_url,
         url_repo,
         chunk_repo,
         llm_client,
         embedding_client,
-        fetch_fn=mock_fetch,
+        fetch_fn=mock_fetcher_should_not_be_called,
     )
-
-    # fetch_url_content should not have been called
-    assert not fetch_called
 
     # Should return existing URL
     assert result.url.url == test_url
@@ -129,7 +146,7 @@ async def test_process_url_content_duplicate_url_returns_existing():
 
 
 @pytest.mark.asyncio
-async def test_process_url_content_embedding_failure():
+async def test_process_url_content_embedding_failure(mock_simple_fetcher):
     """Test that embedding generation failures are propagated."""
     # Setup
     url_repo = StubURLRepository()
@@ -139,16 +156,6 @@ async def test_process_url_content_embedding_failure():
 
     test_url = "https://example.com/article"
 
-    # Create a mock fetch function
-    async def mock_fetch(
-        url: str, max_content_size: int | None = None
-    ) -> FetchedContent:
-        return FetchedContent(
-            url=test_url,
-            title="Test Article",
-            content="Content paragraph.",
-        )
-
     # Should raise EmbeddingError
     with pytest.raises(EmbeddingError):
         await process_url_content(
@@ -157,12 +164,12 @@ async def test_process_url_content_embedding_failure():
             chunk_repo,
             llm_client,
             embedding_client,
-            fetch_fn=mock_fetch,
+            fetch_fn=mock_simple_fetcher,
         )
 
 
 @pytest.mark.asyncio
-async def test_process_url_content_llm_failure():
+async def test_process_url_content_llm_failure(mock_simple_fetcher):
     """Test that LLM summary generation failures are propagated."""
     # Setup
     url_repo = StubURLRepository()
@@ -172,16 +179,6 @@ async def test_process_url_content_llm_failure():
 
     test_url = "https://example.com/article"
 
-    # Create a mock fetch function
-    async def mock_fetch(
-        url: str, max_content_size: int | None = None
-    ) -> FetchedContent:
-        return FetchedContent(
-            url=test_url,
-            title="Test Article",
-            content="Content paragraph.",
-        )
-
     # Should raise LLMError
     with pytest.raises(LLMError):
         await process_url_content(
@@ -190,7 +187,7 @@ async def test_process_url_content_llm_failure():
             chunk_repo,
             llm_client,
             embedding_client,
-            fetch_fn=mock_fetch,
+            fetch_fn=mock_simple_fetcher,
         )
 
 

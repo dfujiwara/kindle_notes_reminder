@@ -91,3 +91,24 @@ def create_summary_prompt(content: str) -> str:
 {content}
 
 Summary:"""
+
+
+def create_chunk_context_prompt(url: str, url_title: str, chunk_content: str) -> str:
+    """
+    Create a prompt for generating additional context for a URL chunk.
+
+    Args:
+        url: The URL of the webpage
+        url_title: The title of the URL/webpage
+        chunk_content: The content of the chunk
+
+    Returns:
+        A formatted context generation prompt string
+    """
+    return f"""Article: "{url_title}"
+URL: {url}
+
+Content passage:
+"{chunk_content}"
+
+Explain this concept clearly and provide a practical example that makes it memorable."""

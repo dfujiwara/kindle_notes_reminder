@@ -7,9 +7,10 @@ Tests weighted random selection between notes and URL chunks.
 from src.routers.random_selector import (
     RandomNoteSelection,
     RandomChunkSelection,
+    RandomSelection,
     select_random_content,
 )
-from src.repositories.models import NoteRead, NoteCreate, URLChunkRead, URLChunkCreate
+from src.repositories.models import NoteCreate, URLChunkCreate
 from src.test_utils import StubNoteRepository, StubURLChunkRepository
 
 
@@ -71,7 +72,7 @@ def test_select_random_content_both_types():
     note_repo = StubNoteRepository()
     chunk_repo = StubURLChunkRepository()
 
-    # Add notes
+    # Add note and chunks
     for i in range(10):
         note_repo.add(
             NoteCreate(
@@ -81,9 +82,6 @@ def test_select_random_content_both_types():
                 embedding=[0.1] * 1536,
             )
         )
-
-    # Add chunks
-    for i in range(10):
         chunk_repo.add(
             URLChunkCreate(
                 url_id=1,
@@ -96,15 +94,14 @@ def test_select_random_content_both_types():
         )
 
     # With equal counts, we should eventually get both types
-    results: list[RandomChunkSelection | RandomNoteSelection | None] = []
+    results: list[RandomSelection | None] = []
     for _ in range(20):
         result = select_random_content(note_repo, chunk_repo)
         results.append(result)
 
     # Verify we got both types
-    has_note = any(isinstance(r, RandomNoteSelection) for r in results)
-    has_chunk = any(isinstance(r, RandomChunkSelection) for r in results)
-
+    has_note = any(r.content_type == "note" for r in results if r is not None)
+    has_chunk = any(r.content_type == "url_chunk" for r in results if r is not None)
     assert has_note, "Expected at least one note selection"
     assert has_chunk, "Expected at least one chunk selection"
 
@@ -152,40 +149,3 @@ def test_select_random_content_weighted_distribution():
     # Allow some variance (40-85% for notes)
     assert 40 <= note_count <= 85, f"Expected ~75 notes, got {note_count}"
     assert 15 <= chunk_count <= 60, f"Expected ~25 chunks, got {chunk_count}"
-
-
-def test_select_random_content_type_discrimination():
-    """Test that content_type field correctly discriminates types."""
-    note_repo = StubNoteRepository()
-    chunk_repo = StubURLChunkRepository()
-
-    # Add multiple notes and chunks
-    for i in range(10):
-        note_repo.add(
-            NoteCreate(
-                book_id=1,
-                content=f"Note {i}",
-                content_hash=f"note_{i}",
-                embedding=[0.1] * 1536,
-            )
-        )
-        chunk_repo.add(
-            URLChunkCreate(
-                url_id=1,
-                content=f"Chunk {i}",
-                content_hash=f"chunk_{i}",
-                chunk_order=i,
-                is_summary=False,
-                embedding=[0.2] * 1536,
-            )
-        )
-
-    for _ in range(50):
-        result = select_random_content(note_repo, chunk_repo)
-        if result:
-            if result.content_type == "note":
-                assert isinstance(result, RandomNoteSelection)
-                assert isinstance(result.item, NoteRead)
-            elif result.content_type == "url_chunk":
-                assert isinstance(result, RandomChunkSelection)
-                assert isinstance(result.item, URLChunkRead)

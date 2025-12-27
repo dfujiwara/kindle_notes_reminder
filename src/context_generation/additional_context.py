@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import AsyncGenerator
 from src.llm_interface import LLMClientInterface, LLMPromptResponse
+from src.prompts import create_chunk_context_prompt, SYSTEM_INSTRUCTIONS
 
 
 @dataclass
@@ -48,3 +49,25 @@ async def get_additional_context_stream(
         is_complete=True,
         llm_prompt_response=llm_prompt_response,
     )
+
+
+async def get_additional_context_stream_for_chunk(
+    llm_client: LLMClientInterface, url_title: str, chunk_content: str
+) -> AsyncGenerator[StreamedContextChunk, None]:
+    """
+    Stream additional context for a URL chunk.
+
+    Generates context for a specific chunk from a URL by creating a prompt
+    from the URL title and chunk content, then streaming the response.
+
+    :param llm_client: An instance of LLMClientInterface to get responses.
+    :param url_title: The title of the URL/webpage.
+    :param chunk_content: The content of the chunk.
+    :yield: StreamedContextChunk objects for each chunk and final result.
+    """
+    prompt = create_chunk_context_prompt(url_title, chunk_content)
+    system_instruction = SYSTEM_INSTRUCTIONS["context_provider"]
+    async for chunk in get_additional_context_stream(
+        llm_client, prompt, system_instruction
+    ):
+        yield chunk

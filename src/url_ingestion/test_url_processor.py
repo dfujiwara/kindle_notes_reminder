@@ -43,7 +43,7 @@ def mock_fetcher_should_not_be_called():
 
 
 @pytest.mark.asyncio
-async def test_process_url_content_success():
+async def test_process_url_content_success(mock_simple_fetcher):
     """Test successful processing of a new URL with content chunking and embedding."""
     # Setup
     url_repo = StubURLRepository()
@@ -53,16 +53,6 @@ async def test_process_url_content_success():
 
     test_url = "https://example.com/article"
 
-    # Create a mock fetch function
-    async def mock_fetch(
-        url: str, max_content_size: int | None = None
-    ) -> FetchedContent:
-        return FetchedContent(
-            url=test_url,
-            title="Test Article",
-            content="First paragraph with some content.\n\nSecond paragraph with more content.",
-        )
-
     # Call the function with injected mock
     result = await process_url_content(
         test_url,
@@ -70,7 +60,7 @@ async def test_process_url_content_success():
         chunk_repo,
         llm_client,
         embedding_client,
-        fetch_fn=mock_fetch,
+        fetch_fn=mock_simple_fetcher,
     )
 
     # Assertions on URL

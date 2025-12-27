@@ -38,7 +38,7 @@ class Settings(BaseSettings):
     openai_api_key: SecretStr | None = None
 
     # Optional settings with sensible defaults
-    database_url: str = "postgresql://postgres:postgres@localhost:5432/fastapi"
+    database_url: str = "postgresql://postgres:postgres@localhost:5432/fastapi_db"
     db_echo: bool = True  # Set to False in production via DB_ECHO=false
     log_level: str = "INFO"
     cors_allow_origin: str | None = None

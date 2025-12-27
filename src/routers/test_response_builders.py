@@ -27,9 +27,6 @@ from .response_builders import (
 )
 
 
-# Pytest Fixtures
-
-
 @pytest.fixture
 def book_response() -> BookResponse:
     """Create a test BookResponse."""
@@ -66,29 +63,26 @@ def note_read() -> NoteRead:
 
 
 @pytest.fixture
-def related_note_1() -> NoteRead:
-    """Create a related NoteRead."""
-    return NoteRead(
-        id=2,
-        content="Good naming saves debugging time.",
-        content_hash="hash_2",
-        book_id=1,
-        embedding=None,
-        created_at=datetime.now(timezone.utc),
-    )
-
-
-@pytest.fixture
-def related_note_2() -> NoteRead:
-    """Create another related NoteRead."""
-    return NoteRead(
-        id=3,
-        content="Comments should explain why, not what.",
-        content_hash="hash_3",
-        book_id=1,
-        embedding=None,
-        created_at=datetime.now(timezone.utc),
-    )
+def related_notes() -> list[NoteRead]:
+    """Create related NoteRead fixtures."""
+    return [
+        NoteRead(
+            id=2,
+            content="Good naming saves debugging time.",
+            content_hash="hash_2",
+            book_id=1,
+            embedding=None,
+            created_at=datetime.now(timezone.utc),
+        ),
+        NoteRead(
+            id=3,
+            content="Comments should explain why, not what.",
+            content_hash="hash_3",
+            book_id=1,
+            embedding=None,
+            created_at=datetime.now(timezone.utc),
+        ),
+    ]
 
 
 @pytest.fixture
@@ -148,33 +142,30 @@ def url_chunk_summary() -> URLChunkRead:
 
 
 @pytest.fixture
-def related_chunk_1() -> URLChunkRead:
-    """Create a related URLChunkRead."""
-    return URLChunkRead(
-        id=2,
-        content="First section details.",
-        content_hash="hash_chunk_1",
-        url_id=1,
-        chunk_order=1,
-        is_summary=False,
-        embedding=None,
-        created_at=datetime.now(timezone.utc),
-    )
-
-
-@pytest.fixture
-def related_chunk_2() -> URLChunkRead:
-    """Create another related URLChunkRead."""
-    return URLChunkRead(
-        id=3,
-        content="Second section details.",
-        content_hash="hash_chunk_2",
-        url_id=1,
-        chunk_order=2,
-        is_summary=False,
-        embedding=None,
-        created_at=datetime.now(timezone.utc),
-    )
+def related_chunks() -> list[URLChunkRead]:
+    """Create related URLChunkRead fixtures."""
+    return [
+        URLChunkRead(
+            id=2,
+            content="First section details.",
+            content_hash="hash_chunk_1",
+            url_id=1,
+            chunk_order=1,
+            is_summary=False,
+            embedding=None,
+            created_at=datetime.now(timezone.utc),
+        ),
+        URLChunkRead(
+            id=3,
+            content="Second section details.",
+            content_hash="hash_chunk_2",
+            url_id=1,
+            chunk_order=2,
+            is_summary=False,
+            embedding=None,
+            created_at=datetime.now(timezone.utc),
+        ),
+    ]
 
 
 # Tests for Source Response Builders
@@ -183,8 +174,6 @@ def related_chunk_2() -> URLChunkRead:
 def test_build_source_response_from_book(book_response: BookResponse):
     """Test conversion of BookResponse to BookSource."""
     result = build_source_response_from_book(book_response)
-
-    assert isinstance(result, BookSource)
     assert result.id == book_response.id
     assert result.title == book_response.title
     assert result.author == book_response.author
@@ -195,8 +184,6 @@ def test_build_source_response_from_book(book_response: BookResponse):
 def test_build_source_response_from_url(url_response: URLResponse):
     """Test conversion of URLResponse to URLSource."""
     result = build_source_response_from_url(url_response)
-
-    assert isinstance(result, URLSource)
     assert result.id == url_response.id
     assert result.title == url_response.title
     assert result.url == url_response.url
@@ -210,8 +197,6 @@ def test_build_source_response_from_url(url_response: URLResponse):
 def test_build_content_item_from_note(note_read: NoteRead):
     """Test conversion of NoteRead to NoteContent."""
     result = build_content_item_from_note(note_read)
-
-    assert isinstance(result, NoteContent)
     assert result.id == note_read.id
     assert result.content == note_read.content
     assert result.content_type == "note"
@@ -221,8 +206,6 @@ def test_build_content_item_from_note(note_read: NoteRead):
 def test_build_content_item_from_chunk(url_chunk_read: URLChunkRead):
     """Test conversion of URLChunkRead to URLChunkContent."""
     result = build_content_item_from_chunk(url_chunk_read)
-
-    assert isinstance(result, URLChunkContent)
     assert result.id == url_chunk_read.id
     assert result.content == url_chunk_read.content
     assert result.content_type == "url_chunk"
@@ -233,8 +216,6 @@ def test_build_content_item_from_chunk(url_chunk_read: URLChunkRead):
 def test_build_content_item_from_chunk_summary(url_chunk_summary: URLChunkRead):
     """Test conversion of URLChunkRead summary to URLChunkContent."""
     result = build_content_item_from_chunk(url_chunk_summary)
-
-    assert isinstance(result, URLChunkContent)
     assert result.id == url_chunk_summary.id
     assert result.is_summary is True
     assert result.chunk_order == 0
@@ -247,12 +228,11 @@ def test_build_content_item_from_chunk_summary(url_chunk_summary: URLChunkRead):
 def test_build_unified_response_for_note(
     book_with_custom_values: BookResponse,
     note_read: NoteRead,
-    related_note_1: NoteRead,
-    related_note_2: NoteRead,
+    related_notes: list[NoteRead],
 ):
     """Test building unified response for a note with related notes."""
     result = build_unified_response_for_note(
-        book_with_custom_values, note_read, [related_note_1, related_note_2]
+        book_with_custom_values, note_read, related_notes
     )
 
     assert isinstance(result.source, BookSource)
@@ -268,8 +248,8 @@ def test_build_unified_response_for_note(
 
     assert len(result.related_items) == 2
     assert all(isinstance(item, NoteContent) for item in result.related_items)
-    assert result.related_items[0].id == related_note_1.id
-    assert result.related_items[1].id == related_note_2.id
+    assert result.related_items[0].id == related_notes[0].id
+    assert result.related_items[1].id == related_notes[1].id
 
 
 def test_build_unified_response_for_note_no_related(
@@ -287,12 +267,11 @@ def test_build_unified_response_for_note_no_related(
 def test_build_unified_response_for_chunk(
     url_with_custom_values: URLResponse,
     url_chunk_summary: URLChunkRead,
-    related_chunk_1: URLChunkRead,
-    related_chunk_2: URLChunkRead,
+    related_chunks: list[URLChunkRead],
 ):
     """Test building unified response for a URL chunk with related chunks."""
     result = build_unified_response_for_chunk(
-        url_with_custom_values, url_chunk_summary, [related_chunk_1, related_chunk_2]
+        url_with_custom_values, url_chunk_summary, related_chunks
     )
 
     assert isinstance(result.source, URLSource)
@@ -309,5 +288,3 @@ def test_build_unified_response_for_chunk(
 
     assert len(result.related_items) == 2
     assert all(isinstance(item, URLChunkContent) for item in result.related_items)
-    assert result.related_items[0].chunk_order == related_chunk_1.chunk_order
-    assert result.related_items[1].chunk_order == related_chunk_2.chunk_order

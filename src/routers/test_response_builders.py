@@ -31,35 +31,29 @@ from .response_builders import (
 
 
 @pytest.fixture
-def created_at() -> datetime:
-    """Shared timestamp for consistent test data."""
-    return datetime.now(timezone.utc)
-
-
-@pytest.fixture
-def book_response(created_at: datetime) -> BookResponse:
+def book_response() -> BookResponse:
     """Create a test BookResponse."""
     return BookResponse(
         id=1,
         title="Test Book",
         author="Test Author",
-        created_at=created_at,
+        created_at=datetime.now(timezone.utc),
     )
 
 
 @pytest.fixture
-def book_with_custom_values(created_at: datetime) -> BookResponse:
+def book_with_custom_values() -> BookResponse:
     """Create a BookResponse with custom values for detailed testing."""
     return BookResponse(
         id=42,
         title="The Pragmatic Programmer",
         author="Hunt & Thomas",
-        created_at=created_at,
+        created_at=datetime.now(timezone.utc),
     )
 
 
 @pytest.fixture
-def note_read(created_at: datetime) -> NoteRead:
+def note_read() -> NoteRead:
     """Create a test NoteRead."""
     return NoteRead(
         id=1,
@@ -67,12 +61,12 @@ def note_read(created_at: datetime) -> NoteRead:
         content_hash="hash_1",
         book_id=1,
         embedding=None,
-        created_at=created_at,
+        created_at=datetime.now(timezone.utc),
     )
 
 
 @pytest.fixture
-def related_note_1(created_at: datetime) -> NoteRead:
+def related_note_1() -> NoteRead:
     """Create a related NoteRead."""
     return NoteRead(
         id=2,
@@ -80,12 +74,12 @@ def related_note_1(created_at: datetime) -> NoteRead:
         content_hash="hash_2",
         book_id=1,
         embedding=None,
-        created_at=created_at,
+        created_at=datetime.now(timezone.utc),
     )
 
 
 @pytest.fixture
-def related_note_2(created_at: datetime) -> NoteRead:
+def related_note_2() -> NoteRead:
     """Create another related NoteRead."""
     return NoteRead(
         id=3,
@@ -93,13 +87,14 @@ def related_note_2(created_at: datetime) -> NoteRead:
         content_hash="hash_3",
         book_id=1,
         embedding=None,
-        created_at=created_at,
+        created_at=datetime.now(timezone.utc),
     )
 
 
 @pytest.fixture
-def url_response(created_at: datetime) -> URLResponse:
+def url_response() -> URLResponse:
     """Create a test URLResponse."""
+    created_at = datetime.now(timezone.utc)
     return URLResponse(
         id=1,
         url="https://example.com",
@@ -110,8 +105,9 @@ def url_response(created_at: datetime) -> URLResponse:
 
 
 @pytest.fixture
-def url_with_custom_values(created_at: datetime) -> URLResponse:
+def url_with_custom_values() -> URLResponse:
     """Create a URLResponse with custom values for detailed testing."""
+    created_at = datetime.now(timezone.utc)
     return URLResponse(
         id=5,
         url="https://example.com/guide",
@@ -122,7 +118,7 @@ def url_with_custom_values(created_at: datetime) -> URLResponse:
 
 
 @pytest.fixture
-def url_chunk_read(created_at: datetime) -> URLChunkRead:
+def url_chunk_read() -> URLChunkRead:
     """Create a test URLChunkRead."""
     return URLChunkRead(
         id=1,
@@ -132,12 +128,12 @@ def url_chunk_read(created_at: datetime) -> URLChunkRead:
         chunk_order=0,
         is_summary=False,
         embedding=None,
-        created_at=created_at,
+        created_at=datetime.now(timezone.utc),
     )
 
 
 @pytest.fixture
-def url_chunk_summary(created_at: datetime) -> URLChunkRead:
+def url_chunk_summary() -> URLChunkRead:
     """Create a test URLChunkRead summary."""
     return URLChunkRead(
         id=1,
@@ -147,12 +143,12 @@ def url_chunk_summary(created_at: datetime) -> URLChunkRead:
         chunk_order=0,
         is_summary=True,
         embedding=None,
-        created_at=created_at,
+        created_at=datetime.now(timezone.utc),
     )
 
 
 @pytest.fixture
-def related_chunk_1(created_at: datetime) -> URLChunkRead:
+def related_chunk_1() -> URLChunkRead:
     """Create a related URLChunkRead."""
     return URLChunkRead(
         id=2,
@@ -162,12 +158,12 @@ def related_chunk_1(created_at: datetime) -> URLChunkRead:
         chunk_order=1,
         is_summary=False,
         embedding=None,
-        created_at=created_at,
+        created_at=datetime.now(timezone.utc),
     )
 
 
 @pytest.fixture
-def related_chunk_2(created_at: datetime) -> URLChunkRead:
+def related_chunk_2() -> URLChunkRead:
     """Create another related URLChunkRead."""
     return URLChunkRead(
         id=3,
@@ -177,7 +173,7 @@ def related_chunk_2(created_at: datetime) -> URLChunkRead:
         chunk_order=2,
         is_summary=False,
         embedding=None,
-        created_at=created_at,
+        created_at=datetime.now(timezone.utc),
     )
 
 

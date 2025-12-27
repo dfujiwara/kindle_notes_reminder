@@ -3,7 +3,6 @@
 from src.repositories.models import (
     BookResponse,
     BookSource,
-    ContentItemResponse,
     ContentWithRelatedItemsResponse,
     NoteContent,
     NoteRead,

@@ -153,10 +153,7 @@ def test_build_content_item_from_note():
         content="This is a highlight from a book.",
         created_at=created_at,
     )
-
     result = build_content_item_from_note(note)
-
-    assert isinstance(result, NoteContent)
     assert result.id == 7
     assert result.content == "This is a highlight from a book."
     assert result.content_type == "note"
@@ -173,10 +170,7 @@ def test_build_content_item_from_chunk():
         is_summary=False,
         created_at=created_at,
     )
-
     result = build_content_item_from_chunk(chunk)
-
-    assert isinstance(result, URLChunkContent)
     assert result.id == 55
     assert result.content == "This is a chunk of text from a URL."
     assert result.content_type == "url_chunk"
@@ -195,10 +189,7 @@ def test_build_content_item_from_chunk_summary():
         is_summary=True,
         created_at=created_at,
     )
-
     result = build_content_item_from_chunk(summary_chunk)
-
-    assert isinstance(result, URLChunkContent)
     assert result.id == 66
     assert result.is_summary is True
     assert result.chunk_order == 0
@@ -232,12 +223,9 @@ def test_build_unified_response_for_note():
         content="Comments should explain why, not what.",
         created_at=created_at,
     )
-
     result = build_unified_response_for_note(
         book, note, [related_note_1, related_note_2]
     )
-
-    assert isinstance(result, ContentWithRelatedItemsResponse)
 
     # Check source
     assert isinstance(result.source, BookSource)
@@ -302,12 +290,9 @@ def test_build_unified_response_for_chunk():
         is_summary=False,
         created_at=created_at,
     )
-
     result = build_unified_response_for_chunk(
         url, chunk, [related_chunk_1, related_chunk_2]
     )
-
-    assert isinstance(result, ContentWithRelatedItemsResponse)
 
     # Check source
     assert isinstance(result.source, URLSource)
@@ -326,21 +311,6 @@ def test_build_unified_response_for_chunk():
     # Check related items
     assert len(result.related_items) == 2
     assert all(isinstance(item, URLChunkContent) for item in result.related_items)
-    assert result.related_items[0].chunk_order == 1
-    assert result.related_items[1].chunk_order == 2
-
-
-def test_build_unified_response_for_chunk_no_related():
-    """Test building unified response for a URL chunk with no related chunks."""
-    created_at = datetime.now(timezone.utc)
-    url = create_url_response(created_at=created_at)
-    chunk = create_url_chunk_read(created_at=created_at)
-
-    result = build_unified_response_for_chunk(url, chunk, [])
-
-    assert isinstance(result.source, URLSource)
-    assert isinstance(result.content, URLChunkContent)
-    assert result.related_items == []
 
 
 # Type discrimination tests

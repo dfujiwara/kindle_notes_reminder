@@ -1,0 +1,11 @@
+[environment]
+# Python version matching pyproject.toml
+python-version = "3.13"
+# Treat the project root as the namespace root
+# This makes src/ a top-level package, enabling both:
+# - absolute imports: from src.main import app
+# - relative imports: from ..main import app (from src/routers/test_books.py)
+root = ["."]
+
+[src]
+include = ["src"]

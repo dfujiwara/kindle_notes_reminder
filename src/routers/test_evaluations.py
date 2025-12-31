@@ -5,17 +5,14 @@ Tests for the evaluations router endpoints.
 from fastapi.testclient import TestClient
 from datetime import datetime, timezone
 from ..main import app
-from ..dependencies import get_evaluation_repository, get_note_repository
 from ..repositories.models import Evaluation, NoteCreate
-from ..test_utils import StubEvaluationRepository, StubNoteRepository
 
 client = TestClient(app)
 
 
-def test_get_note_evaluation_history_success():
+def test_get_note_evaluation_history_success(setup_evaluation_deps):
     """Test getting evaluation history for a note that exists with evaluations."""
-    note_repo = StubNoteRepository()
-    eval_repo = StubEvaluationRepository()
+    note_repo, eval_repo = setup_evaluation_deps()
 
     # Create a note
     note = note_repo.add(
@@ -50,39 +47,32 @@ def test_get_note_evaluation_history_success():
     eval_repo.add(eval1)
     eval_repo.add(eval2)
 
-    app.dependency_overrides[get_note_repository] = lambda: note_repo
-    app.dependency_overrides[get_evaluation_repository] = lambda: eval_repo
+    response = client.get("/notes/1/evaluations")
 
-    try:
-        response = client.get("/notes/1/evaluations")
+    assert response.status_code == 200
+    data = response.json()
 
-        assert response.status_code == 200
-        data = response.json()
+    # Check response structure
+    assert data["note"]["id"] == 1
+    assert data["note"]["content"] == "Test content"
+    assert len(data["evaluations"]) == 2
 
-        # Check response structure
-        assert data["note"]["id"] == 1
-        assert data["note"]["content"] == "Test content"
-        assert len(data["evaluations"]) == 2
+    # Check first evaluation
+    assert data["evaluations"][0]["id"] == 1
+    assert data["evaluations"][0]["score"] == 0.85
+    assert data["evaluations"][0]["model_name"] == "gpt-4"
+    assert data["evaluations"][0]["analysis"] == "Test analysis 1"
 
-        # Check first evaluation
-        assert data["evaluations"][0]["id"] == 1
-        assert data["evaluations"][0]["score"] == 0.85
-        assert data["evaluations"][0]["model_name"] == "gpt-4"
-        assert data["evaluations"][0]["analysis"] == "Test analysis 1"
-
-        # Check second evaluation
-        assert data["evaluations"][1]["id"] == 2
-        assert data["evaluations"][1]["score"] == 0.92
-        assert data["evaluations"][1]["model_name"] == "gpt-4o"
-        assert data["evaluations"][1]["analysis"] == "Test analysis 2"
-    finally:
-        app.dependency_overrides.clear()
+    # Check second evaluation
+    assert data["evaluations"][1]["id"] == 2
+    assert data["evaluations"][1]["score"] == 0.92
+    assert data["evaluations"][1]["model_name"] == "gpt-4o"
+    assert data["evaluations"][1]["analysis"] == "Test analysis 2"
 
 
-def test_get_note_evaluation_history_empty():
+def test_get_note_evaluation_history_empty(setup_evaluation_deps):
     """Test getting evaluation history for a note that exists but has no evaluations."""
-    note_repo = StubNoteRepository()
-    eval_repo = StubEvaluationRepository()
+    note_repo, eval_repo = setup_evaluation_deps()
 
     # Create a note with no evaluations
     note_repo.add(
@@ -93,36 +83,21 @@ def test_get_note_evaluation_history_empty():
         )
     )
 
-    app.dependency_overrides[get_note_repository] = lambda: note_repo
-    app.dependency_overrides[get_evaluation_repository] = lambda: eval_repo
+    response = client.get("/notes/1/evaluations")
 
-    try:
-        response = client.get("/notes/1/evaluations")
+    assert response.status_code == 200
+    data = response.json()
 
-        assert response.status_code == 200
-        data = response.json()
-
-        # Check response structure
-        assert data["note"]["id"] == 1
-        assert data["note"]["content"] == "Test content"
-        assert data["evaluations"] == []
-    finally:
-        app.dependency_overrides.clear()
+    # Check response structure
+    assert data["note"]["id"] == 1
+    assert data["note"]["content"] == "Test content"
+    assert data["evaluations"] == []
 
 
-def test_get_note_evaluation_history_note_not_found():
+def test_get_note_evaluation_history_note_not_found(setup_evaluation_deps):
     """Test getting evaluation history for a note that doesn't exist."""
-    note_repo = StubNoteRepository()
-    eval_repo = StubEvaluationRepository()
+    note_repo, eval_repo = setup_evaluation_deps()
 
-    # Don't add any notes to the repository
+    response = client.get("/notes/999/evaluations")
 
-    app.dependency_overrides[get_note_repository] = lambda: note_repo
-    app.dependency_overrides[get_evaluation_repository] = lambda: eval_repo
-
-    try:
-        response = client.get("/notes/999/evaluations")
-
-        assert response.status_code == 404
-    finally:
-        app.dependency_overrides.clear()
+    assert response.status_code == 404

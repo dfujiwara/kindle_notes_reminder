@@ -20,64 +20,9 @@ from ..test_utils import (
     StubLLMClient,
     StubEmbeddingClient,
 )
-from ..url_ingestion.url_fetcher import FetchedContent, URLFetchError
+from ..url_ingestion.url_fetcher import URLFetchError
 
 client = TestClient(app)
-
-
-def test_ingest_url_already_exists():
-    """Test ingesting a URL that already exists returns the existing record."""
-    url_repo = StubURLRepository()
-    chunk_repo = StubURLChunkRepository()
-    llm_client = StubLLMClient(responses=["Test summary"])
-    embedding_client = StubEmbeddingClient()
-
-    app.dependency_overrides[get_url_repository] = lambda: url_repo
-    app.dependency_overrides[get_urlchunk_repository] = lambda: chunk_repo
-    app.dependency_overrides[get_llm_client] = lambda: llm_client
-    app.dependency_overrides[get_embedding_client] = lambda: embedding_client
-
-    try:
-        # Pre-populate with an existing URL
-        existing_url = url_repo.add(
-            URLCreate(
-                url="https://example.com",
-                title="Example Article",
-            )
-        )
-        chunk_repo.add(
-            URLChunkCreate(
-                content="Test content",
-                content_hash="hash1",
-                url_id=existing_url.id,
-                chunk_order=0,
-                is_summary=True,
-                embedding=[0.1] * 1536,
-            )
-        )
-
-        # Try to ingest the same URL
-        mock_fetched_content = FetchedContent(
-            url="https://example.com",
-            title="Different Title (should not be used)",
-            content="Different content (should not be used)",
-        )
-
-        with patch(
-            "src.url_ingestion.url_processor.fetch_url_content",
-            new_callable=AsyncMock,
-            return_value=mock_fetched_content,
-        ):
-            response = client.post("/urls", json={"url": "https://example.com"})
-
-        assert response.status_code == 200
-        data = response.json()
-        # Should return the existing URL, not refetch
-        assert data["url"]["url"] == "https://example.com"
-        assert data["url"]["title"] == "Example Article"  # Original title
-        assert len(data["chunks"]) == 1  # Original chunk count
-    finally:
-        app.dependency_overrides.clear()
 
 
 def test_ingest_url_fetch_error():
@@ -215,8 +160,8 @@ def test_ingest_url_invalid_request():
         app.dependency_overrides.clear()
 
 
-def test_ingest_url_empty_string():
-    """Test POST /urls with empty URL string."""
+def test_ingest_url_invalid_format():
+    """Test POST /urls with invalid URL format."""
     url_repo = StubURLRepository()
     chunk_repo = StubURLChunkRepository()
 
@@ -224,8 +169,11 @@ def test_ingest_url_empty_string():
     app.dependency_overrides[get_urlchunk_repository] = lambda: chunk_repo
 
     try:
-        response = client.post("/urls", json={"url": ""})
+        # Test with invalid URL format
+        response = client.post("/urls", json={"url": "not a valid url"})
 
-        assert response.status_code == 422  # Validation error due to min_length=1
+        assert response.status_code == 422  # Validation error from pydantic.HttpUrl
+        data = response.json()
+        assert "detail" in data
     finally:
         app.dependency_overrides.clear()

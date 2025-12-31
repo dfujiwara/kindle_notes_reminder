@@ -4,6 +4,7 @@ URL-related endpoints for ingesting and exploring URLs with AI enhancements.
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import SQLModel, Field
+from pydantic import HttpUrl
 from src.repositories.interfaces import (
     URLRepositoryInterface,
     URLChunkRepositoryInterface,
@@ -29,7 +30,7 @@ router = APIRouter(tags=["urls"])
 class URLIngestRequest(SQLModel):
     """Request model for URL ingestion."""
 
-    url: str = Field(min_length=1, description="URL to ingest and process")
+    url: HttpUrl = Field(description="URL to ingest and process")
 
 
 @router.post(
@@ -60,9 +61,10 @@ async def ingest_url(
     embedding_client: EmbeddingClientInterface = Depends(get_embedding_client),
 ) -> URLWithChunksResponses:
     """Ingest and process URL content."""
+    url_str = str(request.url)
     try:
         result = await process_url_content(
-            request.url,
+            url_str,
             url_repository,
             chunk_repository,
             llm_client,
@@ -70,10 +72,10 @@ async def ingest_url(
         )
         return result
     except URLFetchError as e:
-        logger.error(f"URL fetch error for {request.url}: {str(e)}")
+        logger.error(f"URL fetch error for {url_str}: {str(e)}")
         raise HTTPException(status_code=400, detail=f"URL fetch error: {str(e)}")
     except Exception as e:
-        logger.error(f"Unexpected error processing URL {request.url}: {str(e)}")
+        logger.error(f"Unexpected error processing URL {url_str}: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error processing URL: {str(e)}")
 
 

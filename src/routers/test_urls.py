@@ -6,7 +6,6 @@ Tests URL ingestion, listing, and chunk retrieval endpoints.
 
 from fastapi.testclient import TestClient
 from unittest.mock import AsyncMock, patch
-from datetime import datetime, timezone
 from ..main import app
 from ..dependencies import (
     get_url_repository,
@@ -14,13 +13,7 @@ from ..dependencies import (
     get_llm_client,
     get_embedding_client,
 )
-from ..repositories.models import (
-    URLCreate,
-    URLChunkCreate,
-    URLResponse,
-    URLChunkResponse,
-    URLWithChunksResponses,
-)
+from ..repositories.models import URLCreate, URLChunkCreate
 from ..test_utils import (
     StubURLRepository,
     StubURLChunkRepository,
@@ -46,7 +39,6 @@ def test_ingest_url_already_exists():
 
     try:
         # Pre-populate with an existing URL
-        created_at = datetime.now(timezone.utc)
         existing_url = url_repo.add(
             URLCreate(
                 url="https://example.com",

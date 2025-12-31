@@ -17,7 +17,11 @@ from src.dependencies import (
     get_llm_client,
     get_embedding_client,
 )
-from src.repositories.models import URLWithChunksResponses, URLWithChunksResponse
+from src.repositories.models import (
+    URLWithChunksResponses,
+    URLWithChunksResponse,
+    URLListResponse,
+)
 from src.url_ingestion.url_processor import process_url_content
 from src.url_ingestion.url_fetcher import URLFetchError
 import logging
@@ -84,11 +88,12 @@ async def ingest_url(
     summary="List all URLs",
     description="Retrieve all processed URLs with their chunk counts",
     response_description="List of URLs with metadata and chunk counts",
+    response_model=URLListResponse,
 )
 async def get_urls(
     url_repository: URLRepositoryInterface = Depends(get_url_repository),
     chunk_repository: URLChunkRepositoryInterface = Depends(get_urlchunk_repository),
-):
+) -> URLListResponse:
     """List all URLs with chunk counts."""
     urls = url_repository.list_urls()
     chunk_count_dict = chunk_repository.get_chunk_counts_by_url_ids(
@@ -108,4 +113,4 @@ async def get_urls(
             )
         )
 
-    return {"urls": url_responses}
+    return URLListResponse(urls=url_responses)

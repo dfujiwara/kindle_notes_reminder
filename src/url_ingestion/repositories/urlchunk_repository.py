@@ -1,6 +1,6 @@
 from sqlmodel import Session, select
 from src.repositories.models import URLChunk, URLChunkCreate, URLChunkRead, URL
-from src.repositories.interfaces import URLChunkRepositoryInterface
+from .interfaces import URLChunkRepositoryInterface
 from sqlalchemy import func, column, Integer
 from src.types import Embedding
 

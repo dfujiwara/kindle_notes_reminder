@@ -1,6 +1,6 @@
 from sqlmodel import Session, select
 from src.repositories.models import URL, URLCreate, URLResponse
-from src.repositories.interfaces import URLRepositoryInterface
+from .interfaces import URLRepositoryInterface
 
 
 class URLRepository(URLRepositoryInterface):

@@ -20,6 +20,8 @@ from src.repositories.interfaces import (
     BookRepositoryInterface,
     EvaluationRepositoryInterface,
     NoteRepositoryInterface,
+)
+from src.url_ingestion.repositories.interfaces import (
     URLRepositoryInterface,
     URLChunkRepositoryInterface,
 )

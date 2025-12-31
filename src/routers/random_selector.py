@@ -9,10 +9,8 @@ import random
 from dataclasses import dataclass
 from typing import Literal
 
-from src.repositories.interfaces import (
-    NoteRepositoryInterface,
-    URLChunkRepositoryInterface,
-)
+from src.repositories.interfaces import NoteRepositoryInterface
+from src.url_ingestion.repositories.interfaces import URLChunkRepositoryInterface
 from src.repositories.models import NoteRead, URLChunkRead
 
 

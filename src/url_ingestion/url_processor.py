@@ -14,7 +14,7 @@ from src.types import Embedding
 from src.url_ingestion.content_chunker import TextChunk, chunk_text_by_paragraphs
 from src.embedding_interface import EmbeddingClientInterface
 from src.llm_interface import LLMClientInterface
-from src.repositories.interfaces import (
+from src.url_ingestion.repositories.interfaces import (
     URLChunkRepositoryInterface,
     URLRepositoryInterface,
 )

@@ -18,6 +18,7 @@ from src.dependencies import (
     get_llm_client,
     get_url_repository,
     get_urlchunk_repository,
+    get_url_fetcher,
 )
 from src.test_utils import (
     StubBookRepository,
@@ -27,6 +28,7 @@ from src.test_utils import (
     StubLLMClient,
     StubURLRepository,
     StubURLChunkRepository,
+    StubURLFetcher,
 )
 
 # Type aliases for fixtures
@@ -35,7 +37,14 @@ SearchDepsSetup = Callable[
     ..., tuple[StubBookRepository, StubNoteRepository, StubEmbeddingClient]
 ]
 EvaluationDepsSetup = Callable[..., tuple[StubNoteRepository, StubEvaluationRepository]]
-URLDepsSetup = Callable[..., tuple[StubURLRepository, StubURLChunkRepository]]
+URLDepsSetup = Callable[
+    ...,
+    tuple[
+        StubURLRepository,
+        StubURLChunkRepository,
+        StubURLFetcher,
+    ],
+]
 NotebookDepsSetup = Callable[
     ...,
     tuple[StubBookRepository, StubNoteRepository, StubEmbeddingClient, StubLLMClient],
@@ -135,22 +144,30 @@ def setup_url_deps() -> Generator[URLDepsSetup, None, None]:
     """
     Setup dependencies for URL endpoints.
 
-    Returns a function for consistent interface. Used in test_urls.py (5 tests).
+    Returns a function for flexible configuration. Used in test_urls.py (5 tests).
 
     Usage:
         def test_url(setup_url_deps):
-            url_repo, chunk_repo = setup_url_deps()
+            url_repo, chunk_repo, fetcher = setup_url_deps()
+            # or with error simulation:
+            url_repo, chunk_repo, fetcher = setup_url_deps(fetcher_should_fail=True)
             # Cleanup is automatic!
     """
 
-    def _setup() -> tuple[StubURLRepository, StubURLChunkRepository]:
+    def _setup(
+        fetcher_should_fail: bool = False,
+    ) -> tuple[StubURLRepository, StubURLChunkRepository, StubURLFetcher]:
         url_repo = StubURLRepository()
         chunk_repo = StubURLChunkRepository()
+        fetcher = StubURLFetcher(should_fail=fetcher_should_fail)
 
         app.dependency_overrides[get_url_repository] = lambda: url_repo
         app.dependency_overrides[get_urlchunk_repository] = lambda: chunk_repo
+        app.dependency_overrides[get_url_fetcher] = lambda: fetcher
+        app.dependency_overrides[get_llm_client] = lambda: StubLLMClient()
+        app.dependency_overrides[get_embedding_client] = lambda: StubEmbeddingClient()
 
-        return url_repo, chunk_repo
+        return url_repo, chunk_repo, fetcher
 
     yield _setup
     app.dependency_overrides.clear()

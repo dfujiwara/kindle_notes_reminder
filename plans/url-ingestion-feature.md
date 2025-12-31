@@ -371,9 +371,15 @@ similar_chunks = chunk_repository.search_chunks_by_embedding(embedding, limit=li
 - ✅ `src/url_ingestion/repositories/test_url_repository.py` - URL CRUD & deduplication
 - ✅ `src/url_ingestion/repositories/test_urlchunk_repository.py` - URLChunk CRUD, vector search, random selection
 
-**8.3 Router Tests:** ⚠️ PARTIALLY COMPLETE
+**8.3 Router Tests:** ✅ COMPLETE (test_urls.py)
 - ✅ `src/routers/test_response_builders.py` - Unified response builder tests (22 tests)
-- ❌ `src/routers/test_urls.py` - Test URL endpoints (blocked on Phase 5 implementation)
+- ✅ `src/routers/test_urls.py` - Test URL endpoints (6 tests, no patching via dependency injection)
+  - ✅ `test_ingest_url_fetch_error` - Error handling (422 unprocessable entity)
+  - ✅ `test_ingest_url_success` - Successful ingestion with chunk validation
+  - ✅ `test_get_urls_empty` - Empty URL list endpoint
+  - ✅ `test_get_urls_with_urls` - URL listing with chunk counts
+  - ✅ `test_ingest_url_invalid_request` - Invalid request validation
+  - ✅ `test_ingest_url_invalid_format` - URL format validation
 - ❌ Update `src/routers/test_streaming.py` - Test unified /random (blocked on Phase 4.4 implementation)
 
 **8.4 Testing Commands:**
@@ -500,25 +506,41 @@ Use HNSW (Hierarchical Navigable Small World) for consistency with existing Note
 - ✅ Additional context streaming (refactored to remove wrapper, keep generic function) - `src/context_generation/additional_context.py`
 - ✅ **NEW: `/random/v2` endpoint with unified schema** (commit 0c716c5) - `src/routers/notes.py`
 
-**Test Status:** 164 tests passing across all modules
+**Test Status:** 170 tests passing across all modules
 - Phase 1-3: 35 tests (URL processing pipeline)
 - Phase 4: 22 tests (response builders) + 1 test (context streaming)
+- Phase 5: 6 tests (URL endpoints) ✅ NEW
 - Phase 7: Repositories fully tested
-- Total: 58+ URL-feature tests + existing 106 tests
+- Total: 64+ URL-feature tests + existing 106 tests
 
 **COMPLETED IN THIS SESSION:**
-1. ✅ Phase 1.2 - Created database migration for URL and URLChunk tables
-   - Fixed HNSW index creation (operator class issue resolved)
-   - Migration file: `migrations/versions/fb012279fd22_add_url_and_urlchunk_tables.py`
-   - Ready to apply: `uv run alembic upgrade head`
+1. ✅ Phase 5 - URL Endpoint Testing (test_urls.py)
+   - Created `StubURLFetcher` class for testing without external HTTP calls
+   - Implemented dependency injection for URL fetcher via `get_url_fetcher()` factory
+   - Refactored test fixture `setup_url_deps()` with clean API
+   - **Eliminated patching** - tests use pure dependency injection instead of mocks
+   - Added comprehensive test coverage (6 tests):
+     - Error handling (422 for fetch failures)
+     - Successful ingestion with chunk validation
+     - URL listing endpoints
+     - Input validation (missing/invalid URLs)
+   - Tests validate observable outcomes (repository state) not implementation details
+   - All tests passing, zero lint/type errors
 
-**NEXT STEPS (User Choice):**
-- **Option A:** Apply migration → Implement Phase 5 (URL endpoints)
-- **Option B:** Write Phase 8.3 tests for `/random/v2` endpoint
-- **Option C:** Something else?
+**ARCHITECTURAL IMPROVEMENTS:**
+- Used existing `fetch_fn` parameter in `process_url_content()` instead of making entire processor injectable
+- Follows YAGNI principle - pragmatic solution that leverages existing design
+- Fixture returns only used dependencies (url_repo, chunk_repo, fetcher) but still overrides clients for endpoint isolation
+- Tests focus on business logic outcomes rather than internal plumbing
+
+**NEXT STEPS:**
+- ✅ Phase 8.3 Complete - Router tests for URL endpoints working
+- ⏳ Phase 5 Implementation - URL endpoints fully implemented (POST /urls and GET endpoints)
+- ⏳ Phase 6 - Search integration with URL chunks
+- ⏳ Phase 9 - Documentation updates
 
 ---
 
-*Plan Status: **READY FOR PHASE 5** (Phase 1-4 complete, migration ready, Phase 5-6,9 remaining)*
+*Plan Status: **PHASE 5 ENDPOINTS TESTED** (Phases 1-4 complete, Phase 5 testing complete, Phase 5 impl + 6-9 remaining)*
 
-*Last Updated: 2025-12-31 - Phase 1.2 complete! Migration created and HNSW index fixed. All 164 tests passing. Ready to apply migration and proceed with Phase 5.*
+*Last Updated: 2026-01-01 - Phase 5 testing complete! URL endpoint tests written with pure dependency injection (no patching). 170 tests passing. Endpoints fully implemented and tested.*

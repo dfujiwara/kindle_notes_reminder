@@ -5,22 +5,23 @@ URL-related endpoints for ingesting and exploring URLs with AI enhancements.
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import SQLModel, Field
 from pydantic import HttpUrl
-from src.repositories.interfaces import (
+from src.url_ingestion.repositories.interfaces import (
     URLRepositoryInterface,
     URLChunkRepositoryInterface,
 )
 from src.llm_interface import LLMClientInterface
 from src.embedding_interface import EmbeddingClientInterface
+from src.url_ingestion.url_fetcher import URLFetcherInterface
 from src.dependencies import (
     get_url_repository,
     get_urlchunk_repository,
     get_llm_client,
     get_embedding_client,
+    get_url_fetcher,
 )
 from src.repositories.models import (
     URLWithChunksResponses,
     URLWithChunksResponse,
-    URLListResponse,
 )
 from src.url_ingestion.url_processor import process_url_content
 from src.url_ingestion.url_fetcher import URLFetchError
@@ -35,6 +36,12 @@ class URLIngestRequest(SQLModel):
     """Request model for URL ingestion."""
 
     url: HttpUrl = Field(description="URL to ingest and process")
+
+
+class URLListResponse(SQLModel):
+    """Response model for listing URLs with chunk counts."""
+
+    urls: list[URLWithChunksResponse]
 
 
 @router.post(
@@ -63,6 +70,7 @@ async def ingest_url(
     chunk_repository: URLChunkRepositoryInterface = Depends(get_urlchunk_repository),
     llm_client: LLMClientInterface = Depends(get_llm_client),
     embedding_client: EmbeddingClientInterface = Depends(get_embedding_client),
+    url_fetcher: URLFetcherInterface = Depends(get_url_fetcher),
 ) -> URLWithChunksResponses:
     """Ingest and process URL content."""
     url_str = str(request.url)
@@ -73,6 +81,7 @@ async def ingest_url(
             chunk_repository,
             llm_client,
             embedding_client,
+            fetch_fn=url_fetcher,
         )
         return result
     except URLFetchError as e:

@@ -249,12 +249,6 @@ class URLWithChunksResponses(SQLModel):
     chunks: list[URLChunkResponse]
 
 
-class URLListResponse(SQLModel):
-    """Response model for listing URLs with chunk counts."""
-
-    urls: list[URLWithChunksResponse]
-
-
 # Unified Response Models (for /random endpoint)
 # Uses discriminated unions for type safety
 

@@ -26,6 +26,10 @@ from src.url_ingestion.repositories.interfaces import (
 from src.openai_client import OpenAIClient, OpenAIEmbeddingClient
 from src.embedding_interface import EmbeddingClientInterface
 from src.llm_interface import LLMClientInterface
+from src.url_ingestion.url_fetcher import (
+    fetch_url_content,
+    URLFetcherInterface,
+)
 
 
 def get_book_repository(
@@ -57,6 +61,11 @@ def get_embedding_client() -> EmbeddingClientInterface:
 def get_llm_client() -> LLMClientInterface:
     """Get an instance of the LLM client."""
     return OpenAIClient()
+
+
+def get_url_fetcher() -> URLFetcherInterface:
+    """Get the URL fetcher function."""
+    return fetch_url_content
 
 
 def get_url_repository(

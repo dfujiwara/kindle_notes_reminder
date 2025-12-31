@@ -26,7 +26,7 @@ client = TestClient(app)
 
 
 def test_ingest_url_fetch_error():
-    """Test URL fetch error returns 400."""
+    """Test URL fetch error returns 422 (unprocessable entity)."""
     url_repo = StubURLRepository()
     chunk_repo = StubURLChunkRepository()
     llm_client = StubLLMClient()
@@ -45,10 +45,10 @@ def test_ingest_url_fetch_error():
         ):
             response = client.post("/urls", json={"url": "https://invalid.com"})
 
-        assert response.status_code == 400
+        assert response.status_code == 422
         data = response.json()
         assert "detail" in data
-        assert "URL fetch error" in data["detail"]
+        assert "Cannot process URL" in data["detail"]
     finally:
         app.dependency_overrides.clear()
 

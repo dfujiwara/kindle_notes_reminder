@@ -49,7 +49,7 @@ class URLIngestRequest(SQLModel):
     """,
     response_description="Processing result with URL and chunks",
     responses={
-        400: {"description": "Invalid URL or fetching error"},
+        422: {"description": "Cannot process URL (fetch error or no content)"},
         200: {"description": "URL processed successfully"},
     },
 )
@@ -73,7 +73,7 @@ async def ingest_url(
         return result
     except URLFetchError as e:
         logger.error(f"URL fetch error for {url_str}: {str(e)}")
-        raise HTTPException(status_code=400, detail=f"URL fetch error: {str(e)}")
+        raise HTTPException(status_code=422, detail=f"Cannot process URL: {str(e)}")
     except Exception as e:
         logger.error(f"Unexpected error processing URL {url_str}: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error processing URL: {str(e)}")

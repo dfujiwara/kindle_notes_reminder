@@ -2,12 +2,13 @@ from fastapi.testclient import TestClient
 from ..main import app
 from ..repositories.models import NoteCreate, BookCreate
 from ..config import settings
+from .conftest import BookNoteDepsSetup
 
 client = TestClient(app)
 
 
-def test_get_notes_by_book_with_notes(setup_book_note_deps):
-    book_repo, note_repo = setup_book_note_deps(include_sample_book=True)
+def test_get_notes_by_book_with_notes(setup_book_note_deps: BookNoteDepsSetup):
+    _, note_repo = setup_book_note_deps(include_sample_book=True)
 
     # Add notes to the repository
     note1 = NoteCreate(
@@ -49,8 +50,8 @@ def test_get_notes_by_book_with_notes(setup_book_note_deps):
     assert "created_at" in data["notes"][1]
 
 
-def test_get_notes_by_book_empty_book(setup_book_note_deps):
-    book_repo, note_repo = setup_book_note_deps(include_sample_book=True)
+def test_get_notes_by_book_empty_book(setup_book_note_deps: BookNoteDepsSetup):
+    _, _ = setup_book_note_deps(include_sample_book=True)
 
     # Make the request
     response = client.get("/books/1/notes")
@@ -64,8 +65,8 @@ def test_get_notes_by_book_empty_book(setup_book_note_deps):
     assert data["notes"] == []
 
 
-def test_get_notes_by_book_nonexistent_book(setup_book_note_deps):
-    book_repo, note_repo = setup_book_note_deps(include_sample_book=False)
+def test_get_notes_by_book_nonexistent_book(setup_book_note_deps: BookNoteDepsSetup):
+    _, note_repo = setup_book_note_deps(include_sample_book=False)
 
     # Add note for book_id=1, but we'll request book_id=999
     note = NoteCreate(
@@ -82,7 +83,7 @@ def test_get_notes_by_book_nonexistent_book(setup_book_note_deps):
     assert response.status_code == 404
 
 
-def test_get_notes_by_book_multiple_books(setup_book_note_deps):
+def test_get_notes_by_book_multiple_books(setup_book_note_deps: BookNoteDepsSetup):
     book_repo, note_repo = setup_book_note_deps(include_sample_book=True)
 
     # Add additional book
@@ -133,8 +134,8 @@ def test_get_notes_by_book_invalid_book_id():
     assert response.status_code == 422  # Validation error
 
 
-def test_get_notes_by_book_response_structure(setup_book_note_deps):
-    book_repo, note_repo = setup_book_note_deps(include_sample_book=True)
+def test_get_notes_by_book_response_structure(setup_book_note_deps: BookNoteDepsSetup):
+    _, note_repo = setup_book_note_deps(include_sample_book=True)
 
     # Add note with embedding to test that it's not exposed
     note = NoteCreate(

@@ -1,12 +1,13 @@
 from fastapi.testclient import TestClient
 from ..main import app
 from ..repositories.models import BookCreate, NoteCreate
+from .conftest import BookNoteDepsSetup
 
 client = TestClient(app)
 
 
-def test_get_books_empty(setup_book_note_deps):
-    book_repo, _ = setup_book_note_deps()
+def test_get_books_empty(setup_book_note_deps: BookNoteDepsSetup):
+    _, _ = setup_book_note_deps()
 
     response = client.get("/books")
 
@@ -15,8 +16,8 @@ def test_get_books_empty(setup_book_note_deps):
     assert data["books"] == []
 
 
-def test_get_books_with_books(setup_book_note_deps):
-    book_repo, note_repo = setup_book_note_deps()
+def test_get_books_with_books(setup_book_note_deps: BookNoteDepsSetup):
+    book_repo, _ = setup_book_note_deps()
 
     # Add books to the repository
     book1 = BookCreate(title="Book 1", author="Author 1")
@@ -43,7 +44,9 @@ def test_get_books_with_books(setup_book_note_deps):
     assert data["books"][1]["note_count"] == 0
 
 
-def test_get_books_multiple_books_different_note_counts(setup_book_note_deps):
+def test_get_books_multiple_books_different_note_counts(
+    setup_book_note_deps: BookNoteDepsSetup,
+):
     book_repo, note_repo = setup_book_note_deps()
 
     # Book with no notes

@@ -2,7 +2,7 @@
 Shared pytest fixtures for router tests.
 
 Provides reusable dependency injection fixtures to reduce boilerplate in test files.
-Each fixture returns a setup function that creates fresh stub instances and handles
+Each fixture returns a setup function that creates fresh stub repositories and
 dependency overrides with automatic cleanup.
 """
 
@@ -29,19 +29,32 @@ from src.test_utils import (
     StubURLChunkRepository,
 )
 
+# Type aliases for fixtures
+BookNoteDepsSetup = Callable[..., tuple[StubBookRepository, StubNoteRepository]]
+SearchDepsSetup = Callable[
+    ..., tuple[StubBookRepository, StubNoteRepository, StubEmbeddingClient]
+]
+EvaluationDepsSetup = Callable[..., tuple[StubNoteRepository, StubEvaluationRepository]]
+URLDepsSetup = Callable[..., tuple[StubURLRepository, StubURLChunkRepository]]
+NotebookDepsSetup = Callable[
+    ...,
+    tuple[StubBookRepository, StubNoteRepository, StubEmbeddingClient, StubLLMClient],
+]
+
 
 @pytest.fixture
-def setup_book_note_deps() -> Generator[Callable[..., tuple[StubBookRepository, StubNoteRepository]], None, None]:
+def setup_book_note_deps() -> Generator[BookNoteDepsSetup, None, None]:
     """
     Setup book and note repository dependencies.
 
-    Returns a function that creates fresh stub instances and overrides deps.
-    Most common pattern - used in ~15 tests.
+    Returns a function for flexible configuration. Most common pattern - used in ~15 tests.
 
     Usage:
         def test_something(setup_book_note_deps):
             book_repo, note_repo = setup_book_note_deps()
-            # Test code here - cleanup is automatic!
+            # or with config:
+            book_repo, note_repo = setup_book_note_deps(include_sample_book=True)
+            # Cleanup is automatic!
     """
 
     def _setup(
@@ -60,16 +73,18 @@ def setup_book_note_deps() -> Generator[Callable[..., tuple[StubBookRepository, 
 
 
 @pytest.fixture
-def setup_search_deps() -> Generator[Callable[..., tuple[StubBookRepository, StubNoteRepository, StubEmbeddingClient]], None, None]:
+def setup_search_deps() -> Generator[SearchDepsSetup, None, None]:
     """
     Setup dependencies for search endpoints (book, note, embedding).
 
-    Used in test_search.py (5 tests).
+    Returns a function for flexible configuration. Used in test_search.py (5 tests).
 
     Usage:
         def test_search(setup_search_deps):
             book_repo, note_repo, embedding_client = setup_search_deps()
-            # Test code here - cleanup is automatic!
+            # or with config:
+            book_repo, note_repo, embedding_client = setup_search_deps(embedding_should_fail=True)
+            # Cleanup is automatic!
     """
 
     def _setup(
@@ -90,16 +105,16 @@ def setup_search_deps() -> Generator[Callable[..., tuple[StubBookRepository, Stu
 
 
 @pytest.fixture
-def setup_evaluation_deps() -> Generator[Callable[..., tuple[StubNoteRepository, StubEvaluationRepository]], None, None]:
+def setup_evaluation_deps() -> Generator[EvaluationDepsSetup, None, None]:
     """
     Setup dependencies for evaluation endpoints (note, evaluation).
 
-    Used in test_evaluations.py (3 tests).
+    Returns a function for consistent interface. Used in test_evaluations.py (3 tests).
 
     Usage:
         def test_evaluation(setup_evaluation_deps):
             note_repo, eval_repo = setup_evaluation_deps()
-            # Test code here - cleanup is automatic!
+            # Cleanup is automatic!
     """
 
     def _setup() -> tuple[StubNoteRepository, StubEvaluationRepository]:
@@ -116,16 +131,16 @@ def setup_evaluation_deps() -> Generator[Callable[..., tuple[StubNoteRepository,
 
 
 @pytest.fixture
-def setup_url_deps() -> Generator[Callable[..., tuple[StubURLRepository, StubURLChunkRepository]], None, None]:
+def setup_url_deps() -> Generator[URLDepsSetup, None, None]:
     """
     Setup dependencies for URL endpoints.
 
-    Used in test_urls.py (5 tests).
+    Returns a function for consistent interface. Used in test_urls.py (5 tests).
 
     Usage:
         def test_url(setup_url_deps):
             url_repo, chunk_repo = setup_url_deps()
-            # Test code here - cleanup is automatic!
+            # Cleanup is automatic!
     """
 
     def _setup() -> tuple[StubURLRepository, StubURLChunkRepository]:
@@ -142,23 +157,20 @@ def setup_url_deps() -> Generator[Callable[..., tuple[StubURLRepository, StubURL
 
 
 @pytest.fixture
-def setup_notebook_deps() -> Generator[Callable[..., tuple[StubBookRepository, StubNoteRepository, StubEmbeddingClient, StubLLMClient]], None, None]:
+def setup_notebook_deps() -> Generator[NotebookDepsSetup, None, None]:
     """
     Setup dependencies for notebook upload endpoints.
 
-    Used in test_notebooks.py (3 tests).
+    Returns a function for consistent interface. Used in test_notebooks.py (3 tests).
 
     Usage:
         def test_notebook(setup_notebook_deps):
             book_repo, note_repo, embedding_client, llm_client = setup_notebook_deps()
-            # Test code here - cleanup is automatic!
+            # Cleanup is automatic!
     """
 
     def _setup() -> tuple[
-        StubBookRepository,
-        StubNoteRepository,
-        StubEmbeddingClient,
-        StubLLMClient,
+        StubBookRepository, StubNoteRepository, StubEmbeddingClient, StubLLMClient
     ]:
         book_repo = StubBookRepository()
         note_repo = StubNoteRepository()

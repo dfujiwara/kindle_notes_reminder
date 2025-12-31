@@ -6,11 +6,14 @@ from fastapi.testclient import TestClient
 from datetime import datetime, timezone
 from ..main import app
 from ..repositories.models import Evaluation, NoteCreate
+from .conftest import EvaluationDepsSetup
 
 client = TestClient(app)
 
 
-def test_get_note_evaluation_history_success(setup_evaluation_deps):
+def test_get_note_evaluation_history_success(
+    setup_evaluation_deps: EvaluationDepsSetup,
+):
     """Test getting evaluation history for a note that exists with evaluations."""
     note_repo, eval_repo = setup_evaluation_deps()
 
@@ -70,9 +73,9 @@ def test_get_note_evaluation_history_success(setup_evaluation_deps):
     assert data["evaluations"][1]["analysis"] == "Test analysis 2"
 
 
-def test_get_note_evaluation_history_empty(setup_evaluation_deps):
+def test_get_note_evaluation_history_empty(setup_evaluation_deps: EvaluationDepsSetup):
     """Test getting evaluation history for a note that exists but has no evaluations."""
-    note_repo, eval_repo = setup_evaluation_deps()
+    note_repo, _ = setup_evaluation_deps()
 
     # Create a note with no evaluations
     note_repo.add(
@@ -94,9 +97,11 @@ def test_get_note_evaluation_history_empty(setup_evaluation_deps):
     assert data["evaluations"] == []
 
 
-def test_get_note_evaluation_history_note_not_found(setup_evaluation_deps):
+def test_get_note_evaluation_history_note_not_found(
+    setup_evaluation_deps: EvaluationDepsSetup,
+):
     """Test getting evaluation history for a note that doesn't exist."""
-    note_repo, eval_repo = setup_evaluation_deps()
+    _, _ = setup_evaluation_deps()
 
     response = client.get("/notes/999/evaluations")
 

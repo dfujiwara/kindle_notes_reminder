@@ -6,13 +6,14 @@ from fastapi.testclient import TestClient
 from ..main import app
 from ..repositories.models import BookCreate, NoteCreate
 from ..config import settings
+from .conftest import SearchDepsSetup
 
 client = TestClient(app)
 
 
-def test_search_notes_empty_results(setup_search_deps):
+def test_search_notes_empty_results(setup_search_deps: SearchDepsSetup):
     """Test search endpoint with no matching results."""
-    book_repo, note_repo, embedding_client = setup_search_deps()
+    _, _, _ = setup_search_deps()
 
     response = client.get("/search?q=nonexistent")
 
@@ -23,9 +24,9 @@ def test_search_notes_empty_results(setup_search_deps):
     assert data["count"] == 0
 
 
-def test_search_notes_single_book(setup_search_deps):
+def test_search_notes_single_book(setup_search_deps: SearchDepsSetup):
     """Test search endpoint with results from a single book."""
-    book_repo, note_repo, embedding_client = setup_search_deps()
+    book_repo, note_repo, _ = setup_search_deps()
 
     # Create test data
     book1 = book_repo.add(BookCreate(title="Machine Learning Book", author="ML Author"))
@@ -69,9 +70,9 @@ def test_search_notes_single_book(setup_search_deps):
     assert notes[1]["content"] == "Neural networks and deep learning"
 
 
-def test_search_notes_multiple_books(setup_search_deps):
+def test_search_notes_multiple_books(setup_search_deps: SearchDepsSetup):
     """Test search endpoint with results grouped by multiple books."""
-    book_repo, note_repo, embedding_client = setup_search_deps()
+    book_repo, note_repo, _ = setup_search_deps()
 
     # Create test data - two books
     book1 = book_repo.add(BookCreate(title="ML Book", author="Author 1"))
@@ -124,9 +125,9 @@ def test_search_notes_multiple_books(setup_search_deps):
     assert len(book2_result["notes"]) == 1
 
 
-def test_search_notes_with_limit(setup_search_deps):
+def test_search_notes_with_limit(setup_search_deps: SearchDepsSetup):
     """Test search endpoint respects the limit parameter."""
-    book_repo, note_repo, embedding_client = setup_search_deps()
+    book_repo, note_repo, _ = setup_search_deps()
 
     # Create test data with many notes
     book1 = BookCreate(title="Test Book", author="Test Author")
@@ -150,9 +151,9 @@ def test_search_notes_with_limit(setup_search_deps):
     assert len(data["results"][0]["notes"]) == 3  # 3 notes
 
 
-def test_search_notes_max_limit(setup_search_deps):
+def test_search_notes_max_limit(setup_search_deps: SearchDepsSetup):
     """Test search endpoint enforces maximum limit of 50."""
-    book_repo, note_repo, embedding_client = setup_search_deps()
+    _, _, _ = setup_search_deps()
 
     response = client.get("/search?q=test&limit=100")
 

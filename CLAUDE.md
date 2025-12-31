@@ -79,3 +79,41 @@ FastAPI application for managing Kindle notes with AI-powered features, embeddin
 - Returns `text/event-stream` with Server-Sent Events
 - Event types: `metadata` (book/note/related notes), `context_chunk` (AI context), `context_complete` (end), `error`
 - AI context streams as it generates, improving perceived performance
+
+## Testing Patterns
+
+### Router Tests
+Router tests use pytest fixtures from `src/routers/conftest.py` to reduce boilerplate and ensure consistent dependency injection patterns.
+
+**Available Fixtures**:
+- `setup_book_note_deps()` - Book and note repository dependencies (most common pattern)
+- `setup_search_deps()` - Search endpoint dependencies (book, note, embedding client)
+- `setup_evaluation_deps()` - Evaluation endpoint dependencies (note, evaluation)
+- `setup_url_deps()` - URL endpoint dependencies (URL, URL chunk)
+- `setup_notebook_deps()` - Notebook upload dependencies (book, note, embedding, LLM clients)
+- `override_dependencies()` - Base fixture for custom dependency configurations
+
+**Usage Example**:
+```python
+def test_something(setup_book_note_deps):
+    book_repo, note_repo = setup_book_note_deps()
+
+    # Add test data
+    book = book_repo.add(BookCreate(title="Test", author="Author"))
+
+    # Make request - cleanup is automatic!
+    response = client.get("/books")
+    assert response.status_code == 200
+```
+
+**Benefits**:
+- Automatic cleanup via pytest fixtures (no forgotten `finally` blocks)
+- Consistent dependency injection across all router tests
+- Reduced boilerplate (~125 lines eliminated)
+- Single place to modify dependency setup
+
+### Repository Tests
+Repository tests use fixtures from `src/repositories/conftest.py` with real repository instances and in-memory SQLite database for integration testing.
+
+### Unit Tests
+Unit tests for utilities and helpers live in `src/test_*.py` with direct imports (no dependency injection needed).

@@ -1,30 +1,23 @@
 from fastapi.testclient import TestClient
 from ..main import app
-from ..dependencies import get_book_repository, get_note_repository
 from ..repositories.models import BookCreate, NoteCreate
-from ..test_utils import StubBookRepository, StubNoteRepository
+from .conftest import BookNoteDepsSetup
 
 client = TestClient(app)
 
 
-def test_get_books_empty():
-    book_repo = StubBookRepository()
+def test_get_books_empty(setup_book_note_deps: BookNoteDepsSetup):
+    _, _ = setup_book_note_deps()
 
-    app.dependency_overrides[get_book_repository] = lambda: book_repo
+    response = client.get("/books")
 
-    try:
-        response = client.get("/books")
-
-        assert response.status_code == 200
-        data = response.json()
-        assert data["books"] == []
-    finally:
-        app.dependency_overrides.clear()
+    assert response.status_code == 200
+    data = response.json()
+    assert data["books"] == []
 
 
-def test_get_books_with_books():
-    book_repo = StubBookRepository()
-    note_repo = StubNoteRepository()
+def test_get_books_with_books(setup_book_note_deps: BookNoteDepsSetup):
+    book_repo, _ = setup_book_note_deps()
 
     # Add books to the repository
     book1 = BookCreate(title="Book 1", author="Author 1")
@@ -32,34 +25,29 @@ def test_get_books_with_books():
     book_repo.add(book1)
     book_repo.add(book2)
 
-    app.dependency_overrides[get_book_repository] = lambda: book_repo
-    app.dependency_overrides[get_note_repository] = lambda: note_repo
+    response = client.get("/books")
 
-    try:
-        response = client.get("/books")
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data["books"]) == 2
 
-        assert response.status_code == 200
-        data = response.json()
-        assert len(data["books"]) == 2
+    # Check first book
+    assert data["books"][0]["id"] == 1
+    assert data["books"][0]["title"] == "Book 1"
+    assert data["books"][0]["author"] == "Author 1"
+    assert data["books"][0]["note_count"] == 0
 
-        # Check first book
-        assert data["books"][0]["id"] == 1
-        assert data["books"][0]["title"] == "Book 1"
-        assert data["books"][0]["author"] == "Author 1"
-        assert data["books"][0]["note_count"] == 0
-
-        # Check second book
-        assert data["books"][1]["id"] == 2
-        assert data["books"][1]["title"] == "Book 2"
-        assert data["books"][1]["author"] == "Author 2"
-        assert data["books"][1]["note_count"] == 0
-    finally:
-        app.dependency_overrides.clear()
+    # Check second book
+    assert data["books"][1]["id"] == 2
+    assert data["books"][1]["title"] == "Book 2"
+    assert data["books"][1]["author"] == "Author 2"
+    assert data["books"][1]["note_count"] == 0
 
 
-def test_get_books_multiple_books_different_note_counts():
-    book_repo = StubBookRepository()
-    note_repo = StubNoteRepository()
+def test_get_books_multiple_books_different_note_counts(
+    setup_book_note_deps: BookNoteDepsSetup,
+):
+    book_repo, note_repo = setup_book_note_deps()
 
     # Book with no notes
     book1 = BookCreate(title="Book No Notes", author="Author 1")
@@ -81,25 +69,19 @@ def test_get_books_multiple_books_different_note_counts():
     note_repo.add(note3_2)
     note_repo.add(note3_3)
 
-    app.dependency_overrides[get_book_repository] = lambda: book_repo
-    app.dependency_overrides[get_note_repository] = lambda: note_repo
+    response = client.get("/books")
 
-    try:
-        response = client.get("/books")
+    assert response.status_code == 200
+    data = response.json()
 
-        assert response.status_code == 200
-        data = response.json()
+    assert len(data["books"]) == 3
 
-        assert len(data["books"]) == 3
+    # Check note counts
+    assert data["books"][0]["note_count"] == 0
+    assert data["books"][1]["note_count"] == 1
+    assert data["books"][2]["note_count"] == 3
 
-        # Check note counts
-        assert data["books"][0]["note_count"] == 0
-        assert data["books"][1]["note_count"] == 1
-        assert data["books"][2]["note_count"] == 3
-
-        # Check titles to verify order
-        assert data["books"][0]["title"] == "Book No Notes"
-        assert data["books"][1]["title"] == "Book One Note"
-        assert data["books"][2]["title"] == "Book Many Notes"
-    finally:
-        app.dependency_overrides.clear()
+    # Check titles to verify order
+    assert data["books"][0]["title"] == "Book No Notes"
+    assert data["books"][1]["title"] == "Book One Note"
+    assert data["books"][2]["title"] == "Book Many Notes"

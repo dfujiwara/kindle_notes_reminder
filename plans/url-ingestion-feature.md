@@ -302,27 +302,46 @@ ContentWithRelatedItemsResponse:
 - ✅ Backwards compatible - existing `/random` unchanged
 - Future: Add URL chunk branching after Phase 5 (migration + endpoints)
 
-### Phase 5: URL-Specific Endpoints - ❌ NOT STARTED
+### Phase 5: URL-Specific Endpoints - ⚠️ PARTIALLY COMPLETE (2/4 endpoints)
 
-**5.1 Create `src/routers/urls.py`:** ❌ NOT STARTED
-- `POST /urls` - Ingest URL content (**synchronous**, blocks until complete)
+**5.1 Create `src/routers/urls.py`:** ⚠️ PARTIALLY COMPLETE (3/4 endpoints)
+
+**Implemented Endpoints:**
+- ✅ `POST /urls` - Ingest URL content (**synchronous**, blocks until complete)
   - Request: `{"url": "https://..."}`
   - Response: URL metadata + all chunks
   - **Enforces max content size limit** (rejects if exceeds settings.max_url_content_size)
   - **Returns existing URL if already ingested** (deduplication by URL)
   - Calls `process_url_content()` which handles fetch → chunk → summarize → embed
-- `GET /urls` - List URLs with chunk counts
-- `GET /urls/{url_id}` - Get URL metadata
-- `GET /urls/{url_id}/chunks` - Get all chunks for URL (ordered by chunk_order)
-- `GET /urls/{url_id}/chunks/{chunk_id}` - SSE streaming endpoint (pattern: mirror `/books/{id}/notes/{id}`)
-  - Same SSE events: metadata, context_chunk, context_complete
-  - **No background evaluation** (per confirmed decision)
+  - Error handling: 422 for fetch errors, 500 for unexpected errors
 
-**5.2 Register router in `src/main.py`:** ❌ NOT STARTED
-```python
-from src.routers import urls
-app.include_router(urls.router)
-```
+- ✅ `GET /urls` - List all URLs with chunk counts
+  - Returns all processed URLs with metadata and chunk counts
+  - Includes: id, url, title, fetched_at, created_at, chunk_count
+
+**Not Yet Implemented Endpoints (Option A - Minimal):**
+- ❌ `GET /urls/{url_id}` - Get URL with metadata AND all chunks
+  - Returns URL details (id, url, title, fetched_at, created_at)
+  - Includes all chunks ordered by chunk_order (content, chunk_order, is_summary)
+  - No AI context generation (lightweight endpoint for browsing)
+  - Pattern: Similar to existing `/urls` but for a specific URL
+
+- ❌ `GET /urls/{url_id}/chunks/{chunk_id}` - SSE streaming endpoint for specific chunk
+  - Same SSE events: metadata, context_chunk, context_complete
+  - Generates AI context for the selected chunk
+  - **No background evaluation** (per confirmed decision)
+  - Pattern: mirror `/books/{book_id}/notes/{note_id}`
+
+**Design Decision - Option A Rationale:**
+- Simplified API surface (2 endpoints instead of 3)
+- `GET /urls/{url_id}` provides both metadata and chunks in one call (efficient for UI)
+- Removes redundant `/urls/{url_id}/chunks` endpoint
+- Users can browse all chunks, then drill into specific chunks with SSE for AI context
+
+**5.2 Register router in `src/main.py`:** ✅ COMPLETE
+- ✅ Router imported: `from src.routers import urls` (line 3)
+- ✅ Router registered: `app.include_router(urls.router)` (line 89)
+- ✅ OpenAPI tag added for documentation (lines 72-74)
 
 ### Phase 6: Search Integration - ❌ NOT STARTED
 
@@ -404,16 +423,21 @@ uv run pyright      # Type checking
 2. ✅ **Phase 2** (Repositories) - Data access layer COMPLETE
 3. ✅ **Phase 3** (Processing) - URL fetching, chunking, processing COMPLETE (35/35 tests passing)
 4. ✅ **Phase 4** (Unified /random) - All components COMPLETE including /random/v2 endpoint
-5. ❌ **Phase 5** (URL Endpoints) - Migration ready, endpoints NOT STARTED
+5. ⚠️ **Phase 5** (URL Endpoints) - PARTIALLY COMPLETE (2 of 4 endpoints: POST /urls, GET /urls)
 6. ❌ **Phase 6** (Search) - Enhanced search NOT STARTED
 7. ✅ **Phase 7** (DI & Config) - Wire everything together COMPLETE
-8. ⚠️ **Phase 8** (Testing) - Unit & repo tests COMPLETE, 8.3 router tests blocked on Phase 5
+8. ⚠️ **Phase 8** (Testing) - Unit & repo tests COMPLETE, router tests for /urls COMPLETE (6 tests)
 9. ❌ **Phase 9** (Documentation) - Update docs NOT STARTED
 
+**Remaining Phase 5 Work (Option A - 2 endpoints):**
+- ❌ `GET /urls/{url_id}` - Get URL with metadata AND all chunks
+- ❌ `GET /urls/{url_id}/chunks/{chunk_id}` - SSE streaming for specific chunk with AI context
+
 **Next Steps:**
-1. Apply migration: `uv run alembic upgrade head`
-2. Proceed with Phase 5 (URL endpoints), OR
-3. Work on Phase 8.3 (router tests for /random/v2)
+1. Complete Phase 5 by implementing the 2 remaining endpoints (GET /urls/{url_id}, GET /urls/{url_id}/chunks/{chunk_id})
+2. Add tests for both endpoints in test_urls.py
+3. Proceed with Phase 6 (Search integration with URL chunks)
+4. Phase 9 (Documentation updates)
 
 **Key Pattern to Follow:** Mirror existing Book/Note architecture everywhere:
 - Models: Book → URL, Note → URLChunk
@@ -513,8 +537,18 @@ Use HNSW (Hierarchical Navigable Small World) for consistency with existing Note
 - Phase 7: Repositories fully tested
 - Total: 64+ URL-feature tests + existing 106 tests
 
-**COMPLETED IN THIS SESSION:**
-1. ✅ Phase 5 - URL Endpoint Testing (test_urls.py)
+**COMPLETED IN PREVIOUS SESSION:**
+1. ✅ Phase 5.1 - POST /urls endpoint (ingest URL content)
+   - Synchronous processing: fetches, chunks, summarizes, embeds in one call
+   - Deduplication by URL (returns existing if already ingested)
+   - Error handling: 422 for fetch errors, 500 for unexpected errors
+   - Size limit enforcement via `settings.max_url_content_size`
+
+2. ✅ Phase 5.1 - GET /urls endpoint (list all URLs)
+   - Returns all ingested URLs with chunk counts
+   - Includes metadata: id, url, title, fetched_at, created_at
+
+3. ✅ Phase 8.3 - URL Endpoint Testing (test_urls.py)
    - Created `StubURLFetcher` class for testing without external HTTP calls
    - Implemented dependency injection for URL fetcher via `get_url_fetcher()` factory
    - Refactored test fixture `setup_url_deps()` with clean API
@@ -527,20 +561,30 @@ Use HNSW (Hierarchical Navigable Small World) for consistency with existing Note
    - Tests validate observable outcomes (repository state) not implementation details
    - All tests passing, zero lint/type errors
 
-**ARCHITECTURAL IMPROVEMENTS:**
-- Used existing `fetch_fn` parameter in `process_url_content()` instead of making entire processor injectable
-- Follows YAGNI principle - pragmatic solution that leverages existing design
-- Fixture returns only used dependencies (url_repo, chunk_repo, fetcher) but still overrides clients for endpoint isolation
-- Tests focus on business logic outcomes rather than internal plumbing
+4. ✅ Phase 5.2 - Router registration
+   - Router imported and registered in `src/main.py`
+   - OpenAPI documentation tags added
+
+**REMAINING PHASE 5 WORK (Option A - Minimal API):**
+- ❌ `GET /urls/{url_id}` - Get URL with all chunks (metadata + chunks, no AI context)
+- ❌ `GET /urls/{url_id}/chunks/{chunk_id}` - SSE streaming endpoint for specific chunk
+  - Should follow same pattern as `/books/{book_id}/notes/{note_id}`
+  - Same SSE events: metadata, context_chunk, context_complete
+  - No background evaluation (per design decision)
+
+**DESIGN CHOICE APPLIED - Option A:**
+- Removed redundant `/urls/{url_id}/chunks` endpoint
+- Simplified to 4 total endpoints (POST /urls, GET /urls, GET /urls/{url_id}, GET /urls/{url_id}/chunks/{chunk_id})
+- `GET /urls/{url_id}` returns both metadata AND chunks in one call for efficiency
 
 **NEXT STEPS:**
-- ✅ Phase 8.3 Complete - Router tests for URL endpoints working
-- ⏳ Phase 5 Implementation - URL endpoints fully implemented (POST /urls and GET endpoints)
-- ⏳ Phase 6 - Search integration with URL chunks
-- ⏳ Phase 9 - Documentation updates
+- Complete Phase 5 remaining 2 endpoints
+- Add tests for both new endpoints in test_urls.py
+- Phase 6 - Search integration (include URL chunks in semantic search)
+- Phase 9 - Documentation updates
 
 ---
 
-*Plan Status: **PHASE 5 ENDPOINTS TESTED** (Phases 1-4 complete, Phase 5 testing complete, Phase 5 impl + 6-9 remaining)*
+*Plan Status: **PHASE 5 PARTIAL - OPTION A APPLIED** (Phases 1-4 complete, Phase 5 partial - 2/4 endpoints done, Phase 6-9 remaining)*
 
-*Last Updated: 2026-01-01 - Phase 5 testing complete! URL endpoint tests written with pure dependency injection (no patching). 170 tests passing. Endpoints fully implemented and tested.*
+*Last Updated: 2026-01-01 - Updated to Option A design. Removed redundant chunk listing endpoint. 2 core endpoints (POST /urls, GET /urls) implemented with tests. 2 remaining endpoints (GET /urls/{url_id}, GET /urls/{url_id}/chunks/{chunk_id}).*

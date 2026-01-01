@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from src.routers import general, notebooks, books, notes, search, evaluations
+from src.routers import general, notebooks, books, notes, search, evaluations, urls
 from src.cors_config import get_cors_config
 from src.config import settings
 import logging
@@ -68,6 +68,10 @@ app = FastAPI(
             "name": "evaluations",
             "description": "Analytics and insights from AI quality evaluations",
         },
+        {
+            "name": "urls",
+            "description": "Ingest and explore URLs with AI-enhanced chunks",
+        },
     ],
 )
 
@@ -82,3 +86,4 @@ app.include_router(books.router)
 app.include_router(notes.router)
 app.include_router(search.router)
 app.include_router(evaluations.router)
+app.include_router(urls.router)

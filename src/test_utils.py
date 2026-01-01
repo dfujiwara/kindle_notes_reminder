@@ -27,6 +27,10 @@ from src.url_ingestion.repositories.interfaces import (
 )
 from src.embedding_interface import EmbeddingClientInterface, EmbeddingError
 from src.llm_interface import LLMClientInterface, LLMError
+from src.url_ingestion.url_fetcher import (
+    URLFetchError,
+    FetchedContent,
+)
 from src.types import Embedding
 from src.config import settings
 from datetime import datetime, timezone
@@ -269,6 +273,28 @@ class StubURLChunkRepository(URLChunkRepositoryInterface):
 
     def count_with_embeddings(self) -> int:
         return len([c for c in self.chunks if c.embedding is not None])
+
+
+class StubURLFetcher:
+    """Stub implementation of URL fetcher for testing."""
+
+    def __init__(self, should_fail: bool = False):
+        self.should_fail = should_fail
+        self.calls: list[str] = []  # Track calls for verification
+
+    async def __call__(
+        self, url: str, max_content_size: int | None = None
+    ) -> FetchedContent:
+        """Stub fetcher that can simulate success or failure."""
+        self.calls.append(url)
+
+        if self.should_fail:
+            raise URLFetchError("Failed to fetch URL")
+
+        # Return minimal successful fetch result
+        return FetchedContent(
+            url=url, title=f"Test: {url}", content="Test content from stub fetcher."
+        )
 
 
 class StubEmbeddingClient(EmbeddingClientInterface):

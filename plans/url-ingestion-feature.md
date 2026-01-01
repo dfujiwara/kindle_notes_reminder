@@ -302,9 +302,9 @@ ContentWithRelatedItemsResponse:
 - ✅ Backwards compatible - existing `/random` unchanged
 - Future: Add URL chunk branching after Phase 5 (migration + endpoints)
 
-### Phase 5: URL-Specific Endpoints - ⚠️ PARTIALLY COMPLETE (3/4 endpoints)
+### Phase 5: URL-Specific Endpoints - ✅ COMPLETE (4/4 endpoints)
 
-**5.1 Create `src/routers/urls.py`:** ⚠️ PARTIALLY COMPLETE (4/4 endpoints - 3 implemented)
+**5.1 Create `src/routers/urls.py`:** ✅ COMPLETE (4/4 endpoints - all implemented)
 
 **Implemented Endpoints:**
 - ✅ `POST /urls` - Ingest URL content (**synchronous**, blocks until complete)
@@ -326,12 +326,15 @@ ContentWithRelatedItemsResponse:
   - Returns 404 if URL not found
   - Pattern: Similar to existing `/books/{id}` endpoint
 
-**Not Yet Implemented Endpoints (Option A - Minimal):**
-- ❌ `GET /urls/{url_id}/chunks/{chunk_id}` - SSE streaming endpoint for specific chunk
-  - Same SSE events: metadata, context_chunk, context_complete
-  - Generates AI context for the selected chunk
-  - **No background evaluation** (per confirmed decision)
-  - Pattern: mirror `/books/{book_id}/notes/{note_id}`
+- ✅ `GET /urls/{url_id}/chunks/{chunk_id}` - SSE streaming endpoint for specific chunk
+  - Streams URL chunk with AI-generated context via Server-Sent Events
+  - Same SSE events: metadata, context_chunk, context_complete, error
+  - Returns chunk metadata + related chunks from same URL (limit: 3)
+  - Uses unified response schema (ContentWithRelatedItemsResponse)
+  - **No background evaluation** (per confirmed decision - evaluations only for Kindle notes)
+  - Pattern: mirrors `/books/{book_id}/notes/{note_id}`
+  - Tests: 3 comprehensive tests (404 errors + happy path SSE streaming)
+  - Commit: c9f900a
 
 **Design Decision - Option A Rationale:**
 - Simplified API surface (2 endpoints + 2 detail endpoints)
@@ -393,13 +396,19 @@ similar_chunks = chunk_repository.search_chunks_by_embedding(embedding, limit=li
 
 **8.3 Router Tests:** ✅ COMPLETE (test_urls.py)
 - ✅ `src/routers/test_response_builders.py` - Unified response builder tests (22 tests)
-- ✅ `src/routers/test_urls.py` - Test URL endpoints (6 tests, no patching via dependency injection)
+- ✅ `src/routers/test_urls.py` - Test URL endpoints (12 tests, no patching via dependency injection)
   - ✅ `test_ingest_url_fetch_error` - Error handling (422 unprocessable entity)
   - ✅ `test_ingest_url_success` - Successful ingestion with chunk validation
   - ✅ `test_get_urls_empty` - Empty URL list endpoint
   - ✅ `test_get_urls_with_urls` - URL listing with chunk counts
   - ✅ `test_ingest_url_invalid_request` - Invalid request validation
   - ✅ `test_ingest_url_invalid_format` - URL format validation
+  - ✅ `test_get_url_with_chunks_not_found` - 404 when URL doesn't exist
+  - ✅ `test_get_url_with_chunks_empty` - URL with no chunks
+  - ✅ `test_get_url_with_chunks_success` - Chunks ordered by chunk_order
+  - ✅ `test_get_chunk_with_context_stream_chunk_not_found` - SSE 404 chunk not found
+  - ✅ `test_get_chunk_with_context_stream_url_not_found` - SSE 404 URL mismatch
+  - ✅ `test_get_chunk_with_context_stream_success` - SSE happy path with event streaming
 - ❌ Update `src/routers/test_streaming.py` - Test unified /random (blocked on Phase 4.4 implementation)
 
 **8.4 Testing Commands:**
@@ -424,20 +433,22 @@ uv run pyright      # Type checking
 2. ✅ **Phase 2** (Repositories) - Data access layer COMPLETE
 3. ✅ **Phase 3** (Processing) - URL fetching, chunking, processing COMPLETE (35/35 tests passing)
 4. ✅ **Phase 4** (Unified /random) - All components COMPLETE including /random/v2 endpoint
-5. ⚠️ **Phase 5** (URL Endpoints) - PARTIALLY COMPLETE (3 of 4 endpoints: POST /urls, GET /urls, GET /urls/{url_id})
+5. ✅ **Phase 5** (URL Endpoints) - COMPLETE (all 4 endpoints: POST /urls, GET /urls, GET /urls/{url_id}, GET /urls/{url_id}/chunks/{chunk_id})
 6. ❌ **Phase 6** (Search) - Enhanced search NOT STARTED
 7. ✅ **Phase 7** (DI & Config) - Wire everything together COMPLETE
-8. ⚠️ **Phase 8** (Testing) - Unit & repo tests COMPLETE, router tests for /urls COMPLETE (9 tests)
+8. ✅ **Phase 8** (Testing) - All tests COMPLETE (unit, repo, and router tests - 12 URL endpoint tests total)
 9. ❌ **Phase 9** (Documentation) - Update docs NOT STARTED
 
-**Remaining Phase 5 Work (Option A - 1 endpoint):**
-- ❌ `GET /urls/{url_id}/chunks/{chunk_id}` - SSE streaming for specific chunk with AI context
+**Phase 5 Complete (Commit c9f900a):**
+- ✅ `GET /urls/{url_id}/chunks/{chunk_id}` - SSE streaming for specific chunk with AI context
+- ✅ 3 new tests for SSE endpoint (404 handling + happy path)
+- ✅ All 12 URL endpoint tests passing
+- ✅ Zero type errors from pyright
+- ✅ Code formatted with ruff
 
 **Next Steps:**
-1. Complete Phase 5 by implementing the final endpoint (GET /urls/{url_id}/chunks/{chunk_id})
-2. Add tests for SSE streaming endpoint
-3. Proceed with Phase 6 (Search integration with URL chunks)
-4. Phase 9 (Documentation updates)
+1. Phase 6 (Search integration with URL chunks)
+2. Phase 9 (Documentation updates to CLAUDE.md)
 
 **Key Pattern to Follow:** Mirror existing Book/Note architecture everywhere:
 - Models: Book → URL, Note → URLChunk
@@ -582,25 +593,28 @@ Use HNSW (Hierarchical Navigable Small World) for consistency with existing Note
    - Fixed StubURLChunkRepository to sort chunks by chunk_order
    - All 9 tests passing, type checking clean
 
-**REMAINING PHASE 5 WORK (Option A - 1 final endpoint):**
-- ❌ `GET /urls/{url_id}/chunks/{chunk_id}` - SSE streaming endpoint for specific chunk
-  - Should follow same pattern as `/books/{book_id}/notes/{note_id}`
-  - Same SSE events: metadata, context_chunk, context_complete
+**PHASE 5 COMPLETE - ALL 4 ENDPOINTS IMPLEMENTED:**
+- ✅ `POST /urls` - Ingest URL content
+- ✅ `GET /urls` - List all URLs with chunk counts
+- ✅ `GET /urls/{url_id}` - Get URL with all chunks
+- ✅ `GET /urls/{url_id}/chunks/{chunk_id}` - SSE streaming endpoint for specific chunk
+  - Follows same pattern as `/books/{book_id}/notes/{note_id}`
+  - Same SSE events: metadata, context_chunk, context_complete, error
   - No background evaluation (per design decision)
+  - Uses unified response schema (ContentWithRelatedItemsResponse)
 
 **DESIGN CHOICE APPLIED - Option A:**
 - Removed redundant `/urls/{url_id}/chunks` endpoint
-- Implemented 3 of 4 endpoints (POST /urls, GET /urls, GET /urls/{url_id})
+- Implemented all 4 endpoints (POST /urls, GET /urls, GET /urls/{url_id}, GET /urls/{url_id}/chunks/{chunk_id})
 - `GET /urls/{url_id}` returns both metadata AND chunks in one call for efficiency
+- `GET /urls/{url_id}/chunks/{chunk_id}` provides streaming AI context for deep dives
 
 **NEXT STEPS:**
-- Complete Phase 5 with final endpoint: GET /urls/{url_id}/chunks/{chunk_id} (SSE streaming)
-- Add tests for SSE streaming endpoint
 - Phase 6 - Search integration (include URL chunks in semantic search)
-- Phase 9 - Documentation updates
+- Phase 9 - Documentation updates (CLAUDE.md)
 
 ---
 
-*Plan Status: **PHASE 5 PARTIAL - 3/4 ENDPOINTS COMPLETE** (Phases 1-4 complete, Phase 5 partial - 3/4 endpoints done, 1 remaining, Phase 6-9 pending)*
+*Plan Status: **PHASE 5 COMPLETE** (Phases 1-5 complete, Phase 6-9 pending)*
 
-*Last Updated: 2026-01-01 - Implemented GET /urls/{url_id} endpoint (commit 9222ef8). Returns URL metadata + all chunks ordered by chunk_order. All tests passing (9/9). Only final SSE streaming endpoint remains for Phase 5.*
+*Last Updated: 2026-01-01 - Implemented GET /urls/{url_id}/chunks/{chunk_id} SSE streaming endpoint (commit c9f900a). All 12 URL tests passing. All type checks passing. Phase 5 fully complete.*

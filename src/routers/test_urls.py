@@ -4,7 +4,11 @@ Tests for URL management endpoints in urls.py
 Tests URL ingestion, listing, and chunk retrieval endpoints.
 """
 
+import json
+import pytest
 from fastapi.testclient import TestClient
+from httpx import AsyncClient, ASGITransport
+from typing import Any
 
 from src.routers.conftest import URLDepsSetup
 from ..main import app
@@ -260,7 +264,8 @@ def test_get_chunk_with_context_stream_not_found(setup_url_deps: URLDepsSetup):
     assert "Chunk not found" in data["detail"]
 
 
-def test_get_chunk_with_context_stream_success(setup_url_deps: URLDepsSetup):
+@pytest.mark.asyncio
+async def test_get_chunk_with_context_stream_success(setup_url_deps: URLDepsSetup):
     """Test GET /urls/{url_id}/chunks/{chunk_id} streams events correctly."""
     url_repo, chunk_repo, _ = setup_url_deps()
 
@@ -277,19 +282,45 @@ def test_get_chunk_with_context_stream_success(setup_url_deps: URLDepsSetup):
         )
     )
 
-    # Make SSE request
-    response = client.get(f"/urls/{url.id}/chunks/{chunk.id}")
+    # Make SSE streaming request
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as async_client:
+        async with async_client.stream(
+            "GET",
+            f"/urls/{url.id}/chunks/{chunk.id}",
+            headers={"Accept": "text/event-stream"},
+        ) as response:
+            assert response.status_code == 200
+            assert (
+                response.headers["content-type"] == "text/event-stream; charset=utf-8"
+            )
 
-    assert response.status_code == 200
-    assert response.headers["content-type"] == "text/event-stream; charset=utf-8"
+            # Parse SSE events as they stream
+            events: list[dict[str, Any]] = []
+            event_type: str = ""
+            async for line in response.aiter_lines():
+                if line.startswith("event: "):
+                    event_type = line[7:]  # Remove "event: " prefix
+                elif line.startswith("data: "):
+                    data = json.loads(line[6:])  # Remove "data: " prefix
+                    events.append({"type": event_type, "data": data})
 
-    # Parse SSE events
-    events = []
-    for line in response.iter_lines():
-        if line.startswith("event:"):
-            events.append(line.split(":", 1)[1].strip())
+            # Verify event sequence: metadata -> context_chunk(s) -> context_complete
+            assert len(events) >= 2
+            assert events[0]["type"] == "metadata"
+            assert events[-1]["type"] == "context_complete"
 
-    # Verify event sequence
-    assert "metadata" in events
-    assert "context_chunk" in events  # At least one context chunk
-    assert "context_complete" in events
+            # Verify metadata event contains expected structure
+            metadata = events[0]["data"]
+            assert metadata["source"]["id"] == url.id
+            assert metadata["source"]["url"] == url.url
+            assert metadata["content"]["id"] == chunk.id
+            assert metadata["content"]["content"] == "Test chunk content"
+            assert "related_items" in metadata
+
+            # Verify content events contain chunks
+            content_events = [e for e in events if e["type"] == "context_chunk"]
+            assert len(content_events) == 2
+            # Reconstruct the full content from chunks
+            full_content = "".join([e["data"]["content"] for e in content_events])
+            assert full_content == "Test LLM response"

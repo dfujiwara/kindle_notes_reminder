@@ -155,3 +155,95 @@ def test_ingest_url_invalid_format(setup_url_deps: URLDepsSetup):
     assert response.status_code == 422  # Validation error from pydantic.HttpUrl
     data = response.json()
     assert "detail" in data
+
+
+def test_get_url_with_chunks_not_found(setup_url_deps: URLDepsSetup):
+    """Test GET /urls/{url_id} returns 404 when URL doesn't exist."""
+    setup_url_deps()
+
+    response = client.get("/urls/999")
+
+    assert response.status_code == 404
+    data = response.json()
+    assert data["detail"] == "URL not found"
+
+
+def test_get_url_with_chunks_empty(setup_url_deps: URLDepsSetup):
+    """Test GET /urls/{url_id} returns URL with empty chunks when no chunks exist."""
+    url_repo, _, _ = setup_url_deps()
+
+    # Create URL without chunks
+    url = url_repo.add(URLCreate(url="https://example.com", title="Example"))
+
+    response = client.get(f"/urls/{url.id}")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["url"]["id"] == url.id
+    assert data["url"]["url"] == "https://example.com"
+    assert data["url"]["title"] == "Example"
+    assert len(data["chunks"]) == 0
+
+
+def test_get_url_with_chunks_success(setup_url_deps: URLDepsSetup):
+    """Test GET /urls/{url_id} returns URL with all chunks ordered by chunk_order."""
+    url_repo, chunk_repo, _ = setup_url_deps()
+
+    # Create URL
+    url = url_repo.add(URLCreate(url="https://example.com", title="Example"))
+
+    # Add chunks in non-sequential order to verify ordering
+    chunk_repo.add(
+        URLChunkCreate(
+            content="Content 2",
+            content_hash="hash2",
+            url_id=url.id,
+            chunk_order=2,
+            is_summary=False,
+            embedding=[0.2] * 1536,
+        )
+    )
+    chunk_repo.add(
+        URLChunkCreate(
+            content="Summary",
+            content_hash="hash0",
+            url_id=url.id,
+            chunk_order=0,
+            is_summary=True,
+            embedding=[0.0] * 1536,
+        )
+    )
+    chunk_repo.add(
+        URLChunkCreate(
+            content="Content 1",
+            content_hash="hash1",
+            url_id=url.id,
+            chunk_order=1,
+            is_summary=False,
+            embedding=[0.1] * 1536,
+        )
+    )
+
+    response = client.get(f"/urls/{url.id}")
+
+    assert response.status_code == 200
+    data = response.json()
+
+    # Verify URL metadata
+    assert data["url"]["id"] == url.id
+    assert data["url"]["url"] == "https://example.com"
+    assert data["url"]["title"] == "Example"
+
+    # Verify chunks are returned and ordered by chunk_order
+    assert len(data["chunks"]) == 3
+    assert data["chunks"][0]["chunk_order"] == 0
+    assert data["chunks"][0]["is_summary"] is True
+    assert data["chunks"][0]["content"] == "Summary"
+
+    assert data["chunks"][1]["chunk_order"] == 1
+    assert data["chunks"][1]["is_summary"] is False
+    assert data["chunks"][1]["content"] == "Content 1"
+
+    assert data["chunks"][2]["chunk_order"] == 2
+    assert data["chunks"][2]["is_summary"] is False
+    assert data["chunks"][2]["content"] == "Content 2"

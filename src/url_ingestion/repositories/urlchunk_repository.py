@@ -1,4 +1,4 @@
-from sqlmodel import Session, select
+from sqlmodel import Session, select, col
 from src.repositories.models import URLChunk, URLChunkCreate, URLChunkRead, URL
 from .interfaces import URLChunkRepositoryInterface
 from sqlalchemy import func, column, Integer
@@ -56,9 +56,9 @@ class URLChunkRepository(URLChunkRepositoryInterface):
         statement = (
             select(URLChunk)
             .where(URLChunk.url_id == url_id)
-            .order_by(URLChunk.__table__.c.chunk_order)  # type: ignore
+            .order_by(col(URLChunk.chunk_order))
         )
-        chunks = self.session.exec(statement)
+        chunks = self.session.exec(statement).all()
         return [URLChunkRead.model_validate(chunk) for chunk in chunks]
 
     def find_similar_chunks(

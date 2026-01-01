@@ -31,6 +31,13 @@ class URLRepository(URLRepositoryInterface):
         db_url = self.session.exec(statement).first()
         return URLResponse.model_validate(db_url) if db_url else None
 
+    def get_by_ids(self, url_ids: list[int]) -> list[URLResponse]:
+        if not url_ids:
+            return []
+        statement = select(URL).where(URL.id.in_(url_ids))
+        urls = self.session.exec(statement).all()
+        return [URLResponse.model_validate(url) for url in urls]
+
     def list_urls(self) -> list[URLResponse]:
         statement = select(URL)
         urls = self.session.exec(statement).all()

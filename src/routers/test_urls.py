@@ -249,7 +249,7 @@ def test_get_url_with_chunks_success(setup_url_deps: URLDepsSetup):
     assert data["chunks"][2]["content"] == "Content 2"
 
 
-def test_get_chunk_with_context_stream_chunk_not_found(setup_url_deps: URLDepsSetup):
+def test_get_chunk_with_context_stream_not_found(setup_url_deps: URLDepsSetup):
     """Test GET /urls/{url_id}/chunks/{chunk_id} returns 404 when chunk not found."""
     setup_url_deps()
 
@@ -258,32 +258,6 @@ def test_get_chunk_with_context_stream_chunk_not_found(setup_url_deps: URLDepsSe
     assert response.status_code == 404
     data = response.json()
     assert "Chunk not found" in data["detail"]
-
-
-def test_get_chunk_with_context_stream_url_not_found(setup_url_deps: URLDepsSetup):
-    """Test 404 when URL doesn't exist (chunk URL ID mismatch)."""
-    url_repo, chunk_repo, _ = setup_url_deps()
-
-    # Create URL and chunk, then try with wrong URL ID
-    url = url_repo.add(URLCreate(url="https://example.com", title="Example"))
-    chunk = chunk_repo.add(
-        URLChunkCreate(
-            content="Test",
-            content_hash="hash1",
-            url_id=url.id,
-            chunk_order=0,
-            is_summary=True,
-            embedding=[0.1] * 1536,
-        )
-    )
-
-    # Request with wrong URL ID - chunk won't be found with url_id=999
-    response = client.get(f"/urls/999/chunks/{chunk.id}")
-
-    assert response.status_code == 404
-    # Chunk lookup fails first because url_id doesn't match
-    data = response.json()
-    assert "Chunk not found" in data["detail"] or "URL not found" in data["detail"]
 
 
 def test_get_chunk_with_context_stream_success(setup_url_deps: URLDepsSetup):

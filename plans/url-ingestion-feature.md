@@ -396,7 +396,7 @@ similar_chunks = chunk_repository.search_chunks_by_embedding(embedding, limit=li
 
 **8.3 Router Tests:** ✅ COMPLETE (test_urls.py)
 - ✅ `src/routers/test_response_builders.py` - Unified response builder tests (22 tests)
-- ✅ `src/routers/test_urls.py` - Test URL endpoints (12 tests, no patching via dependency injection)
+- ✅ `src/routers/test_urls.py` - Test URL endpoints (11 tests, no patching via dependency injection)
   - ✅ `test_ingest_url_fetch_error` - Error handling (422 unprocessable entity)
   - ✅ `test_ingest_url_success` - Successful ingestion with chunk validation
   - ✅ `test_get_urls_empty` - Empty URL list endpoint
@@ -406,8 +406,7 @@ similar_chunks = chunk_repository.search_chunks_by_embedding(embedding, limit=li
   - ✅ `test_get_url_with_chunks_not_found` - 404 when URL doesn't exist
   - ✅ `test_get_url_with_chunks_empty` - URL with no chunks
   - ✅ `test_get_url_with_chunks_success` - Chunks ordered by chunk_order
-  - ✅ `test_get_chunk_with_context_stream_chunk_not_found` - SSE 404 chunk not found
-  - ✅ `test_get_chunk_with_context_stream_url_not_found` - SSE 404 URL mismatch
+  - ✅ `test_get_chunk_with_context_stream_not_found` - SSE 404 chunk not found
   - ✅ `test_get_chunk_with_context_stream_success` - SSE happy path with event streaming
 - ❌ Update `src/routers/test_streaming.py` - Test unified /random (blocked on Phase 4.4 implementation)
 
@@ -439,10 +438,10 @@ uv run pyright      # Type checking
 8. ✅ **Phase 8** (Testing) - All tests COMPLETE (unit, repo, and router tests - 12 URL endpoint tests total)
 9. ❌ **Phase 9** (Documentation) - Update docs NOT STARTED
 
-**Phase 5 Complete (Commit c9f900a):**
+**Phase 5 Complete (Commit c9f900a, simplified to 2 tests):**
 - ✅ `GET /urls/{url_id}/chunks/{chunk_id}` - SSE streaming for specific chunk with AI context
-- ✅ 3 new tests for SSE endpoint (404 handling + happy path)
-- ✅ All 12 URL endpoint tests passing
+- ✅ 2 new tests for SSE endpoint (404 handling + happy path)
+- ✅ All 11 URL endpoint tests passing
 - ✅ Zero type errors from pyright
 - ✅ Code formatted with ruff
 
@@ -602,12 +601,18 @@ Use HNSW (Hierarchical Navigable Small World) for consistency with existing Note
   - Same SSE events: metadata, context_chunk, context_complete, error
   - No background evaluation (per design decision)
   - Uses unified response schema (ContentWithRelatedItemsResponse)
+  - 2 focused tests: 404 handling + SSE event streaming
 
 **DESIGN CHOICE APPLIED - Option A:**
 - Removed redundant `/urls/{url_id}/chunks` endpoint
 - Implemented all 4 endpoints (POST /urls, GET /urls, GET /urls/{url_id}, GET /urls/{url_id}/chunks/{chunk_id})
 - `GET /urls/{url_id}` returns both metadata AND chunks in one call for efficiency
 - `GET /urls/{url_id}/chunks/{chunk_id}` provides streaming AI context for deep dives
+
+**TEST SIMPLIFICATION:**
+- Removed redundant test that checked URL ID mismatch (same code path as chunk not found)
+- Kept focused tests: 404 error handling + happy path SSE streaming
+- Final test count: 11 (9 existing + 2 new SSE tests)
 
 **NEXT STEPS:**
 - Phase 6 - Search integration (include URL chunks in semantic search)
@@ -617,4 +622,4 @@ Use HNSW (Hierarchical Navigable Small World) for consistency with existing Note
 
 *Plan Status: **PHASE 5 COMPLETE** (Phases 1-5 complete, Phase 6-9 pending)*
 
-*Last Updated: 2026-01-01 - Implemented GET /urls/{url_id}/chunks/{chunk_id} SSE streaming endpoint (commit c9f900a). All 12 URL tests passing. All type checks passing. Phase 5 fully complete.*
+*Last Updated: 2026-01-01 - Implemented GET /urls/{url_id}/chunks/{chunk_id} SSE streaming endpoint (commit c9f900a). Simplified tests to 11 total (removed redundant URL not found test). All 11 URL tests passing. All type checks passing. Phase 5 fully complete.*

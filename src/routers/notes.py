@@ -10,23 +10,35 @@ from src.repositories.interfaces import (
     NoteRepositoryInterface,
     EvaluationRepositoryInterface,
 )
+from src.url_ingestion.repositories.interfaces import (
+    URLRepositoryInterface,
+    URLChunkRepositoryInterface,
+)
 from src.llm_interface import LLMClientInterface
 from src.context_generation.additional_context import (
     get_additional_context_stream,
 )
-from src.prompts import create_context_prompt, SYSTEM_INSTRUCTIONS
+from src.prompts import (
+    create_context_prompt,
+    create_chunk_context_prompt,
+    SYSTEM_INSTRUCTIONS,
+)
 from src.evaluation_service import evaluate_response
 from src.sse_utils import format_sse
 from src.dependencies import (
     get_book_repository,
     get_note_repository,
     get_evaluation_repository,
+    get_url_repository,
+    get_urlchunk_repository,
     get_llm_client,
 )
 from src.routers.response_builders import (
     build_note_with_related_notes_response,
     build_unified_response_for_note,
+    build_unified_response_for_chunk,
 )
+from src.routers.random_selector import select_random_content
 import logging
 
 logger = logging.getLogger(__name__)
@@ -35,6 +47,7 @@ router = APIRouter(tags=["notes"])
 
 # Constants
 RELATED_NOTES_LIMIT = 3
+RELATED_CHUNKS_LIMIT = 3
 
 
 @router.get(
@@ -252,16 +265,17 @@ async def get_note_with_context_stream(
 
 @router.get(
     "/random/v2",
-    summary="Get random note with streaming AI context (unified schema)",
+    summary="Get random content with streaming AI context (unified schema)",
     description="""
-    Retrieve a random note with AI-generated context streamed as Server-Sent Events.
+    Retrieve random content (note or URL chunk) with AI-generated context streamed as SSE.
     Uses the unified response schema (ContentWithRelatedItemsResponse).
 
     This endpoint:
-    - Selects a random note from the database
+    - Selects random content with weighted distribution (proportional to available content)
+    - Can return either a Kindle note or a URL chunk
     - Streams AI-powered additional context using Server-Sent Events (SSE)
-    - Finds related notes based on vector similarity
-    - Evaluates the AI response quality in the background
+    - Finds related items based on vector similarity
+    - Evaluates AI response quality in background (notes only)
 
     **SSE Events:**
     - `metadata`: Contains source, content, and related_items data (unified schema)
@@ -269,9 +283,9 @@ async def get_note_with_context_stream(
     - `context_complete`: Signals the end of streaming
     - `error`: Error information if something goes wrong
     """,
-    response_description="Server-Sent Event stream with unified note data and AI context",
+    response_description="Server-Sent Event stream with unified content data and AI context",
     responses={
-        404: {"description": "No notes found in the database"},
+        404: {"description": "No content found in the database"},
         200: {
             "description": "SSE stream with metadata and context chunks",
             "content": {"text/event-stream": {}},
@@ -285,33 +299,53 @@ async def get_random_content_v2(
     evaluation_repository: EvaluationRepositoryInterface = Depends(
         get_evaluation_repository
     ),
+    url_repository: URLRepositoryInterface = Depends(get_url_repository),
+    chunk_repository: URLChunkRepositoryInterface = Depends(get_urlchunk_repository),
     llm_client: LLMClientInterface = Depends(get_llm_client),
 ) -> StreamingResponse:
-    # Fetch and validate data before streaming
-    random_note = note_repository.get_random()
-    if not random_note:
-        logger.error("Error finding a random note")
-        raise HTTPException(status_code=404, detail="No notes found")
+    # Select random content (note or URL chunk) with weighted distribution
+    selection = select_random_content(note_repository, chunk_repository)
+    if not selection:
+        logger.error("Error finding random content")
+        raise HTTPException(status_code=404, detail="No content found")
 
-    book = book_repository.get(random_note.book_id)
-    if not book:
-        logger.error(f"Error finding a book with an id of {random_note.book_id}")
-        raise HTTPException(status_code=404, detail="Book not found")
+    # Branch based on content type
+    if selection.content_type == "note":
+        # Handle note selection
+        random_note = selection.item
+        book = book_repository.get(random_note.book_id)
+        if not book:
+            logger.error(f"Error finding a book with an id of {random_note.book_id}")
+            raise HTTPException(status_code=404, detail="Book not found")
 
-    # Find similar notes
-    similar_notes = note_repository.find_similar_notes(
-        random_note, limit=RELATED_NOTES_LIMIT
-    )
+        similar_notes = note_repository.find_similar_notes(
+            random_note, limit=RELATED_NOTES_LIMIT
+        )
+        metadata = build_unified_response_for_note(book, random_note, similar_notes)
+        prompt = create_context_prompt(book.title, random_note.content)
+        should_evaluate = True
+        content_for_evaluation = random_note
+    else:  # selection.content_type == "url_chunk"
+        # Handle URL chunk selection
+        random_chunk = selection.item
+        url = url_repository.get(random_chunk.url_id)
+        if not url:
+            logger.error(f"Error finding URL with id {random_chunk.url_id}")
+            raise HTTPException(status_code=404, detail="URL not found")
 
-    # Use unified response builder
-    metadata = build_unified_response_for_note(book, random_note, similar_notes)
+        similar_chunks = chunk_repository.find_similar_chunks(
+            random_chunk, limit=RELATED_CHUNKS_LIMIT
+        )
+        metadata = build_unified_response_for_chunk(url, random_chunk, similar_chunks)
+        prompt = create_chunk_context_prompt(url.url, url.title, random_chunk.content)
+        should_evaluate = False  # No evaluation for URL chunks
+        content_for_evaluation = None
 
     async def event_generator() -> AsyncGenerator[str, None]:
         # Send metadata first
         yield format_sse("metadata", metadata.model_dump(mode="json"))
 
-        # Prepare prompt and instruction
-        prompt = create_context_prompt(book.title, random_note.content)
+        # Use prompt prepared above (different for notes vs chunks)
         instruction = SYSTEM_INSTRUCTIONS["context_provider"]
 
         # Stream context chunks and collect result
@@ -334,14 +368,14 @@ async def get_random_content_v2(
         # Signal completion
         yield format_sse("context_complete", {})
 
-        # Evaluate response in background
-        if llm_prompt_response:
+        # Evaluate response in background (only for notes, not URL chunks)
+        if should_evaluate and llm_prompt_response and content_for_evaluation:
             background_tasks.add_task(
                 evaluate_response,
                 llm_client,
                 llm_prompt_response,
                 evaluation_repository,
-                random_note,
+                content_for_evaluation,
             )
 
     return StreamingResponse(

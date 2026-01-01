@@ -241,7 +241,10 @@ class StubURLChunkRepository(URLChunkRepositoryInterface):
         return self.chunks[0] if self.chunks else None
 
     def get_by_url_id(self, url_id: int) -> list[URLChunkRead]:
-        return [chunk for chunk in self.chunks if chunk.url_id == url_id]
+        return sorted(
+            [chunk for chunk in self.chunks if chunk.url_id == url_id],
+            key=lambda c: c.chunk_order,
+        )
 
     def find_similar_chunks(
         self, chunk: URLChunkRead, limit: int = 5

@@ -22,6 +22,7 @@ from src.dependencies import (
 from src.repositories.models import (
     URLWithChunksResponses,
     URLWithChunksResponse,
+    URLChunkResponse,
 )
 from src.url_ingestion.url_processor import process_url_content
 from src.url_ingestion.url_fetcher import URLFetchError
@@ -123,3 +124,29 @@ async def get_urls(
         )
 
     return URLListResponse(urls=url_responses)
+
+
+@router.get(
+    "/urls/{url_id}",
+    summary="Get URL with all chunks",
+    description="Retrieve URL metadata and all chunks ordered by chunk_order",
+    response_description="URL metadata with all chunks",
+    response_model=URLWithChunksResponses,
+    responses={
+        404: {"description": "URL not found"},
+        200: {"description": "URL retrieved successfully"},
+    },
+)
+async def get_url_with_chunks(
+    url_id: int,
+    url_repository: URLRepositoryInterface = Depends(get_url_repository),
+    chunk_repository: URLChunkRepositoryInterface = Depends(get_urlchunk_repository),
+) -> URLWithChunksResponses:
+    """Get URL with all chunks."""
+    url = url_repository.get(url_id)
+    if not url:
+        raise HTTPException(status_code=404, detail="URL not found")
+
+    chunk_reads = chunk_repository.get_by_url_id(url_id)
+    chunks = [URLChunkResponse.model_validate(chunk) for chunk in chunk_reads]
+    return URLWithChunksResponses(url=url, chunks=chunks)

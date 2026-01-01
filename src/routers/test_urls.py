@@ -247,3 +247,75 @@ def test_get_url_with_chunks_success(setup_url_deps: URLDepsSetup):
     assert data["chunks"][2]["chunk_order"] == 2
     assert data["chunks"][2]["is_summary"] is False
     assert data["chunks"][2]["content"] == "Content 2"
+
+
+def test_get_chunk_with_context_stream_chunk_not_found(setup_url_deps: URLDepsSetup):
+    """Test GET /urls/{url_id}/chunks/{chunk_id} returns 404 when chunk not found."""
+    setup_url_deps()
+
+    response = client.get("/urls/999/chunks/999")
+
+    assert response.status_code == 404
+    data = response.json()
+    assert "Chunk not found" in data["detail"]
+
+
+def test_get_chunk_with_context_stream_url_not_found(setup_url_deps: URLDepsSetup):
+    """Test 404 when URL doesn't exist (chunk URL ID mismatch)."""
+    url_repo, chunk_repo, _ = setup_url_deps()
+
+    # Create URL and chunk, then try with wrong URL ID
+    url = url_repo.add(URLCreate(url="https://example.com", title="Example"))
+    chunk = chunk_repo.add(
+        URLChunkCreate(
+            content="Test",
+            content_hash="hash1",
+            url_id=url.id,
+            chunk_order=0,
+            is_summary=True,
+            embedding=[0.1] * 1536,
+        )
+    )
+
+    # Request with wrong URL ID - chunk won't be found with url_id=999
+    response = client.get(f"/urls/999/chunks/{chunk.id}")
+
+    assert response.status_code == 404
+    # Chunk lookup fails first because url_id doesn't match
+    data = response.json()
+    assert "Chunk not found" in data["detail"] or "URL not found" in data["detail"]
+
+
+def test_get_chunk_with_context_stream_success(setup_url_deps: URLDepsSetup):
+    """Test GET /urls/{url_id}/chunks/{chunk_id} streams events correctly."""
+    url_repo, chunk_repo, _ = setup_url_deps()
+
+    # Create test URL and chunk
+    url = url_repo.add(URLCreate(url="https://example.com", title="Example"))
+    chunk = chunk_repo.add(
+        URLChunkCreate(
+            content="Test chunk content",
+            content_hash="hash1",
+            url_id=url.id,
+            chunk_order=1,
+            is_summary=False,
+            embedding=[0.1] * 1536,
+        )
+    )
+
+    # Make SSE request
+    response = client.get(f"/urls/{url.id}/chunks/{chunk.id}")
+
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "text/event-stream; charset=utf-8"
+
+    # Parse SSE events
+    events = []
+    for line in response.iter_lines():
+        if line.startswith("event:"):
+            events.append(line.split(":", 1)[1].strip())
+
+    # Verify event sequence
+    assert "metadata" in events
+    assert "context_chunk" in events  # At least one context chunk
+    assert "context_complete" in events

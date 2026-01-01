@@ -288,7 +288,7 @@ class StubLLMClient(LLMClientInterface):
     """Stub implementation of LLMClient for testing."""
 
     def __init__(
-        self, responses: list[str] = ["Test response"], should_fail: bool = False
+        self, responses: list[str] = ["Test LLM response"], should_fail: bool = False
     ):
         self.responses = responses
         self.should_fail = should_fail

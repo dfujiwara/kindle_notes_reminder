@@ -2,49 +2,51 @@
 Note-related endpoints for accessing and exploring notes with AI enhancements.
 """
 
+import logging
 from typing import AsyncGenerator
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
-from src.repositories.models import (
-    NoteRead,
-    URLChunkRead,
-    ContentWithRelatedItemsResponse,
-)
+
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from fastapi.responses import StreamingResponse
-from src.repositories.interfaces import (
-    BookRepositoryInterface,
-    NoteRepositoryInterface,
-    EvaluationRepositoryInterface,
-)
-from src.url_ingestion.repositories.interfaces import (
-    URLRepositoryInterface,
-    URLChunkRepositoryInterface,
-)
-from src.llm_interface import LLMClientInterface
+
 from src.context_generation.additional_context import (
     get_additional_context_stream,
 )
-from src.prompts import (
-    create_context_prompt,
-    create_chunk_context_prompt,
-    SYSTEM_INSTRUCTIONS,
-)
-from src.evaluation_service import evaluate_response
-from src.sse_utils import format_sse
 from src.dependencies import (
     get_book_repository,
-    get_note_repository,
     get_evaluation_repository,
+    get_llm_client,
+    get_note_repository,
     get_url_repository,
     get_urlchunk_repository,
-    get_llm_client,
 )
-from src.routers.response_builders import (
-    build_note_with_related_notes_response,
-    build_unified_response_for_note,
-    build_unified_response_for_chunk,
+from src.evaluation_service import evaluate_response
+from src.llm_interface import LLMClientInterface
+from src.prompts import (
+    SYSTEM_INSTRUCTIONS,
+    create_chunk_context_prompt,
+    create_context_prompt,
+)
+from src.repositories.interfaces import (
+    BookRepositoryInterface,
+    EvaluationRepositoryInterface,
+    NoteRepositoryInterface,
+)
+from src.repositories.models import (
+    ContentWithRelatedItemsResponse,
+    NoteRead,
+    URLChunkRead,
 )
 from src.routers.random_selector import select_random_content
-import logging
+from src.routers.response_builders import (
+    build_note_with_related_notes_response,
+    build_unified_response_for_chunk,
+    build_unified_response_for_note,
+)
+from src.sse_utils import format_sse
+from src.url_ingestion.repositories.interfaces import (
+    URLChunkRepositoryInterface,
+    URLRepositoryInterface,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -272,7 +274,7 @@ async def _prepare_note_content(
     note: NoteRead,
     book_repository: BookRepositoryInterface,
     note_repository: NoteRepositoryInterface,
-) -> tuple[ContentWithRelatedItemsResponse, str, NoteRead]:
+) -> tuple[ContentWithRelatedItemsResponse, str]:
     """Prepare metadata, prompt, and content for evaluation (note only)."""
     book = book_repository.get(note.book_id)
     if not book:
@@ -283,14 +285,14 @@ async def _prepare_note_content(
     metadata = build_unified_response_for_note(book, note, similar_notes)
     prompt = create_context_prompt(book.title, note.content)
 
-    return metadata, prompt, note
+    return metadata, prompt
 
 
 async def _prepare_chunk_content(
     chunk: URLChunkRead,
     url_repository: URLRepositoryInterface,
     chunk_repository: URLChunkRepositoryInterface,
-) -> tuple[ContentWithRelatedItemsResponse, str, None]:
+) -> tuple[ContentWithRelatedItemsResponse, str]:
     """Prepare metadata and prompt for a URL chunk (no evaluation)."""
     url = url_repository.get(chunk.url_id)
     if not url:
@@ -303,7 +305,7 @@ async def _prepare_chunk_content(
     metadata = build_unified_response_for_chunk(url, chunk, similar_chunks)
     prompt = create_chunk_context_prompt(url.url, url.title, chunk.content)
 
-    return metadata, prompt, None
+    return metadata, prompt
 
 
 @router.get(
@@ -354,13 +356,15 @@ async def get_random_content_v2(
 
     # Prepare content based on type
     if selection.content_type == "note":
-        metadata, prompt, content_for_evaluation = await _prepare_note_content(
+        metadata, prompt = await _prepare_note_content(
             selection.item, book_repository, note_repository
         )
+        content_for_evaluation = selection.item
     else:  # selection.content_type == "url_chunk"
-        metadata, prompt, content_for_evaluation = await _prepare_chunk_content(
+        metadata, prompt = await _prepare_chunk_content(
             selection.item, url_repository, chunk_repository
         )
+        content_for_evaluation = None
 
     async def event_generator() -> AsyncGenerator[str, None]:
         # Send metadata first

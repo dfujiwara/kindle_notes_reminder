@@ -4,6 +4,11 @@ Note-related endpoints for accessing and exploring notes with AI enhancements.
 
 from typing import AsyncGenerator
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from src.repositories.models import (
+    NoteRead,
+    URLChunkRead,
+    ContentWithRelatedItemsResponse,
+)
 from fastapi.responses import StreamingResponse
 from src.repositories.interfaces import (
     BookRepositoryInterface,
@@ -263,6 +268,44 @@ async def get_note_with_context_stream(
     )
 
 
+async def _prepare_note_content(
+    note: NoteRead,
+    book_repository: BookRepositoryInterface,
+    note_repository: NoteRepositoryInterface,
+) -> tuple[ContentWithRelatedItemsResponse, str, bool, NoteRead | None]:
+    """Prepare metadata, prompt, and evaluation flags for a note."""
+    book = book_repository.get(note.book_id)
+    if not book:
+        logger.error(f"Error finding a book with an id of {note.book_id}")
+        raise HTTPException(status_code=404, detail="Book not found")
+
+    similar_notes = note_repository.find_similar_notes(note, limit=RELATED_NOTES_LIMIT)
+    metadata = build_unified_response_for_note(book, note, similar_notes)
+    prompt = create_context_prompt(book.title, note.content)
+
+    return metadata, prompt, True, note
+
+
+async def _prepare_chunk_content(
+    chunk: URLChunkRead,
+    url_repository: URLRepositoryInterface,
+    chunk_repository: URLChunkRepositoryInterface,
+) -> tuple[ContentWithRelatedItemsResponse, str, bool, NoteRead | None]:
+    """Prepare metadata, prompt, and evaluation flags for a URL chunk."""
+    url = url_repository.get(chunk.url_id)
+    if not url:
+        logger.error(f"Error finding URL with id {chunk.url_id}")
+        raise HTTPException(status_code=404, detail="URL not found")
+
+    similar_chunks = chunk_repository.find_similar_chunks(
+        chunk, limit=RELATED_CHUNKS_LIMIT
+    )
+    metadata = build_unified_response_for_chunk(url, chunk, similar_chunks)
+    prompt = create_chunk_context_prompt(url.url, url.title, chunk.content)
+
+    return metadata, prompt, False, None
+
+
 @router.get(
     "/random/v2",
     summary="Get random content with streaming AI context (unified schema)",
@@ -309,37 +352,25 @@ async def get_random_content_v2(
         logger.error("Error finding random content")
         raise HTTPException(status_code=404, detail="No content found")
 
-    # Branch based on content type
+    # Prepare content based on type
     if selection.content_type == "note":
-        # Handle note selection
-        random_note = selection.item
-        book = book_repository.get(random_note.book_id)
-        if not book:
-            logger.error(f"Error finding a book with an id of {random_note.book_id}")
-            raise HTTPException(status_code=404, detail="Book not found")
-
-        similar_notes = note_repository.find_similar_notes(
-            random_note, limit=RELATED_NOTES_LIMIT
+        (
+            metadata,
+            prompt,
+            should_evaluate,
+            content_for_evaluation,
+        ) = await _prepare_note_content(
+            selection.item, book_repository, note_repository
         )
-        metadata = build_unified_response_for_note(book, random_note, similar_notes)
-        prompt = create_context_prompt(book.title, random_note.content)
-        should_evaluate = True
-        content_for_evaluation = random_note
     else:  # selection.content_type == "url_chunk"
-        # Handle URL chunk selection
-        random_chunk = selection.item
-        url = url_repository.get(random_chunk.url_id)
-        if not url:
-            logger.error(f"Error finding URL with id {random_chunk.url_id}")
-            raise HTTPException(status_code=404, detail="URL not found")
-
-        similar_chunks = chunk_repository.find_similar_chunks(
-            random_chunk, limit=RELATED_CHUNKS_LIMIT
+        (
+            metadata,
+            prompt,
+            should_evaluate,
+            content_for_evaluation,
+        ) = await _prepare_chunk_content(
+            selection.item, url_repository, chunk_repository
         )
-        metadata = build_unified_response_for_chunk(url, random_chunk, similar_chunks)
-        prompt = create_chunk_context_prompt(url.url, url.title, random_chunk.content)
-        should_evaluate = False  # No evaluation for URL chunks
-        content_for_evaluation = None
 
     async def event_generator() -> AsyncGenerator[str, None]:
         # Send metadata first

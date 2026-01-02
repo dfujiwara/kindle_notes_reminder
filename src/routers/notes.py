@@ -272,8 +272,8 @@ async def _prepare_note_content(
     note: NoteRead,
     book_repository: BookRepositoryInterface,
     note_repository: NoteRepositoryInterface,
-) -> tuple[ContentWithRelatedItemsResponse, str, bool, NoteRead | None]:
-    """Prepare metadata, prompt, and evaluation flags for a note."""
+) -> tuple[ContentWithRelatedItemsResponse, str, NoteRead | None]:
+    """Prepare metadata, prompt, and content for evaluation (note only)."""
     book = book_repository.get(note.book_id)
     if not book:
         logger.error(f"Error finding a book with an id of {note.book_id}")
@@ -283,15 +283,15 @@ async def _prepare_note_content(
     metadata = build_unified_response_for_note(book, note, similar_notes)
     prompt = create_context_prompt(book.title, note.content)
 
-    return metadata, prompt, True, note
+    return metadata, prompt, note
 
 
 async def _prepare_chunk_content(
     chunk: URLChunkRead,
     url_repository: URLRepositoryInterface,
     chunk_repository: URLChunkRepositoryInterface,
-) -> tuple[ContentWithRelatedItemsResponse, str, bool, NoteRead | None]:
-    """Prepare metadata, prompt, and evaluation flags for a URL chunk."""
+) -> tuple[ContentWithRelatedItemsResponse, str, NoteRead | None]:
+    """Prepare metadata and prompt for a URL chunk (no evaluation)."""
     url = url_repository.get(chunk.url_id)
     if not url:
         logger.error(f"Error finding URL with id {chunk.url_id}")
@@ -303,7 +303,7 @@ async def _prepare_chunk_content(
     metadata = build_unified_response_for_chunk(url, chunk, similar_chunks)
     prompt = create_chunk_context_prompt(url.url, url.title, chunk.content)
 
-    return metadata, prompt, False, None
+    return metadata, prompt, None
 
 
 @router.get(
@@ -354,21 +354,11 @@ async def get_random_content_v2(
 
     # Prepare content based on type
     if selection.content_type == "note":
-        (
-            metadata,
-            prompt,
-            should_evaluate,
-            content_for_evaluation,
-        ) = await _prepare_note_content(
+        metadata, prompt, content_for_evaluation = await _prepare_note_content(
             selection.item, book_repository, note_repository
         )
     else:  # selection.content_type == "url_chunk"
-        (
-            metadata,
-            prompt,
-            should_evaluate,
-            content_for_evaluation,
-        ) = await _prepare_chunk_content(
+        metadata, prompt, content_for_evaluation = await _prepare_chunk_content(
             selection.item, url_repository, chunk_repository
         )
 
@@ -400,7 +390,7 @@ async def get_random_content_v2(
         yield format_sse("context_complete", {})
 
         # Evaluate response in background (only for notes, not URL chunks)
-        if should_evaluate and llm_prompt_response and content_for_evaluation:
+        if llm_prompt_response and content_for_evaluation:
             background_tasks.add_task(
                 evaluate_response,
                 llm_client,

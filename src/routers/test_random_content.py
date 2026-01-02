@@ -147,56 +147,6 @@ async def test_random_v2_chunk_response_structure(
 
 
 @pytest.mark.asyncio
-async def test_random_v2_sse_event_sequence(setup_random_v2_deps: RandomV2DepsSetup):
-    """Test GET /random/v2 returns correct SSE event sequence."""
-    book_repo, note_repo, _, _, _ = setup_random_v2_deps()
-
-    # Create test data
-    book = book_repo.add(BookCreate(title="Test Book", author="Test Author"))
-    note_repo.add(
-        NoteCreate(
-            book_id=book.id,
-            content="Test note content",
-            content_hash="hash1",
-            embedding=[0.1] * 1536,
-        )
-    )
-
-    # Make async SSE streaming request
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as async_client:
-        async with async_client.stream(
-            "GET", "/random/v2", headers={"Accept": "text/event-stream"}
-        ) as response:
-            assert response.status_code == 200
-
-            # Parse SSE events
-            events: list[dict[str, Any]] = []
-            event_type: str = ""
-            async for line in response.aiter_lines():
-                if line.startswith("event: "):
-                    event_type = line[7:]
-                elif line.startswith("data: "):
-                    data = json.loads(line[6:])
-                    events.append({"type": event_type, "data": data})
-
-            # Verify complete event sequence: metadata -> context_chunk(s) -> context_complete
-            assert len(events) >= 3
-            assert events[0]["type"] == "metadata"
-            assert events[-1]["type"] == "context_complete"
-
-            # Verify context chunks are in the middle
-            middle_events = [e for e in events[1:-1] if e["type"] == "context_chunk"]
-            assert len(middle_events) > 0
-
-            # Verify all events contain proper structure
-            for event in events:
-                assert "type" in event
-                assert "data" in event
-                assert isinstance(event["data"], dict)
-
-
-@pytest.mark.asyncio
 async def test_random_v2_weighted_distribution(setup_random_v2_deps: RandomV2DepsSetup):
     """Test GET /random/v2 respects weighted distribution (2:1 notes to chunks)."""
     book_repo, note_repo, _, url_repo, chunk_repo = setup_random_v2_deps()

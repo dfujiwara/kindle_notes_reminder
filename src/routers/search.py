@@ -148,5 +148,9 @@ async def search_notes(
     )
 
     return SearchResult(
-        query=q, books=books_results, urls=urls_results, count=total_count
+        query=q,
+        results=books_results,  # For backwards compatibility
+        books=books_results,
+        urls=urls_results,
+        count=total_count,
     )

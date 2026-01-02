@@ -245,6 +245,9 @@ class URLWithChunksResponses(SQLModel):
 
 class SearchResult(SQLModel):
     query: str
+    results: list[
+        BookWithNoteResponses
+    ]  # Deprecated: use 'books' field instead (kept for backwards compatibility)
     books: list[BookWithNoteResponses]
     urls: list[URLWithChunksResponses]
     count: int

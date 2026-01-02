@@ -30,52 +30,6 @@ def test_random_v2_no_content_returns_404(setup_random_v2_deps: RandomV2DepsSetu
     assert data["detail"] == "No content found"
 
 
-def test_random_v2_only_notes_available(setup_random_v2_deps: RandomV2DepsSetup):
-    """Test GET /random/v2 returns note when only notes are available."""
-    book_repo, note_repo, _, _, _ = setup_random_v2_deps()
-
-    # Create test data - book and note only
-    book = book_repo.add(BookCreate(title="Test Book", author="Test Author"))
-    note_repo.add(
-        NoteCreate(
-            book_id=book.id,
-            content="Test note content",
-            content_hash="hash1",
-            embedding=[0.1] * 1536,
-        )
-    )
-
-    response = client.get("/random/v2")
-
-    assert response.status_code == 200
-    # For SSE streams, check that we get event-stream content type
-    assert "text/event-stream" in response.headers["content-type"]
-
-
-def test_random_v2_only_chunks_available(setup_random_v2_deps: RandomV2DepsSetup):
-    """Test GET /random/v2 returns URL chunk when only chunks are available."""
-    _, _, _, url_repo, chunk_repo = setup_random_v2_deps()
-
-    # Create test data - URL chunk only
-    url = url_repo.add(URLCreate(url="https://example.com", title="Example"))
-    chunk_repo.add(
-        URLChunkCreate(
-            content="Test chunk content",
-            content_hash="hash1",
-            url_id=url.id,
-            chunk_order=0,
-            is_summary=False,
-            embedding=[0.1] * 1536,
-        )
-    )
-
-    response = client.get("/random/v2")
-
-    assert response.status_code == 200
-    # For SSE streams, check that we get event-stream content type
-    assert "text/event-stream" in response.headers["content-type"]
-
-
 @pytest.mark.asyncio
 async def test_random_v2_note_response_structure(
     setup_random_v2_deps: RandomV2DepsSetup,

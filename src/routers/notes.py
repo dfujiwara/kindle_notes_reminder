@@ -270,7 +270,7 @@ async def get_note_with_context_stream(
     )
 
 
-async def _prepare_note_content(
+def _prepare_note_content(
     note: NoteRead,
     book_repository: BookRepositoryInterface,
     note_repository: NoteRepositoryInterface,
@@ -288,7 +288,7 @@ async def _prepare_note_content(
     return metadata, prompt
 
 
-async def _prepare_chunk_content(
+def _prepare_chunk_content(
     chunk: URLChunkRead,
     url_repository: URLRepositoryInterface,
     chunk_repository: URLChunkRepositoryInterface,
@@ -356,12 +356,12 @@ async def get_random_content_v2(
 
     # Prepare content based on type
     if selection.content_type == "note":
-        metadata, prompt = await _prepare_note_content(
+        metadata, prompt = _prepare_note_content(
             selection.item, book_repository, note_repository
         )
         content_for_evaluation = selection.item
     else:  # selection.content_type == "url_chunk"
-        metadata, prompt = await _prepare_chunk_content(
+        metadata, prompt = _prepare_chunk_content(
             selection.item, url_repository, chunk_repository
         )
         content_for_evaluation = None

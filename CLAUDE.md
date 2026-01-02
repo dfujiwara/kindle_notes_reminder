@@ -31,12 +31,13 @@ FastAPI application for managing Kindle notes with AI-powered features, embeddin
 ## Architecture
 
 **Key Patterns**:
-- **Repository Pattern**: Database operations abstracted through interfaces (`src/repositories/interfaces.py`)
+- **Repository Pattern**: Database operations abstracted through interfaces (`src/repositories/interfaces.py` and `src/url_ingestion/repositories/interfaces.py`)
 - **Dependency Injection**: FastAPI DI for repositories, LLM/embedding clients, and database sessions
 - **Type Safety**: SQLModel for database models, full type hints throughout
 - **Async Processing**: Background tasks for LLM evaluation and embedding generation
 - **SSE Streaming**: Server-Sent Events for real-time AI context delivery
-- **Content Deduplication**: Content hashing prevents duplicate notes across books
+- **Content Deduplication**: SHA-256 content hashing prevents duplicates (notes across books, URL chunks within URLs)
+- **Unified Content Schema**: Polymorphic response models support both Kindle notes and URL chunks
 
 **Stack**:
 - FastAPI with SQLModel and PostgreSQL + pgvector (1536-dim embeddings)
@@ -44,6 +45,8 @@ FastAPI application for managing Kindle notes with AI-powered features, embeddin
 - Alembic for migrations
 
 **Data Flow**:
+
+**For Kindle Notes:**
 1. HTML notebook uploaded → parsed into Book/Note entities (hash-deduplicated)
 2. Embeddings generated asynchronously → stored in PostgreSQL with pgvector
 3. Notes retrieved via SSE streaming → metadata sent first, then AI context chunks
@@ -51,34 +54,86 @@ FastAPI application for managing Kindle notes with AI-powered features, embeddin
 5. Related notes found via vector similarity search
 6. Background tasks evaluate LLM quality
 
+**For URL Content:**
+1. URL submitted → fetched and parsed with BeautifulSoup (HTML size limit enforced)
+2. Content chunked by paragraphs (max 1000 tokens) → summary generated via LLM
+3. Embeddings generated in parallel for summary + all chunks (pgvector HNSW index)
+4. Summary stored as special chunk (chunk_order=0, is_summary=true)
+5. URL chunks retrieved via SSE streaming (same pattern as notes, no evaluation)
+6. Related chunks found via vector similarity search
+
 **Environment Variables**:
 - `OPENAI_API_KEY` (required)
 - `DATABASE_URL`, `CORS_ALLOW_ORIGIN`, `LOG_LEVEL` (optional)
 
 ## Key Files
 
-**Routers** (`src/routers/`): `general.py` (health), `notebooks.py` (upload), `books.py` (listing), `notes.py` (SSE streaming note retrieval), `search.py` (semantic search), `response_builders.py` (response construction)
+**Routers** (`src/routers/`):
+- `general.py` - Health check endpoint
+- `notebooks.py` - Kindle notebook upload and processing
+- `books.py` - Book listing and management
+- `notes.py` - Note SSE streaming, /random, /random/v2 endpoints
+- `urls.py` - URL content management endpoints (ingest, list, stream)
+- `search.py` - Semantic search across Kindle notes
+- `response_builders.py` - Unified response construction for mixed content types
+- `random_selector.py` - Weighted random selection between notes and URL chunks
 
-**Core Logic**: `notebook_parser.py` (HTML parsing), `notebook_processor.py` (business logic), `additional_context.py` (AI generation), `evaluations.py` (quality scoring), `sse_utils.py` (SSE formatting)
+**Notebook Processing** (`src/notebook_processing/`):
+- `notebook_parser.py` - HTML parsing for Kindle notebooks
+- `notebook_processor.py` - Business logic for note extraction and embedding
 
-**Interfaces**: `llm_interface.py`, `embedding_interface.py`, `repositories/interfaces.py`
+**URL Processing** (`src/url_ingestion/`):
+- `url_fetcher.py` - HTTP fetching and HTML parsing for URLs
+- `content_chunker.py` - Paragraph-based text chunking with size limits
+- `url_processor.py` - Complete URL ingestion pipeline (fetch → chunk → summarize → embed)
+- `repositories/` - URL and URLChunk data access implementations
 
-**Infrastructure**: `dependencies.py` (DI), `database.py` (sessions), `openai_client.py`, `prompts.py`, `repositories/models.py` (Book, Note, Evaluation)
+**Context Generation** (`src/context_generation/`):
+- `additional_context.py` - AI-powered context streaming via LLM
+
+**Core Services**:
+- `evaluation_service.py` - Quality scoring for LLM responses (Kindle notes only)
+- `sse_utils.py` - Server-Sent Events formatting
+
+**Interfaces**:
+- `llm_interface.py`, `embedding_interface.py` - LLM and embedding client contracts
+- `repositories/interfaces.py` - Data access layer contracts
+
+**Infrastructure**:
+- `dependencies.py` - Dependency injection setup
+- `database.py` - Database session management
+- `openai_client.py` - OpenAI API integration
+- `prompts.py` - LLM prompts and system instructions
+- `repositories/models.py` - Database models (Book, Note, URL, URLChunk, Evaluation)
 
 ## API Endpoints
 
+### Health & General
 - `GET /health` - Health check
+
+### Kindle Notes Management
 - `POST /books` - Upload Kindle HTML notebook
 - `GET /books` - List books with note counts
 - `GET /books/{book_id}/notes` - Get all notes for a book
-- `GET /random` - Random note with AI context and similar notes (SSE stream)
-- `GET /books/{book_id}/notes/{note_id}` - Specific note with AI context (SSE stream)
-- `GET /search?q={query}&limit={limit}` - Semantic search (max 50, threshold 0.7)
 
-**SSE Streaming Endpoints** (`/random`, `/books/{book_id}/notes/{note_id}`):
+### URL Content Management
+- `POST /urls` - Ingest content from URL (synchronous: fetch → chunk → summarize → embed)
+- `GET /urls` - List all ingested URLs with chunk counts
+- `GET /urls/{url_id}` - Get URL with all chunks (sorted by order)
+- `GET /urls/{url_id}/chunks/{chunk_id}` - Specific chunk with AI context (SSE stream)
+
+### Content Discovery
+- `GET /random` - Random Kindle note with AI context (SSE stream)
+- `GET /random/v2` - Random content (note or URL chunk) with unified schema (SSE stream)
+- `GET /books/{book_id}/notes/{note_id}` - Specific note with AI context (SSE stream)
+- `GET /search?q={query}&limit={limit}` - Semantic search across Kindle notes (max 50, threshold 0.7)
+
+**SSE Streaming Endpoints** (`/random`, `/random/v2`, `/books/{book_id}/notes/{note_id}`, `/urls/{url_id}/chunks/{chunk_id}`):
 - Returns `text/event-stream` with Server-Sent Events
-- Event types: `metadata` (book/note/related notes), `context_chunk` (AI context), `context_complete` (end), `error`
+- Event types: `metadata` (content + related items), `context_chunk` (AI context), `context_complete` (end), `error`
 - AI context streams as it generates, improving perceived performance
+- Note: `/random/v2` selects between Kindle notes and URL chunks with weighted distribution
+- Note: URL chunks do not trigger background evaluation (notes only)
 
 ## Testing Patterns
 

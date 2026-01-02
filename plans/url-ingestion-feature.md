@@ -347,25 +347,20 @@ ContentWithRelatedItemsResponse:
 - ✅ Router registered: `app.include_router(urls.router)` (line 89)
 - ✅ OpenAPI tag added for documentation (lines 72-74)
 
-### Phase 6: Search Integration - ❌ NOT STARTED
+### Phase 6: Search Integration - ⚠️ IN PROGRESS (on `search` branch)
 
-**6.1 Update `src/routers/search.py`:** ❌ NOT STARTED
-- Search both notes and URL chunks in parallel using `asyncio.gather()`
-- Combine results (allocate limit/2 to each source)
-- Keep existing `SearchResult` model structure
-- Group URL chunks by URL (similar to how notes are grouped by book)
-- Note: May need to extend SearchResult or create separate search endpoint for URLs
+**6.1 Update `src/routers/search.py`:** ✅ IMPLEMENTED (on `search` branch, not yet merged to master)
+- ✅ Search both notes and URL chunks in parallel using `asyncio.gather()`
+- ✅ Combine results (allocate limit/2 to each source)
+- ✅ Extended `SearchResult` model to support both books and urls arrays
+- ✅ Group URL chunks by URL (similar to how notes are grouped by book)
+- ✅ Added `get_by_ids()` method to URLRepository for efficient batch lookups
 
-**Implementation approach:**
-```python
-# Search both in parallel
-similar_notes = note_repository.search_notes_by_embedding(embedding, limit=limit//2)
-similar_chunks = chunk_repository.search_chunks_by_embedding(embedding, limit=limit//2)
-
-# Group notes by book (existing logic)
-# Group chunks by URL (new logic - similar pattern)
-# Combine into response
-```
+**Implementation Status:**
+- ✅ Commit: `68a4d30` - "Phase 6: integrate URL chunks into semantic search endpoint"
+- ✅ Branch: `search` (feature branch, not merged to master)
+- ✅ Tests: Updated with new SearchResult structure validation (mixed results test added)
+- ⚠️ **Note:** This feature is complete but lives on the `search` branch. Integration into master pending merge decision.
 
 ### Phase 7: Dependency Injection & Configuration - ✅ COMPLETE
 
@@ -382,19 +377,20 @@ similar_chunks = chunk_repository.search_chunks_by_embedding(embedding, limit=li
 - ✅ Add: `StubURLChunkRepository` with full interface implementation
 - Includes deduplication logic and stub methods for all repository operations
 
-### Phase 8: Testing - ⚠️ MOSTLY COMPLETE
+### Phase 8: Testing - ✅ COMPLETE
 
 **8.1 Unit Tests:** ✅ COMPLETE
 - ✅ `src/url_ingestion/test_url_fetcher.py` - URL fetching, parsing, error handling (20 tests)
 - ✅ `src/url_ingestion/test_content_chunker.py` - Chunking logic, edge cases (13 tests)
 - ✅ `src/url_ingestion/test_url_processor.py` - Processing pipeline (2 tests)
 - ✅ `src/routers/test_random_selector.py` - Random selection logic with edge cases
+- ✅ `src/routers/test_random_content.py` - Unified /random/v2 endpoint with URL chunk support (4 focused tests after cleanup)
 
 **8.2 Repository Tests:** ✅ COMPLETE
 - ✅ `src/url_ingestion/repositories/test_url_repository.py` - URL CRUD & deduplication
-- ✅ `src/url_ingestion/repositories/test_urlchunk_repository.py` - URLChunk CRUD, vector search, random selection
+- ✅ `src/url_ingestion/repositories/test_urlchunk_repository.py` - URLChunk CRUD, vector search, random selection (13 tests)
 
-**8.3 Router Tests:** ✅ COMPLETE (test_urls.py)
+**8.3 Router Tests:** ✅ COMPLETE (test_urls.py + test_search.py on search branch)
 - ✅ `src/routers/test_response_builders.py` - Unified response builder tests (22 tests)
 - ✅ `src/routers/test_urls.py` - Test URL endpoints (11 tests, no patching via dependency injection)
   - ✅ `test_ingest_url_fetch_error` - Error handling (422 unprocessable entity)
@@ -408,7 +404,7 @@ similar_chunks = chunk_repository.search_chunks_by_embedding(embedding, limit=li
   - ✅ `test_get_url_with_chunks_success` - Chunks ordered by chunk_order
   - ✅ `test_get_chunk_with_context_stream_not_found` - SSE 404 chunk not found
   - ✅ `test_get_chunk_with_context_stream_success` - SSE happy path with event streaming
-- ❌ Update `src/routers/test_streaming.py` - Test unified /random (blocked on Phase 4.4 implementation)
+- ✅ `src/routers/test_search.py` - Updated for mixed notes + URL chunks search (on `search` branch)
 
 **8.4 Testing Commands:**
 ```bash
@@ -416,6 +412,11 @@ uv run ruff format  # Format code
 uv run pytest -v    # Run all tests
 uv run pyright      # Type checking
 ```
+
+**Test Summary (Master Branch):**
+- **Total Tests:** 178 passing
+- **Type Errors:** 0
+- **Coverage:** All phases 1-5 with comprehensive test coverage
 
 ### Phase 9: Documentation - ❌ NOT STARTED
 
@@ -431,22 +432,29 @@ uv run pyright      # Type checking
 1. ✅ **Phase 1** (Models & Migration) - COMPLETE (models + migration with fixed HNSW index)
 2. ✅ **Phase 2** (Repositories) - Data access layer COMPLETE
 3. ✅ **Phase 3** (Processing) - URL fetching, chunking, processing COMPLETE (35/35 tests passing)
-4. ✅ **Phase 4** (Unified /random) - All components COMPLETE including /random/v2 endpoint
+4. ✅ **Phase 4** (Unified /random) - COMPLETE with Phase 4.4 URL chunk support (Commit 25c0866)
 5. ✅ **Phase 5** (URL Endpoints) - COMPLETE (all 4 endpoints: POST /urls, GET /urls, GET /urls/{url_id}, GET /urls/{url_id}/chunks/{chunk_id})
-6. ❌ **Phase 6** (Search) - Enhanced search NOT STARTED
+6. ⚠️ **Phase 6** (Search) - IMPLEMENTED on `search` branch (Commit 68a4d30), not yet merged to master
 7. ✅ **Phase 7** (DI & Config) - Wire everything together COMPLETE
-8. ✅ **Phase 8** (Testing) - All tests COMPLETE (unit, repo, and router tests - 12 URL endpoint tests total)
+8. ✅ **Phase 8** (Testing) - ALL TESTS COMPLETE (178 tests passing, 0 type errors)
 9. ❌ **Phase 9** (Documentation) - Update docs NOT STARTED
 
-**Phase 5 Complete (Commit c9f900a, simplified to 2 tests):**
-- ✅ `GET /urls/{url_id}/chunks/{chunk_id}` - SSE streaming for specific chunk with AI context
-- ✅ 2 new tests for SSE endpoint (404 handling + happy path)
-- ✅ All 11 URL endpoint tests passing
-- ✅ Zero type errors from pyright
-- ✅ Code formatted with ruff
+**Phase 4.4 Complete (Commit 25c0866):**
+- ✅ Added URL chunk support to `/random/v2` endpoint
+- ✅ Unified random selection between Kindle notes and URL chunks
+- ✅ Weighted random distribution (proportional to content count)
+- ✅ Separate evaluation logic (notes only, not URL chunks)
+- ✅ Tests refactored and simplified to 4 focused tests
+
+**Phase 6 Status (on `search` branch):**
+- ✅ Extended `/search` endpoint to support both notes and URL chunks
+- ✅ Modified SearchResult model to include both books and urls
+- ✅ Parallel search with equal allocation (50% notes, 50% chunks)
+- ✅ Comprehensive tests with mixed result validation
+- ⚠️ **Status:** Implemented but on feature branch, awaiting merge decision
 
 **Next Steps:**
-1. Phase 6 (Search integration with URL chunks)
+1. Evaluate and merge Phase 6 (`search` branch) into master if approved
 2. Phase 9 (Documentation updates to CLAUDE.md)
 
 **Key Pattern to Follow:** Mirror existing Book/Note architecture everywhere:
@@ -527,99 +535,53 @@ Use HNSW (Hierarchical Navigable Small World) for consistency with existing Note
 
 ## Progress Summary
 
-**COMPLETED (Phase 1-4):**
-- ✅ URL and URLChunk models (commit b060b83)
-- ✅ Repository interfaces with count_with_embeddings (commit 4f3df43)
-- ✅ URL and URLChunk repository implementations (commit 02b37bc)
-- ✅ URL fetcher module with full HTTP/HTML handling (20/20 tests) - `src/url_ingestion/url_fetcher.py`
-- ✅ Content chunker module with paragraph-based splitting (13/13 tests) - `src/url_ingestion/content_chunker.py`
-- ✅ URL processor module with complete pipeline (2/2 tests) - `src/url_ingestion/url_processor.py`
-- ✅ Random selector function with weighted selection - `src/routers/random_selector.py`
-- ✅ Unified response models (BookSource, URLSource, NoteContent, URLChunkContent, ContentWithRelatedItemsResponse) - `src/repositories/models.py`
-- ✅ Response builder functions (6 functions, 22 comprehensive tests) - `src/routers/response_builders.py`
-- ✅ Additional context streaming (refactored to remove wrapper, keep generic function) - `src/context_generation/additional_context.py`
-- ✅ **NEW: `/random/v2` endpoint with unified schema** (commit 0c716c5) - `src/routers/notes.py`
+**COMPLETED PHASES 1-5 (Master Branch):**
+- ✅ Phase 1: URL and URLChunk models with HNSW vector indexes
+- ✅ Phase 2: URL and URLChunk repository implementations with deduplication
+- ✅ Phase 3: URL fetching, chunking, and processing pipeline (35 tests)
+- ✅ Phase 4: Unified /random/v2 endpoint with URL chunk support (Phase 4.4 - Commit 25c0866)
+- ✅ Phase 5: Complete URL endpoints (POST /urls, GET /urls, GET /urls/{url_id}, GET /urls/{url_id}/chunks/{chunk_id})
+- ✅ Phase 7: Dependency injection and configuration
+- ✅ Phase 8: Comprehensive test coverage (178 tests passing)
 
-**Test Status:** 176 tests passing across all modules
-- Phase 1-3: 35 tests (URL processing pipeline)
-- Phase 4: 22 tests (response builders) + 1 test (context streaming)
-- Phase 5: 9 tests (URL endpoints) ✅ UPDATED (added 3 tests for GET /urls/{url_id})
-- Phase 7: Repositories fully tested
-- Total: 67+ URL-feature tests + existing 109 tests
+**COMPLETED PHASE 6 (on `search` branch):**
+- ✅ Search integration with URL chunks
+- ✅ Extended SearchResult model to support both notes and chunks
+- ✅ Parallel search with equal allocation
+- ✅ Comprehensive test coverage for mixed results
+- ⚠️ **Branch Status:** Feature implemented but on separate `search` branch, not merged to master
 
-**COMPLETED IN PREVIOUS SESSION:**
-1. ✅ Phase 5.1 - POST /urls endpoint (ingest URL content)
-   - Synchronous processing: fetches, chunks, summarizes, embeds in one call
-   - Deduplication by URL (returns existing if already ingested)
-   - Error handling: 422 for fetch errors, 500 for unexpected errors
-   - Size limit enforcement via `settings.max_url_content_size`
+**KEY ACHIEVEMENTS:**
 
-2. ✅ Phase 5.1 - GET /urls endpoint (list all URLs)
-   - Returns all ingested URLs with chunk counts
-   - Includes metadata: id, url, title, fetched_at, created_at
+1. **URL Infrastructure Complete** - All 4 endpoints working with full SSE streaming support
+2. **Unified Content Selection** - /random/v2 seamlessly selects between Kindle notes and URL chunks
+3. **Test Coverage Comprehensive** - 178 tests passing across all phases
+4. **Type Safety** - 0 type errors with full pyright checking
+5. **Clean Architecture** - Mirrors existing Book/Note patterns throughout
 
-3. ✅ Phase 8.3 - URL Endpoint Testing (test_urls.py)
-   - Created `StubURLFetcher` class for testing without external HTTP calls
-   - Implemented dependency injection for URL fetcher via `get_url_fetcher()` factory
-   - Refactored test fixture `setup_url_deps()` with clean API
-   - **Eliminated patching** - tests use pure dependency injection instead of mocks
-   - Added comprehensive test coverage (6 tests):
-     - Error handling (422 for fetch failures)
-     - Successful ingestion with chunk validation
-     - URL listing endpoints
-     - Input validation (missing/invalid URLs)
-   - Tests validate observable outcomes (repository state) not implementation details
-   - All tests passing, zero lint/type errors
+**CURRENT CODEBASE STATE:**
 
-4. ✅ Phase 5.2 - Router registration
-   - Router imported and registered in `src/main.py`
-   - OpenAPI documentation tags added
+- **Master Branch (Current):**
+  - All Phases 1-5 complete and merged
+  - Phase 4.4: URL chunk support in /random/v2 endpoint
+  - 178 tests passing, 0 type errors
+  - Full API documentation in docstrings
+  - Ready for production use (Phases 1-5)
 
-**COMPLETED IN THIS SESSION:**
-1. ✅ Phase 5.1 - GET /urls/{url_id} endpoint (get URL with chunks)
-   - Returns URL metadata + all chunks ordered by chunk_order
-   - No AI context generation (lightweight for browsing)
-   - Returns 404 if URL not found
-   - Follows same pattern as existing Book/Note architecture
+- **Search Branch (Feature):**
+  - Phase 6 search integration complete
+  - URL chunks included in semantic search endpoint
+  - Additional test coverage for mixed search results
+  - Awaiting merge review
 
-2. ✅ Tests for GET /urls/{url_id} (3 tests added)
-   - test_get_url_with_chunks_not_found - 404 error handling
-   - test_get_url_with_chunks_empty - URL with no chunks
-   - test_get_url_with_chunks_success - Chunks ordered by chunk_order
-
-3. ✅ Repository fixes
-   - Fixed URLChunkRepository.get_by_url_id() ordering (SQLAlchemy syntax)
-   - Fixed StubURLChunkRepository to sort chunks by chunk_order
-   - All 9 tests passing, type checking clean
-
-**PHASE 5 COMPLETE - ALL 4 ENDPOINTS IMPLEMENTED:**
-- ✅ `POST /urls` - Ingest URL content
-- ✅ `GET /urls` - List all URLs with chunk counts
-- ✅ `GET /urls/{url_id}` - Get URL with all chunks
-- ✅ `GET /urls/{url_id}/chunks/{chunk_id}` - SSE streaming endpoint for specific chunk
-  - Follows same pattern as `/books/{book_id}/notes/{note_id}`
-  - Same SSE events: metadata, context_chunk, context_complete, error
-  - No background evaluation (per design decision)
-  - Uses unified response schema (ContentWithRelatedItemsResponse)
-  - 2 focused tests: 404 handling + SSE event streaming
-
-**DESIGN CHOICE APPLIED - Option A:**
-- Removed redundant `/urls/{url_id}/chunks` endpoint
-- Implemented all 4 endpoints (POST /urls, GET /urls, GET /urls/{url_id}, GET /urls/{url_id}/chunks/{chunk_id})
-- `GET /urls/{url_id}` returns both metadata AND chunks in one call for efficiency
-- `GET /urls/{url_id}/chunks/{chunk_id}` provides streaming AI context for deep dives
-
-**TEST SIMPLIFICATION:**
-- Removed redundant test that checked URL ID mismatch (same code path as chunk not found)
-- Kept focused tests: 404 error handling + happy path SSE streaming
-- Final test count: 11 (9 existing + 2 new SSE tests)
-
-**NEXT STEPS:**
-- Phase 6 - Search integration (include URL chunks in semantic search)
-- Phase 9 - Documentation updates (CLAUDE.md)
+**PENDING:**
+- Phase 9: Update CLAUDE.md documentation with URL feature details
+- Decision: Merge `search` branch into master (Phase 6) or keep as separate feature
 
 ---
 
-*Plan Status: **PHASE 5 COMPLETE** (Phases 1-5 complete, Phase 6-9 pending)*
+*Plan Status: **PHASES 1-5 COMPLETE** (Master Branch) + **PHASE 6 IMPLEMENTED** (on `search` branch)*
 
-*Last Updated: 2026-01-01 - Implemented GET /urls/{url_id}/chunks/{chunk_id} SSE streaming endpoint (commit c9f900a). Simplified tests to 11 total (removed redundant URL not found test). All 11 URL tests passing. All type checks passing. Phase 5 fully complete.*
+*Current Branch: master (Phase 4.4 latest commit: 25c0866)*
+
+*Last Updated: 2026-01-02 - Updated plan to reflect current state: Phases 1-5 complete on master, Phase 6 implemented on search branch, 178 tests passing, 0 type errors.*

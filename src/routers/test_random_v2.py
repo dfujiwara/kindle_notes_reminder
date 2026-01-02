@@ -6,14 +6,15 @@ unified response schema, SSE streaming, and background evaluation.
 """
 
 import json
-import pytest
-from fastapi.testclient import TestClient
-from httpx import AsyncClient, ASGITransport
 from typing import Any
 
-from src.routers.conftest import RandomV2DepsSetup
+import pytest
+from fastapi.testclient import TestClient
+from httpx import ASGITransport, AsyncClient
+
 from src.main import app
-from src.repositories.models import BookCreate, NoteCreate, URLCreate, URLChunkCreate
+from src.repositories.models import BookCreate, NoteCreate, URLChunkCreate, URLCreate
+from src.routers.conftest import RandomV2DepsSetup
 
 client = TestClient(app)
 
@@ -35,7 +36,7 @@ def test_random_v2_only_notes_available(setup_random_v2_deps: RandomV2DepsSetup)
 
     # Create test data - book and note only
     book = book_repo.add(BookCreate(title="Test Book", author="Test Author"))
-    note = note_repo.add(
+    note_repo.add(
         NoteCreate(
             book_id=book.id,
             content="Test note content",
@@ -57,7 +58,7 @@ def test_random_v2_only_chunks_available(setup_random_v2_deps: RandomV2DepsSetup
 
     # Create test data - URL chunk only
     url = url_repo.add(URLCreate(url="https://example.com", title="Example"))
-    chunk = chunk_repo.add(
+    chunk_repo.add(
         URLChunkCreate(
             content="Test chunk content",
             content_hash="hash1",
@@ -198,7 +199,7 @@ async def test_random_v2_sse_event_sequence(setup_random_v2_deps: RandomV2DepsSe
 
     # Create test data
     book = book_repo.add(BookCreate(title="Test Book", author="Test Author"))
-    note = note_repo.add(
+    note_repo.add(
         NoteCreate(
             book_id=book.id,
             content="Test note content",
@@ -248,7 +249,7 @@ async def test_random_v2_weighted_distribution(setup_random_v2_deps: RandomV2Dep
 
     # Create test data: 2 notes and 1 URL chunk (2:1 ratio)
     book = book_repo.add(BookCreate(title="Test Book", author="Test Author"))
-    note1 = note_repo.add(
+    note_repo.add(
         NoteCreate(
             book_id=book.id,
             content="Note 1",
@@ -256,7 +257,7 @@ async def test_random_v2_weighted_distribution(setup_random_v2_deps: RandomV2Dep
             embedding=[0.1] * 1536,
         )
     )
-    note2 = note_repo.add(
+    note_repo.add(
         NoteCreate(
             book_id=book.id,
             content="Note 2",
@@ -266,7 +267,7 @@ async def test_random_v2_weighted_distribution(setup_random_v2_deps: RandomV2Dep
     )
 
     url = url_repo.add(URLCreate(url="https://example.com", title="Example"))
-    chunk = chunk_repo.add(
+    chunk_repo.add(
         URLChunkCreate(
             content="Chunk 1",
             content_hash="hash3",
@@ -276,10 +277,6 @@ async def test_random_v2_weighted_distribution(setup_random_v2_deps: RandomV2Dep
             embedding=[0.3] * 1536,
         )
     )
-
-    # Call endpoint multiple times and count note vs chunk returns
-    note_count = 0
-    chunk_count = 0
 
     for _ in range(30):  # Run 30 times to check distribution
         response = client.get("/random/v2")
@@ -299,7 +296,7 @@ def test_random_v2_missing_book_returns_500(setup_random_v2_deps: RandomV2DepsSe
     _, note_repo, _, _, _ = setup_random_v2_deps()
 
     # Create a note with non-existent book_id
-    note = note_repo.add(
+    note_repo.add(
         NoteCreate(
             book_id=999,
             content="Test note",
@@ -321,7 +318,7 @@ def test_random_v2_missing_url_returns_404(setup_random_v2_deps: RandomV2DepsSet
     _, _, _, _, chunk_repo = setup_random_v2_deps()
 
     # Create a chunk with non-existent url_id
-    chunk = chunk_repo.add(
+    chunk_repo.add(
         URLChunkCreate(
             content="Test chunk",
             content_hash="hash1",

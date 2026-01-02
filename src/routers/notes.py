@@ -272,7 +272,7 @@ async def _prepare_note_content(
     note: NoteRead,
     book_repository: BookRepositoryInterface,
     note_repository: NoteRepositoryInterface,
-) -> tuple[ContentWithRelatedItemsResponse, str, NoteRead | None]:
+) -> tuple[ContentWithRelatedItemsResponse, str, NoteRead]:
     """Prepare metadata, prompt, and content for evaluation (note only)."""
     book = book_repository.get(note.book_id)
     if not book:
@@ -290,7 +290,7 @@ async def _prepare_chunk_content(
     chunk: URLChunkRead,
     url_repository: URLRepositoryInterface,
     chunk_repository: URLChunkRepositoryInterface,
-) -> tuple[ContentWithRelatedItemsResponse, str, NoteRead | None]:
+) -> tuple[ContentWithRelatedItemsResponse, str, None]:
     """Prepare metadata and prompt for a URL chunk (no evaluation)."""
     url = url_repository.get(chunk.url_id)
     if not url:

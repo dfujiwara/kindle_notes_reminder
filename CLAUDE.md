@@ -243,11 +243,3 @@ docker compose logs -f
 
 # 4. Select endpoints to test and view results
 ```
-
-**What Gets Tested**:
-- All 15 API endpoints across 5 categories
-- HTTP status codes (200, 404, 422, 500, etc.)
-- Response timing (connect time, total time)
-- SSE streaming endpoints (event verification)
-- Response format and structure
-- Error handling (missing IDs, invalid requests, etc.)

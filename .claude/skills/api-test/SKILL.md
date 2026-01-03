@@ -35,11 +35,21 @@ The user wants to test API endpoints. You must:
 6. **Display Results** - Show status codes and response times clearly
 7. **Offer Cleanup** - Ask if user wants to remove test data
 
+## Setup Requirements
+
+**Before testing, the user should have run:**
+```bash
+docker compose build --no-cache
+docker compose up -d
+```
+
+This starts both the API server and PostgreSQL database. If not running, ask the user to run these commands.
+
 ## Step-by-Step Instructions
 
 ### Step 1: Check Environment
 
-Check if the API server is running and database is accessible:
+Verify that docker compose services are running:
 
 ```bash
 # Test API server (should return 200)
@@ -49,13 +59,11 @@ curl -s -w "HTTP Status: %{http_code}\n" -o /dev/null http://localhost:8000/heal
 psql "postgresql://postgres:postgres@localhost:5432/fastapi_db" -c "SELECT 1;" 2>&1
 ```
 
-**If API server not found:**
-- Say: "API server not running. Please start with: `uv run fastapi dev src/main.py`"
+**If services are not running:**
+- Say: "Services not running. Please ensure docker compose services are started: `docker compose up -d`"
+- If they want to rebuild: `docker compose build --no-cache && docker compose up -d`
 
-**If database connection fails:**
-- Say: "Database not accessible. Please start with: `docker compose up -d`"
-
-**If both work:**
+**If both services are accessible:**
 - Proceed to Step 2
 
 ### Step 2: Check Data Inventory
@@ -364,12 +372,12 @@ The database has these tables for testing:
 
 | Error | Cause | Solution |
 |-------|-------|----------|
-| Connection refused | API not running | Start: `uv run fastapi dev src/main.py` |
+| Connection refused | Services not running | Start: `docker compose up -d` |
+| FATAL: password authentication failed | Services not running properly | Rebuild: `docker compose build --no-cache && docker compose up -d` |
 | psql: command not found | PostgreSQL not installed | Install PostgreSQL or use `brew install postgresql` |
-| FATAL: password authentication failed | Wrong credentials | Check DATABASE_URL in .env |
 | 404 Not Found | Endpoint doesn't exist | Check endpoint path and method |
 | 422 Unprocessable Entity | Invalid request data | Show request body and validation errors |
-| 500 Internal Server Error | Server crash | Show error message, check server logs |
+| 500 Internal Server Error | Server crash | Show error message, check: `docker compose logs` |
 
 **Special Cases:**
 

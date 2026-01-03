@@ -1,7 +1,7 @@
 from sqlmodel import Session, select, col
 from src.repositories.models import URLChunk, URLChunkCreate, URLChunkRead, URL
 from .interfaces import URLChunkRepositoryInterface
-from sqlalchemy import func, column, Integer
+from sqlalchemy import func
 from src.types import Embedding
 
 
@@ -137,8 +137,7 @@ class URLChunkRepository(URLChunkRepositoryInterface):
         if not url_ids:
             return {}
 
-        # Create column expressions that work with the type system
-        url_id_col = column("url_id", Integer)
+        url_id_col = col(URLChunk.url_id)
 
         statement = (
             select(url_id_col, func.count())

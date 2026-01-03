@@ -34,7 +34,14 @@ from src.test_utils import (
 # Type aliases for fixtures
 BookNoteDepsSetup = Callable[..., tuple[StubBookRepository, StubNoteRepository]]
 SearchDepsSetup = Callable[
-    ..., tuple[StubBookRepository, StubNoteRepository, StubEmbeddingClient]
+    ...,
+    tuple[
+        StubBookRepository,
+        StubNoteRepository,
+        StubEmbeddingClient,
+        StubURLRepository,
+        StubURLChunkRepository,
+    ],
 ]
 EvaluationDepsSetup = Callable[..., tuple[StubNoteRepository, StubEvaluationRepository]]
 URLDepsSetup = Callable[
@@ -94,30 +101,40 @@ def setup_book_note_deps() -> Generator[BookNoteDepsSetup, None, None]:
 @pytest.fixture
 def setup_search_deps() -> Generator[SearchDepsSetup, None, None]:
     """
-    Setup dependencies for search endpoints (book, note, embedding).
+    Setup dependencies for search endpoints (book, note, URL, embedding).
 
     Returns a function for flexible configuration. Used in test_search.py (5 tests).
 
     Usage:
         def test_search(setup_search_deps):
-            book_repo, note_repo, embedding_client = setup_search_deps()
+            book_repo, note_repo, embedding_client, url_repo, chunk_repo = setup_search_deps()
             # or with config:
-            book_repo, note_repo, embedding_client = setup_search_deps(embedding_should_fail=True)
+            book_repo, note_repo, embedding_client, url_repo, chunk_repo = setup_search_deps(embedding_should_fail=True)
             # Cleanup is automatic!
     """
 
     def _setup(
         embedding_should_fail: bool = False,
-    ) -> tuple[StubBookRepository, StubNoteRepository, StubEmbeddingClient]:
+    ) -> tuple[
+        StubBookRepository,
+        StubNoteRepository,
+        StubEmbeddingClient,
+        StubURLRepository,
+        StubURLChunkRepository,
+    ]:
         book_repo = StubBookRepository()
         note_repo = StubNoteRepository()
         embedding_client = StubEmbeddingClient(should_fail=embedding_should_fail)
+        url_repo = StubURLRepository()
+        chunk_repo = StubURLChunkRepository()
 
         app.dependency_overrides[get_book_repository] = lambda: book_repo
         app.dependency_overrides[get_note_repository] = lambda: note_repo
         app.dependency_overrides[get_embedding_client] = lambda: embedding_client
+        app.dependency_overrides[get_url_repository] = lambda: url_repo
+        app.dependency_overrides[get_urlchunk_repository] = lambda: chunk_repo
 
-        return book_repo, note_repo, embedding_client
+        return book_repo, note_repo, embedding_client, url_repo, chunk_repo
 
     yield _setup
     app.dependency_overrides.clear()

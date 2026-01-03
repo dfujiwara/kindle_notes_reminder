@@ -114,12 +114,6 @@ class BookWithNoteResponses(SQLModel):
     notes: list[NoteResponse]
 
 
-class SearchResult(SQLModel):
-    query: str
-    results: list[BookWithNoteResponses]
-    count: int
-
-
 class Evaluation(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     score: float = Field(ge=0.0, le=1.0)
@@ -247,6 +241,16 @@ class URLChunkResponse(SQLModel):
 class URLWithChunksResponses(SQLModel):
     url: URLResponse
     chunks: list[URLChunkResponse]
+
+
+class SearchResult(SQLModel):
+    query: str
+    results: list[
+        BookWithNoteResponses
+    ]  # Deprecated: use 'books' field instead (kept for backwards compatibility)
+    books: list[BookWithNoteResponses]
+    urls: list[URLWithChunksResponses]
+    count: int
 
 
 # Unified Response Models (for /random endpoint)

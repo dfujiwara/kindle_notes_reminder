@@ -190,6 +190,9 @@ class StubURLRepository(URLRepositoryInterface):
     def get_by_url(self, url: str) -> URLResponse | None:
         return next((u for u in self.urls if u.url == url), None)
 
+    def get_by_ids(self, url_ids: list[int]) -> list[URLResponse]:
+        return [url for url in self.urls if url.id in url_ids]
+
     def list_urls(self) -> list[URLResponse]:
         return self.urls
 

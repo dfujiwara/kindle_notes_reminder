@@ -24,12 +24,10 @@ FastAPI application for managing Kindle notes with AI-powered features, embeddin
 - `uv run alembic revision --autogenerate -m "description"` - Create migration
 - `uv run alembic upgrade head` - Apply migrations
 
-**Development Server**:
-- `uv run fastapi dev src/main.py` - Run with auto-reload
-- `docker compose up -d` - Start PostgreSQL with pgvector in background
-- `docker compose build --no-cache` - Rebuild Docker images (required after dependency changes)
-- `docker compose logs -f` - View real-time logs from all services
-- `docker compose logs postgres` - View PostgreSQL logs
+**Development Server** (runs API + PostgreSQL with pgvector):
+- `docker compose build --no-cache` - Rebuild images (after dependency changes)
+- `docker compose up -d` - Start services in background
+- `docker compose logs -f` - View real-time logs
 - `docker compose down` - Stop and remove containers
 
 ## Architecture
@@ -179,19 +177,16 @@ Unit tests for utilities and helpers live in `src/test_*.py` with direct imports
 
 ## API Testing
 
-**Prerequisites**:
+**Prerequisites** (docker compose runs both API server and database):
 ```bash
-# 1. Rebuild Docker images (required after dependency changes)
+# 1. Rebuild Docker images (after dependency changes)
 docker compose build --no-cache
 
 # 2. Start services in background
 docker compose up -d
 
-# 3. Check logs if services fail to start
+# 3. Check logs if services fail
 docker compose logs -f
-
-# 4. Run API in another terminal
-uv run fastapi dev src/main.py
 ```
 
 **Interactive Testing** (uses `/api-test` skill):
@@ -212,18 +207,15 @@ uv run fastapi dev src/main.py
 # 4. View results with status codes and timing
 ```
 
-**Manual Testing**:
+**Manual Testing** (after `docker compose up -d`):
 ```bash
-# Ensure server is running
-uv run fastapi dev src/main.py
-
 # Test health endpoint
 curl http://localhost:8000/health
 
 # Test with timing
 curl -w "\nTime: %{time_total}s\n" http://localhost:8000/books
 
-# Test SSE endpoint (will stream until completion or timeout)
+# Test SSE endpoint
 curl -N http://localhost:8000/random
 
 # Test with custom query
@@ -239,27 +231,17 @@ curl "http://localhost:8000/search?q=python&limit=10"
 
 **Example Test Workflow**:
 ```bash
-# 1. Rebuild Docker images (if dependencies changed)
+# 1. Rebuild and start services
 docker compose build --no-cache
-
-# 2. Start PostgreSQL and pgvector in background
 docker compose up -d
 
-# 3. Check logs if anything fails
-docker compose logs -f postgres
+# 2. Check logs if services fail to start
+docker compose logs -f
 
-# 4. In another terminal, start the API server
-uv run fastapi dev src/main.py
-
-# 5. In a third terminal, use the API test skill
+# 3. Run the API test skill
 /api-test
 
-# 6. Select "Run all endpoints" to test the complete API
-# 7. View results with status codes and timing metrics
-# 8. Optional: Keep or remove test data
-
-# To view API server logs later
-docker compose logs postgres
+# 4. Select endpoints to test and view results
 ```
 
 **What Gets Tested**:

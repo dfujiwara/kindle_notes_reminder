@@ -172,3 +172,72 @@ Repository tests use fixtures from `src/repositories/conftest.py` with real repo
 
 ### Unit Tests
 Unit tests for utilities and helpers live in `src/test_*.py` with direct imports (no dependency injection needed).
+
+## API Testing
+
+**Interactive Testing** (uses `/api-test` skill):
+- Test individual endpoints with timing metrics
+- Group testing by category (Health, Books, URLs, etc.)
+- Run all endpoints with summary report
+- Automatic data checking and minimal test data creation
+
+**Usage**:
+```bash
+# Run the skill
+/api-test
+
+# Follow interactive prompts to:
+# 1. Check existing data
+# 2. Create minimal test data if needed
+# 3. Select endpoints to test
+# 4. View results with status codes and timing
+```
+
+**Manual Testing**:
+```bash
+# Ensure server is running
+uv run fastapi dev src/main.py
+
+# Test health endpoint
+curl http://localhost:8000/health
+
+# Test with timing
+curl -w "\nTime: %{time_total}s\n" http://localhost:8000/books
+
+# Test SSE endpoint (will stream until completion or timeout)
+curl -N http://localhost:8000/random
+
+# Test with custom query
+curl "http://localhost:8000/search?q=python&limit=10"
+```
+
+**API Test Categories**:
+1. **Health & General** - `/health` endpoint
+2. **Books & Notes** - Upload, list, retrieve Kindle notes
+3. **Random & Discovery** - Random note/content selection
+4. **URL Content** - Ingest and retrieve URL content
+5. **Search** - Semantic search across notes and chunks
+
+**Example Test Workflow**:
+```bash
+# 1. Start the API server
+uv run fastapi dev src/main.py
+
+# 2. In another terminal, start the database
+docker compose up -d
+
+# 3. Use the API test skill
+/api-test
+
+# 4. Select "Run all endpoints" to test the complete API
+# 5. View results with status codes and timing metrics
+# 6. Optional: Keep or remove test data
+```
+
+**What Gets Tested**:
+- All 15 API endpoints across 5 categories
+- HTTP status codes (200, 404, 422, 500, etc.)
+- Response timing (connect time, total time)
+- SSE streaming endpoints (event verification)
+- Response format and structure
+- Error handling (missing IDs, invalid requests, etc.)

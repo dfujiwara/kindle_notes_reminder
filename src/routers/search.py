@@ -157,21 +157,19 @@ async def search(
     # Generate embedding for the search query
     query_embedding = await embedding_client.generate_embedding(q)
 
-    # Search both repositories in parallel - get all similar items up to limit
+    # Search repositories sequentially to avoid session concurrency issues
     # Both are already ordered by relevance (similarity score ascending)
-    similar_notes, similar_chunks = await asyncio.gather(
-        asyncio.to_thread(
-            note_repository.search_notes_by_embedding,
-            query_embedding,
-            limit,
-            0.7,
-        ),
-        asyncio.to_thread(
-            urlchunk_repository.search_chunks_by_embedding,
-            query_embedding,
-            limit,
-            0.7,
-        ),
+    similar_notes = await asyncio.to_thread(
+        note_repository.search_notes_by_embedding,
+        query_embedding,
+        limit,
+        0.7,
+    )
+    similar_chunks = await asyncio.to_thread(
+        urlchunk_repository.search_chunks_by_embedding,
+        query_embedding,
+        limit,
+        0.7,
     )
 
     # Group and fetch related data

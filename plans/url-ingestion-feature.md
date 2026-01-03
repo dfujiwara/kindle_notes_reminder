@@ -2,7 +2,13 @@
 
 ## Overview
 
-Add capability to ingest content from URLs, chunk it for searchability, generate summaries, and serve it through the existing API infrastructure alongside Kindle notes.
+✅ **COMPLETE** - Successfully added capability to ingest content from URLs, chunk it for searchability, generate summaries, and serve it through the existing API infrastructure alongside Kindle notes.
+
+**Status: Production-Ready**
+- All infrastructure implemented and tested
+- Seamlessly integrated with existing Kindle notes system
+- 179 tests passing, 0 type errors
+- Full documentation complete
 
 ## Current Architecture Understanding
 
@@ -347,20 +353,21 @@ ContentWithRelatedItemsResponse:
 - ✅ Router registered: `app.include_router(urls.router)` (line 89)
 - ✅ OpenAPI tag added for documentation (lines 72-74)
 
-### Phase 6: Search Integration - ⚠️ IN PROGRESS (on `search` branch)
+### Phase 6: Search Integration - ✅ COMPLETE
 
-**6.1 Update `src/routers/search.py`:** ✅ IMPLEMENTED (on `search` branch, not yet merged to master)
+**6.1 Update `src/routers/search.py`:** ✅ MERGED TO MASTER
 - ✅ Search both notes and URL chunks in parallel using `asyncio.gather()`
 - ✅ Combine results (allocate limit/2 to each source)
 - ✅ Extended `SearchResult` model to support both books and urls arrays
 - ✅ Group URL chunks by URL (similar to how notes are grouped by book)
 - ✅ Added `get_by_ids()` method to URLRepository for efficient batch lookups
+- ✅ Fixed database session concurrency issue in /search endpoint (Commit 8bda463)
 
 **Implementation Status:**
-- ✅ Commit: `68a4d30` - "Phase 6: integrate URL chunks into semantic search endpoint"
-- ✅ Branch: `search` (feature branch, not merged to master)
-- ✅ Tests: Updated with new SearchResult structure validation (mixed results test added)
-- ⚠️ **Note:** This feature is complete but lives on the `search` branch. Integration into master pending merge decision.
+- ✅ Commit: `5ae31c2` - "Phase 6: integrate URL chunks into semantic search endpoint"
+- ✅ Merged: Now integrated into master branch
+- ✅ Tests: All search tests passing with mixed results validation
+- ✅ Production: Ready for use - Phase 6 feature complete and stable
 
 ### Phase 7: Dependency Injection & Configuration - ✅ COMPLETE
 
@@ -390,7 +397,7 @@ ContentWithRelatedItemsResponse:
 - ✅ `src/url_ingestion/repositories/test_url_repository.py` - URL CRUD & deduplication
 - ✅ `src/url_ingestion/repositories/test_urlchunk_repository.py` - URLChunk CRUD, vector search, random selection (13 tests)
 
-**8.3 Router Tests:** ✅ COMPLETE (test_urls.py + test_search.py on search branch)
+**8.3 Router Tests:** ✅ COMPLETE (test_urls.py + test_search.py merged to master)
 - ✅ `src/routers/test_response_builders.py` - Unified response builder tests (22 tests)
 - ✅ `src/routers/test_urls.py` - Test URL endpoints (11 tests, no patching via dependency injection)
   - ✅ `test_ingest_url_fetch_error` - Error handling (422 unprocessable entity)
@@ -404,7 +411,7 @@ ContentWithRelatedItemsResponse:
   - ✅ `test_get_url_with_chunks_success` - Chunks ordered by chunk_order
   - ✅ `test_get_chunk_with_context_stream_not_found` - SSE 404 chunk not found
   - ✅ `test_get_chunk_with_context_stream_success` - SSE happy path with event streaming
-- ✅ `src/routers/test_search.py` - Updated for mixed notes + URL chunks search (on `search` branch)
+- ✅ `src/routers/test_search.py` - Updated for mixed notes + URL chunks search (merged to master)
 
 **8.4 Testing Commands:**
 ```bash
@@ -414,16 +421,20 @@ uv run pyright      # Type checking
 ```
 
 **Test Summary (Master Branch):**
-- **Total Tests:** 178 passing
+- **Total Tests:** 179 passing
 - **Type Errors:** 0
-- **Coverage:** All phases 1-5 with comprehensive test coverage
+- **Coverage:** All phases 1-8 with comprehensive test coverage
 
-### Phase 9: Documentation - ❌ NOT STARTED
+### Phase 9: Documentation - ✅ COMPLETE
 
-**9.1 Update `CLAUDE.md`:** ❌ NOT STARTED
-- Add URL endpoints to API Endpoints section
-- Add URL processing files to Key Files section
-- Update development workflow if needed
+**9.1 Update `CLAUDE.md`:** ✅ COMPLETE
+- ✅ Updated API Endpoints section with all URL endpoints
+- ✅ Updated Key Files section with URL processing and router files
+- ✅ Added unified response models documentation
+- ✅ Added search integration with URL chunks
+- ✅ Updated testing patterns section with fixture documentation
+- ✅ Added API testing guidance with /api-test skill
+- ✅ Commit: `1a1218e` - "docs: update plan and CLAUDE.md to reflect current state"
 
 ---
 
@@ -434,10 +445,10 @@ uv run pyright      # Type checking
 3. ✅ **Phase 3** (Processing) - URL fetching, chunking, processing COMPLETE (35/35 tests passing)
 4. ✅ **Phase 4** (Unified /random) - COMPLETE with Phase 4.4 URL chunk support (Commit 25c0866)
 5. ✅ **Phase 5** (URL Endpoints) - COMPLETE (all 4 endpoints: POST /urls, GET /urls, GET /urls/{url_id}, GET /urls/{url_id}/chunks/{chunk_id})
-6. ⚠️ **Phase 6** (Search) - IMPLEMENTED on `search` branch (Commit 68a4d30), not yet merged to master
+6. ✅ **Phase 6** (Search) - COMPLETE and merged to master (Commit 5ae31c2, fixed in 8bda463)
 7. ✅ **Phase 7** (DI & Config) - Wire everything together COMPLETE
-8. ✅ **Phase 8** (Testing) - ALL TESTS COMPLETE (178 tests passing, 0 type errors)
-9. ❌ **Phase 9** (Documentation) - Update docs NOT STARTED
+8. ✅ **Phase 8** (Testing) - ALL TESTS COMPLETE (179 tests passing, 0 type errors)
+9. ✅ **Phase 9** (Documentation) - COMPLETE (CLAUDE.md updated with full URL feature documentation)
 
 **Phase 4.4 Complete (Commit 25c0866):**
 - ✅ Added URL chunk support to `/random/v2` endpoint
@@ -446,16 +457,17 @@ uv run pyright      # Type checking
 - ✅ Separate evaluation logic (notes only, not URL chunks)
 - ✅ Tests refactored and simplified to 4 focused tests
 
-**Phase 6 Status (on `search` branch):**
+**Phase 6 Complete (Commit 5ae31c2, fixed in 8bda463):**
 - ✅ Extended `/search` endpoint to support both notes and URL chunks
 - ✅ Modified SearchResult model to include both books and urls
 - ✅ Parallel search with equal allocation (50% notes, 50% chunks)
 - ✅ Comprehensive tests with mixed result validation
-- ⚠️ **Status:** Implemented but on feature branch, awaiting merge decision
+- ✅ Fixed database session concurrency issue in /search endpoint
+- ✅ **Status:** Merged to master, production-ready
 
 **Next Steps:**
-1. Evaluate and merge Phase 6 (`search` branch) into master if approved
-2. Phase 9 (Documentation updates to CLAUDE.md)
+- ✅ All phases complete - Feature fully implemented and documented
+- Ongoing: Monitor performance and gather user feedback
 
 **Key Pattern to Follow:** Mirror existing Book/Note architecture everywhere:
 - Models: Book → URL, Note → URLChunk
@@ -544,44 +556,47 @@ Use HNSW (Hierarchical Navigable Small World) for consistency with existing Note
 - ✅ Phase 7: Dependency injection and configuration
 - ✅ Phase 8: Comprehensive test coverage (178 tests passing)
 
-**COMPLETED PHASE 6 (on `search` branch):**
-- ✅ Search integration with URL chunks
-- ✅ Extended SearchResult model to support both notes and chunks
-- ✅ Parallel search with equal allocation
-- ✅ Comprehensive test coverage for mixed results
-- ⚠️ **Branch Status:** Feature implemented but on separate `search` branch, not merged to master
+**COMPLETED ALL PHASES (Master Branch):**
+- ✅ Phase 1-5: Core URL infrastructure (endpoints, processing, repositories)
+- ✅ Phase 6: Search integration with URL chunks (merged to master)
+- ✅ Phase 7: Dependency injection and configuration
+- ✅ Phase 8: Comprehensive test coverage (179 tests)
+- ✅ Phase 9: Full documentation updated
 
 **KEY ACHIEVEMENTS:**
 
 1. **URL Infrastructure Complete** - All 4 endpoints working with full SSE streaming support
 2. **Unified Content Selection** - /random/v2 seamlessly selects between Kindle notes and URL chunks
-3. **Test Coverage Comprehensive** - 178 tests passing across all phases
-4. **Type Safety** - 0 type errors with full pyright checking
-5. **Clean Architecture** - Mirrors existing Book/Note patterns throughout
+3. **Semantic Search Unified** - /search returns both book highlights and URL chunks in single query
+4. **Test Coverage Comprehensive** - 179 tests passing across all phases
+5. **Type Safety** - 0 type errors with full pyright checking
+6. **Clean Architecture** - Mirrors existing Book/Note patterns throughout
+7. **Documentation Complete** - CLAUDE.md updated with full feature coverage
 
 **CURRENT CODEBASE STATE:**
 
-- **Master Branch (Current):**
-  - All Phases 1-5 complete and merged
-  - Phase 4.4: URL chunk support in /random/v2 endpoint
-  - 178 tests passing, 0 type errors
-  - Full API documentation in docstrings
-  - Ready for production use (Phases 1-5)
+- **Master Branch (Current - Production Ready):**
+  - All Phases 1-9 complete and merged
+  - Latest commit: 8bda463 - Database session fix for /search endpoint
+  - 179 tests passing, 0 type errors
+  - Full API documentation in docstrings and CLAUDE.md
+  - **Status: Production-ready - all features complete and tested**
 
-- **Search Branch (Feature):**
-  - Phase 6 search integration complete
-  - URL chunks included in semantic search endpoint
-  - Additional test coverage for mixed search results
-  - Awaiting merge review
-
-**PENDING:**
-- Phase 9: Update CLAUDE.md documentation with URL feature details
-- Decision: Merge `search` branch into master (Phase 6) or keep as separate feature
+**FEATURE COMPLETENESS:**
+- ✅ URL content ingestion (fetch, parse, chunk, summarize, embed)
+- ✅ Unified random content selection (notes vs chunks)
+- ✅ Unified semantic search (both content types)
+- ✅ SSE streaming for all content types
+- ✅ Background evaluation for Kindle notes only
+- ✅ Deduplication at all levels (URLs, chunks, notes)
+- ✅ Comprehensive test coverage (179 tests, 0 errors)
 
 ---
 
-*Plan Status: **PHASES 1-5 COMPLETE** (Master Branch) + **PHASE 6 IMPLEMENTED** (on `search` branch)*
+*Plan Status: **ALL PHASES 1-9 COMPLETE** (Master Branch)*
 
-*Current Branch: master (Phase 4.4 latest commit: 25c0866)*
+*Current Branch: master*
 
-*Last Updated: 2026-01-02 - Updated plan to reflect current state: Phases 1-5 complete on master, Phase 6 implemented on search branch, 178 tests passing, 0 type errors.*
+*Latest Commit: 8bda463 - Fix database session concurrency issue in /search endpoint*
+
+*Last Updated: 2026-01-03 - All phases complete: URL feature fully implemented, integrated, tested (179 tests), documented, and production-ready. Phase 6 merged to master. CLAUDE.md updated.*

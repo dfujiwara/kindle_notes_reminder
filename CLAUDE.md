@@ -207,21 +207,6 @@ docker compose logs -f
 # 4. View results with status codes and timing
 ```
 
-**Manual Testing** (after `docker compose up -d`):
-```bash
-# Test health endpoint
-curl http://localhost:8000/health
-
-# Test with timing
-curl -w "\nTime: %{time_total}s\n" http://localhost:8000/books
-
-# Test SSE endpoint
-curl -N http://localhost:8000/random
-
-# Test with custom query
-curl "http://localhost:8000/search?q=python&limit=10"
-```
-
 **API Test Categories**:
 1. **Health & General** - `/health` endpoint
 2. **Books & Notes** - Upload, list, retrieve Kindle notes

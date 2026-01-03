@@ -60,6 +60,11 @@ def _group_and_fetch_notes(
 
     for note in similar_notes:
         book_id = note.book_id
+
+        # Skip notes whose book no longer exists (handles orphaned notes)
+        if book_id not in fetched_books_dict:
+            continue
+
         if book_id not in books_dict:
             fetched_book = fetched_books_dict[book_id]
             book_response = BookResponse(
@@ -101,6 +106,11 @@ def _group_and_fetch_chunks(
 
     for chunk in similar_chunks:
         url_id = chunk.url_id
+
+        # Skip chunks whose URL no longer exists (handles orphaned chunks)
+        if url_id not in fetched_urls_dict:
+            continue
+
         if url_id not in urls_dict:
             fetched_url = fetched_urls_dict[url_id]
             url_response = URLResponse(

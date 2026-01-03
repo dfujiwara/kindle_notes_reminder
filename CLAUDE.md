@@ -24,9 +24,11 @@ FastAPI application for managing Kindle notes with AI-powered features, embeddin
 - `uv run alembic revision --autogenerate -m "description"` - Create migration
 - `uv run alembic upgrade head` - Apply migrations
 
-**Development Server**:
-- `uv run fastapi dev src/main.py` - Run with auto-reload
-- `docker compose up -d` - Start PostgreSQL with pgvector
+**Development Server** (runs API + PostgreSQL with pgvector):
+- `docker compose build --no-cache` - Rebuild images (after dependency changes)
+- `docker compose up -d` - Start services in background
+- `docker compose logs -f` - View real-time logs
+- `docker compose down` - Stop and remove containers
 
 ## Architecture
 
@@ -172,3 +174,57 @@ Repository tests use fixtures from `src/repositories/conftest.py` with real repo
 
 ### Unit Tests
 Unit tests for utilities and helpers live in `src/test_*.py` with direct imports (no dependency injection needed).
+
+## API Testing
+
+**Prerequisites** (docker compose runs both API server and database):
+```bash
+# 1. Rebuild Docker images (after dependency changes)
+docker compose build --no-cache
+
+# 2. Start services in background
+docker compose up -d
+
+# 3. Check logs if services fail
+docker compose logs -f
+```
+
+**Interactive Testing** (uses `/api-test` skill):
+- Test individual endpoints with timing metrics
+- Group testing by category (Health, Books, URLs, etc.)
+- Run all endpoints with summary report
+- Automatic data checking and minimal test data creation
+
+**Usage**:
+```bash
+# Run the skill
+/api-test
+
+# Follow interactive prompts to:
+# 1. Check existing data
+# 2. Create minimal test data if needed
+# 3. Select endpoints to test
+# 4. View results with status codes and timing
+```
+
+**API Test Categories**:
+1. **Health & General** - `/health` endpoint
+2. **Books & Notes** - Upload, list, retrieve Kindle notes
+3. **Random & Discovery** - Random note/content selection
+4. **URL Content** - Ingest and retrieve URL content
+5. **Search** - Semantic search across notes and chunks
+
+**Example Test Workflow**:
+```bash
+# 1. Rebuild and start services
+docker compose build --no-cache
+docker compose up -d
+
+# 2. Check logs if services fail to start
+docker compose logs -f
+
+# 3. Run the API test skill
+/api-test
+
+# 4. Select endpoints to test and view results
+```

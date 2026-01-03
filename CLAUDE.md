@@ -26,7 +26,11 @@ FastAPI application for managing Kindle notes with AI-powered features, embeddin
 
 **Development Server**:
 - `uv run fastapi dev src/main.py` - Run with auto-reload
-- `docker compose up -d` - Start PostgreSQL with pgvector
+- `docker compose up -d` - Start PostgreSQL with pgvector in background
+- `docker compose build --no-cache` - Rebuild Docker images (required after dependency changes)
+- `docker compose logs -f` - View real-time logs from all services
+- `docker compose logs postgres` - View PostgreSQL logs
+- `docker compose down` - Stop and remove containers
 
 ## Architecture
 
@@ -175,6 +179,21 @@ Unit tests for utilities and helpers live in `src/test_*.py` with direct imports
 
 ## API Testing
 
+**Prerequisites**:
+```bash
+# 1. Rebuild Docker images (required after dependency changes)
+docker compose build --no-cache
+
+# 2. Start services in background
+docker compose up -d
+
+# 3. Check logs if services fail to start
+docker compose logs -f
+
+# 4. Run API in another terminal
+uv run fastapi dev src/main.py
+```
+
 **Interactive Testing** (uses `/api-test` skill):
 - Test individual endpoints with timing metrics
 - Group testing by category (Health, Books, URLs, etc.)
@@ -220,18 +239,27 @@ curl "http://localhost:8000/search?q=python&limit=10"
 
 **Example Test Workflow**:
 ```bash
-# 1. Start the API server
-uv run fastapi dev src/main.py
+# 1. Rebuild Docker images (if dependencies changed)
+docker compose build --no-cache
 
-# 2. In another terminal, start the database
+# 2. Start PostgreSQL and pgvector in background
 docker compose up -d
 
-# 3. Use the API test skill
+# 3. Check logs if anything fails
+docker compose logs -f postgres
+
+# 4. In another terminal, start the API server
+uv run fastapi dev src/main.py
+
+# 5. In a third terminal, use the API test skill
 /api-test
 
-# 4. Select "Run all endpoints" to test the complete API
-# 5. View results with status codes and timing metrics
-# 6. Optional: Keep or remove test data
+# 6. Select "Run all endpoints" to test the complete API
+# 7. View results with status codes and timing metrics
+# 8. Optional: Keep or remove test data
+
+# To view API server logs later
+docker compose logs postgres
 ```
 
 **What Gets Tested**:

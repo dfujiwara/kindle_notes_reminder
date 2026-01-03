@@ -215,10 +215,10 @@ def test_search_mixed_notes_and_chunks(setup_search_deps: SearchDepsSetup):
     data = response.json()
     assert data["query"] == "machine learning"
     # Should have both notes and chunks
-    assert len(data["results"]) == 1  # Backwards compatibility: at least 1 book
-    assert len(data["books"]) == 1  # At least 1 book
-    assert len(data["urls"]) == 1  # At least 1 URL
+    assert len(data["results"]) == 1  # Backwards compatibility
+    assert len(data["books"]) == 1
+    assert len(data["urls"]) == 1
     # Verify results and books are identical for backwards compatibility
     assert data["results"] == data["books"]
     # Total count should include both
-    assert data["count"] >= 2
+    assert data["count"] == 2

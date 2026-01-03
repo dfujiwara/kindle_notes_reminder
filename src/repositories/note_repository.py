@@ -1,7 +1,7 @@
-from sqlmodel import Session, select
+from sqlmodel import Session, select, col
 from src.repositories.models import Note, NoteCreate, NoteRead, Book
 from src.repositories.interfaces import NoteRepositoryInterface
-from sqlalchemy import func, column, Integer
+from sqlalchemy import func
 from src.types import Embedding
 
 
@@ -143,8 +143,7 @@ class NoteRepository(NoteRepositoryInterface):
         if not book_ids:
             return {}
 
-        # Create column expressions that work with the type system
-        book_id_col = column("book_id", Integer)
+        book_id_col = col(Note.book_id)
 
         statement = (
             select(book_id_col, func.count())

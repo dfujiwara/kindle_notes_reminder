@@ -1,8 +1,9 @@
 """
-Tests for streaming SSE endpoints in notes.py
+Tests for streaming SSE endpoints.
 
 These tests verify the Server-Sent Events (SSE) streaming functionality
-for both random note and specific note endpoints.
+for both random note (/random in random.py) and specific note
+(/books/{book_id}/notes/{note_id} in notes.py) endpoints.
 """
 
 import json

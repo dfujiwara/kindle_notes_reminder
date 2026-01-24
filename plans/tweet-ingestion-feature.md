@@ -173,6 +173,35 @@ TweetContent:
 
 ## Implementation Plan
 
+### Phase 0: Twitter API Access Validation (Prerequisites)
+
+**⚠️ CRITICAL: Complete before starting Phase 1**
+
+Twitter API v2 access has become increasingly restricted. This phase validates API access and documents exact requirements.
+
+**0.1 Twitter Developer Account Setup:**
+- [ ] Create Twitter Developer account at https://developer.twitter.com
+- [ ] Apply for appropriate API tier (Basic: $100/month minimum for v2 access)
+- [ ] Generate Bearer Token for app-only authentication
+- [ ] Store token securely (environment variable)
+
+**0.2 API Access Validation:**
+- [ ] Test `GET /2/tweets/:id` - Verify single tweet fetch works
+- [ ] Test `GET /2/tweets/:id?expansions=author_id` - Verify author data access
+- [ ] Test `GET /2/tweets/search/recent?query=conversation_id:{id}` - **Verify thread access**
+- [ ] Document actual rate limits for your tier
+- [ ] Confirm conversation search is available (may require elevated access)
+
+**0.3 Document Findings:**
+- [ ] Record API tier and associated costs
+- [ ] Document any access limitations discovered
+- [ ] Update this plan with actual capabilities
+- [ ] If thread fetching unavailable, document alternative approach (recursive `in_reply_to` following)
+
+**Exit Criteria:** Successful API calls for single tweet and thread fetching, documented rate limits.
+
+---
+
 ### Phase 1: Database Models & Migration (Foundation)
 
 **1.1 Add Models to `src/repositories/models.py`:**
@@ -282,8 +311,12 @@ TweetContent:
 
 ### Phase 8: Testing
 
+**Testing Strategy Note:** Twitter API mocking requires careful setup. Use `respx` library (async-compatible) for mocking `httpx` requests to Twitter API. Create fixture files with sample API responses for consistent test data.
+
 **8.1 Unit Tests:**
 - [ ] `src/tweet_ingestion/test_twitter_fetcher.py` - Fetching, parsing, error handling
+  - Use `respx` to mock Twitter API responses
+  - Include fixtures for: single tweet, thread, deleted tweet, rate limit response
 - [ ] `src/tweet_ingestion/test_tweet_processor.py` - Processing pipeline
 
 **8.2 Repository Tests:**
@@ -309,6 +342,7 @@ TweetContent:
 
 ## Implementation Order
 
+0. **Phase 0** (API Validation) - **START HERE** - Validate Twitter API access before any code
 1. **Phase 1** (Models & Migration) - Foundation
 2. **Phase 2** (Repositories) - Data access layer
 3. **Phase 3** (Processing) - Twitter fetching and processing
@@ -337,7 +371,7 @@ TweetContent:
 - B) Option to ingest single tweet without thread context
 - C) Ingest single tweet, but allow expanding to thread later
 
-**Recommendation:** Option A - threads provide better context for AI generation.
+**Recommendation:** Option C - More flexible for users. Single tweets with good context can be valuable on their own (e.g., a standalone insightful tweet). Thread expansion can be triggered later via `?expand_thread=true` or a separate endpoint. This also reduces API calls for users who only want specific tweets.
 
 ### Q3: Media Handling
 **Options:**
@@ -383,6 +417,21 @@ TweetContent:
   - `GET /2/tweets/search/recent?query=conversation_id:{id}` - Thread tweets
 - Rate limits: 300 requests/15min (app-only)
 
+### ⚠️ Thread Fetching Limitation
+**Important:** The `search/recent` endpoint only returns tweets from the **last 7 days**.
+
+**Implications:**
+- Threads older than 7 days cannot be fetched using conversation_id search
+- Workaround: Recursively follow `in_reply_to_tweet_id` chain (slower, more API calls)
+- Consider implementing both strategies:
+  1. Try `conversation_id` search first (fast, works for recent threads)
+  2. Fall back to recursive `in_reply_to` traversal for older threads
+
+**Alternative approaches if search unavailable:**
+- Use `referenced_tweets` expansion to find thread relationships
+- Follow `in_reply_to_user_id` + `in_reply_to_tweet_id` fields recursively
+- Accept limitation and only support threads < 7 days old (document clearly)
+
 ### Error Handling
 - `TwitterFetchError` for API failures
 - `TweetNotFoundError` for deleted/private tweets
@@ -394,6 +443,20 @@ TweetContent:
 - Threads: up to 50 tweets × 280 chars = ~14KB text
 - Media URLs: stored as JSON array, not fetched
 - Much smaller than URL content (500KB limit)
+
+### Content Lifecycle: Tweet Deletion Handling
+**Issue:** Tweets can be deleted or made private after ingestion.
+
+**Current approach (MVP):**
+- Stored tweets remain in database even if deleted from Twitter
+- No automatic synchronization with Twitter
+- Broken media URLs may occur over time
+
+**Future enhancements (post-MVP):**
+- Add `?refresh=true` endpoint parameter to re-fetch and update thread
+- Add `deleted_at` field to mark tweets that fail re-fetch
+- Consider periodic background job to validate stored tweets (optional)
+- Handle gracefully in UI when source tweet no longer exists
 
 ---
 
@@ -421,16 +484,24 @@ TweetContent:
 
 ## Progress Summary
 
-**Status:** Planning - Awaiting Review
+**Status:** Planning - Reviewed
+
+**Review Updates (2026-01-24):**
+- Added Phase 0 for Twitter API access validation (critical prerequisite)
+- Documented 7-day thread fetching limitation with workarounds
+- Added content lifecycle section for tweet deletion handling
+- Updated Q2 recommendation to Option C (more flexible single tweet + expand later)
+- Added testing strategy note with `respx` library recommendation
 
 **Next Steps after approval:**
-1. Set up Twitter Developer account and obtain Bearer Token
-2. Begin Phase 1: Models & Migration
-3. Implement incrementally following URL ingestion patterns
+1. Complete Phase 0: Set up Twitter Developer account and validate API access
+2. Document actual API tier requirements and limitations discovered
+3. Begin Phase 1: Models & Migration
+4. Implement incrementally following URL ingestion patterns
 
 ---
 
-*Plan Status: **DRAFT - PENDING REVIEW***
+*Plan Status: **REVIEWED - READY FOR IMPLEMENTATION***
 
 *Created: 2026-01-24*
 

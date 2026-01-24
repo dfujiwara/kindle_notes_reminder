@@ -202,25 +202,25 @@ Twitter API v2 access has become increasingly restricted. This phase validates A
 
 ---
 
-### Phase 1: Database Models & Migration (Foundation)
+### Phase 1: Database Models & Migration (Foundation) ✅
 
 **1.1 Add Models to `src/repositories/models.py`:**
-- [ ] `TweetThread` model: `id, root_tweet_id (unique), author_username, author_display_name, title, tweet_count, fetched_at, created_at`
-- [ ] `Tweet` model: `id, tweet_id (unique), author_username, author_display_name, content, media_urls (JSON), thread_id (FK), position_in_thread, embedding (Vector 1536), tweeted_at, created_at`
-- [ ] Unified response models:
+- [x] `TweetThread` model: `id, root_tweet_id (unique), author_username, author_display_name, title, tweet_count, fetched_at, created_at`
+- [x] `Tweet` model: `id, tweet_id (unique), author_username, author_display_name, content, media_urls (JSON), thread_id (FK), position_in_thread, embedding (Vector 1536), tweeted_at, created_at`
+- [x] Unified response models:
   - `TweetThreadSource` (with `type: Literal["tweet_thread"]`)
   - `TweetContent` (with `content_type: Literal["tweet"]`)
 
 **1.2 Create Migration:**
-- [ ] Generate migration: `uv run alembic revision --autogenerate -m "add tweet tables"`
-- [ ] Add HNSW index on Tweet.embedding (raw SQL for operator class)
-- [ ] Add unique constraints: root_tweet_id, tweet_id
-- [ ] Add foreign key: tweet.thread_id → tweet_thread.id
+- [x] Generate migration: `a1b2c3d4e5f6_add_tweet_tables.py`
+- [x] Add HNSW index on Tweet.embedding (raw SQL for operator class)
+- [x] Add unique constraints: root_tweet_id, tweet_id
+- [x] Add foreign key: tweet.thread_id → tweet_thread.id
 
 **1.3 Add Repository Interfaces:**
-- [ ] Create `src/tweet_ingestion/repositories/interfaces.py`
-- [ ] `TweetThreadRepositoryInterface`: add, get, get_by_root_tweet_id, list_threads, delete
-- [ ] `TweetRepositoryInterface`: add, get, get_by_tweet_id, get_random, find_similar_tweets, search_tweets_by_embedding, count_with_embeddings
+- [x] Create `src/tweet_ingestion/repositories/interfaces.py`
+- [x] `TweetThreadRepositoryInterface`: add, get, get_by_root_tweet_id, list_threads, delete, update_tweet_count, get_by_ids
+- [x] `TweetRepositoryInterface`: add, get, get_by_tweet_id, get_random, find_similar_tweets, search_tweets_by_embedding, count_with_embeddings, get_by_thread_id, get_tweet_counts_by_thread_ids
 
 ### Phase 2: Repository Implementations
 
@@ -484,7 +484,13 @@ Twitter API v2 access has become increasingly restricted. This phase validates A
 
 ## Progress Summary
 
-**Status:** Planning - Reviewed
+**Status:** In Progress - Phase 1 Complete
+
+**Phase 1 Completed (2026-01-24):**
+- Added TweetThread and Tweet models to `src/repositories/models.py`
+- Added TweetThreadSource and TweetContent unified response models
+- Created migration `a1b2c3d4e5f6_add_tweet_tables.py` with HNSW index
+- Created repository interfaces in `src/tweet_ingestion/repositories/interfaces.py`
 
 **Review Updates (2026-01-24):**
 - Added Phase 0 for Twitter API access validation (critical prerequisite)
@@ -493,15 +499,14 @@ Twitter API v2 access has become increasingly restricted. This phase validates A
 - Updated Q2 recommendation to Option C (more flexible single tweet + expand later)
 - Added testing strategy note with `respx` library recommendation
 
-**Next Steps after approval:**
+**Next Steps:**
 1. Complete Phase 0: Set up Twitter Developer account and validate API access
-2. Document actual API tier requirements and limitations discovered
-3. Begin Phase 1: Models & Migration
-4. Implement incrementally following URL ingestion patterns
+2. Begin Phase 2: Repository implementations
+3. Implement incrementally following URL ingestion patterns
 
 ---
 
-*Plan Status: **REVIEWED - READY FOR IMPLEMENTATION***
+*Plan Status: **IN PROGRESS - PHASE 1 COMPLETE***
 
 *Created: 2026-01-24*
 

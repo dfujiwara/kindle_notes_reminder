@@ -296,12 +296,6 @@ class TweetThreadResponse(SQLModel):
     created_at: datetime
 
 
-class TweetThreadWithTweetCountResponse(TweetThreadResponse):
-    """TweetThread response with tweet count (for list endpoints)"""
-
-    pass  # tweet_count is already in TweetThreadResponse
-
-
 # Tweet Models
 
 

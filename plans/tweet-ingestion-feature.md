@@ -239,20 +239,20 @@ Twitter API v2 access has become increasingly restricted. This phase validates A
 - [x] Create `src/tweet_ingestion/repositories/test_tweet_thread_repository.py` (16 tests)
 - [x] Create `src/tweet_ingestion/repositories/test_tweet_repository.py` (20 tests)
 
-### Phase 3: Twitter Fetching & Content Processing
+### Phase 3: Twitter Fetching & Content Processing ✅
 
 **3.1 Create `src/tweet_ingestion/twitter_fetcher.py`:**
-- [ ] Function: `async fetch_tweet(tweet_id: str) -> FetchedTweet`
-- [ ] Function: `async fetch_thread(tweet_id: str, max_depth: int) -> FetchedThread`
-- [ ] Parse tweet URLs to extract tweet ID
-- [ ] Use Twitter API v2 with Bearer Token
-- [ ] Handle rate limiting with exponential backoff
-- [ ] Extract: text, author, media URLs, conversation ID
-- [ ] Raise `TwitterFetchError` on failures
+- [x] Function: `async fetch_tweet(tweet_id: str) -> FetchedTweet`
+- [x] Function: `async fetch_thread(tweet_id: str, max_depth: int) -> FetchedThread`
+- [x] Parse tweet URLs to extract tweet ID
+- [x] Use Twitter API v2 with Bearer Token
+- [x] Handle rate limiting with exponential backoff
+- [x] Extract: text, author, media URLs, conversation ID
+- [x] Raise `TwitterFetchError` on failures
 
 **3.2 Create `src/tweet_ingestion/tweet_processor.py`:**
-- [ ] Function: `async process_tweet_content(...) -> TweetThreadWithTweetsResponse`
-- [ ] Steps:
+- [x] Function: `async process_tweet_content(...) -> TweetThreadWithTweetsResponse`
+- [x] Steps:
   1. Parse input (URL or tweet ID)
   2. Check if thread exists → return existing if found
   3. Fetch tweet/thread from Twitter API
@@ -260,6 +260,10 @@ Twitter API v2 access has become increasingly restricted. This phase validates A
   5. Parallel embedding generation for all tweets
   6. Save thread and tweets to database
   7. Return complete thread with all tweets
+
+**3.3 Unit Tests:**
+- [x] `test_twitter_fetcher.py` - URL parsing, tweet fetch, thread fetch, error handling
+- [x] `test_tweet_processor.py` - Processing pipeline, deduplication, embedding generation
 
 ### Phase 4: Configuration & Dependencies
 
@@ -275,8 +279,8 @@ Twitter API v2 access has become increasingly restricted. This phase validates A
 - [ ] `get_twitter_fetcher()`
 
 **4.3 Update `src/test_utils.py`:**
-- [ ] `StubTweetThreadRepository`
-- [ ] `StubTweetRepository`
+- [x] `StubTweetThreadRepository`
+- [x] `StubTweetRepository`
 - [ ] `StubTwitterFetcher`
 
 ### Phase 5: Tweet-Specific Endpoints
@@ -489,7 +493,7 @@ Twitter API v2 access has become increasingly restricted. This phase validates A
 
 ## Progress Summary
 
-**Status:** In Progress - Phase 2 Complete
+**Status:** In Progress - Phase 3 Complete
 
 **Phase 1 Completed (2026-01-24):**
 - Added TweetThread and Tweet models to `src/repositories/models.py`
@@ -505,6 +509,17 @@ Twitter API v2 access has become increasingly restricted. This phase validates A
 - Implemented random selection with embedding filter
 - Added comprehensive test suite (36 tests, all passing)
 
+**Phase 3 Completed (2026-01-25):**
+- Created `twitter_fetcher.py` with Tweet and Thread fetching via Twitter API v2
+- Implemented URL parsing for twitter.com and x.com URLs
+- Implemented rate limiting with RateLimitError and retry support
+- Created `tweet_processor.py` with full processing pipeline
+- Implemented deduplication by root_tweet_id before saving
+- Parallel embedding generation for all tweets in thread
+- LLM-generated thread summaries for multi-tweet threads
+- Added stub repositories to `test_utils.py`
+- Added comprehensive test suite (41 new tests, 77 total in tweet_ingestion)
+
 **Review Updates (2026-01-24):**
 - Added Phase 0 for Twitter API access validation (critical prerequisite)
 - Documented 7-day thread fetching limitation with workarounds
@@ -514,13 +529,13 @@ Twitter API v2 access has become increasingly restricted. This phase validates A
 
 **Next Steps:**
 1. Complete Phase 0: Set up Twitter Developer account and validate API access
-2. Begin Phase 3: Twitter fetching and content processing
-3. Implement incrementally following URL ingestion patterns
+2. Begin Phase 4: Configuration and dependency injection
+3. Begin Phase 5: Tweet-specific API endpoints
 
 ---
 
-*Plan Status: **IN PROGRESS - PHASE 2 COMPLETE***
+*Plan Status: **IN PROGRESS - PHASE 3 COMPLETE***
 
 *Created: 2026-01-24*
 
-*Last Updated: 2026-01-24*
+*Last Updated: 2026-01-25*

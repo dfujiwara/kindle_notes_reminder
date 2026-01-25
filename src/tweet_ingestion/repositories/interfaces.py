@@ -1,9 +1,10 @@
 from typing import Protocol
+
 from src.repositories.models import (
-    TweetThreadCreate,
-    TweetThreadResponse,
     TweetCreate,
     TweetRead,
+    TweetThreadCreate,
+    TweetThreadResponse,
 )
 from src.types import Embedding
 
@@ -29,7 +30,7 @@ class TweetThreadRepositoryInterface(Protocol):
 class TweetRepositoryInterface(Protocol):
     def add(self, tweet: TweetCreate) -> TweetRead: ...
 
-    def get(self, tweet_id: int, thread_id: int) -> TweetRead | None: ...
+    def get(self, id: int, thread_id: int) -> TweetRead | None: ...
 
     def get_by_id(self, id: int) -> TweetRead | None: ...
 

@@ -1,4 +1,4 @@
-from sqlmodel import Field, SQLModel, Relationship, UniqueConstraint, Column
+from sqlmodel import Field, SQLModel, Relationship, UniqueConstraint, Column, JSON
 from datetime import datetime, timezone
 from pgvector.sqlalchemy import Vector
 from typing import Optional, TYPE_CHECKING, cast, Literal
@@ -253,6 +253,127 @@ class SearchResult(SQLModel):
     count: int
 
 
+# TweetThread Models
+
+
+class TweetThreadBase(SQLModel):
+    """Base model with shared fields"""
+
+    root_tweet_id: str
+    author_username: str
+    author_display_name: str
+    title: str
+
+
+# Type alias - TweetThreadCreate is identical to TweetThreadBase
+TweetThreadCreate = TweetThreadBase
+
+
+class TweetThread(TweetThreadBase, table=True):
+    """Database table model"""
+
+    __table_args__ = (UniqueConstraint("root_tweet_id", name="uix_root_tweet_id"),)
+
+    id: int | None = Field(default=None, primary_key=True)
+    tweet_count: int = Field(default=0)
+    fetched_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+    # Relationship
+    tweets: list["Tweet"] = Relationship(back_populates="thread")
+
+
+class TweetThreadResponse(SQLModel):
+    """Model for API responses (id is guaranteed to exist)"""
+
+    id: int
+    root_tweet_id: str
+    author_username: str
+    author_display_name: str
+    title: str
+    tweet_count: int
+    fetched_at: datetime
+    created_at: datetime
+
+
+# Tweet Models
+
+
+class TweetBase(SQLModel):
+    """Base model with shared fields"""
+
+    tweet_id: str
+    author_username: str
+    author_display_name: str
+    content: str
+    media_urls: list[str] = Field(default_factory=list)
+    thread_id: int = Field(foreign_key="tweetthread.id")
+    position_in_thread: int
+    tweeted_at: datetime
+    embedding: Optional[Embedding] = None
+
+
+# Type alias - TweetCreate is identical to TweetBase
+TweetCreate = TweetBase
+
+
+class Tweet(TweetBase, table=True):
+    """Database table model"""
+
+    __table_args__ = (UniqueConstraint("tweet_id", name="uix_tweet_id"),)
+
+    id: int | None = Field(default=None, primary_key=True)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    media_urls: list[str] = Field(default_factory=list, sa_column=Column(JSON))
+    embedding: Optional[Embedding] = Field(
+        default=None,
+        sa_column=Column("embedding", Vector(settings.embedding_dimension)),
+    )
+
+    # Relationships
+    thread: TweetThread = Relationship(back_populates="tweets")
+
+    @classmethod
+    def embedding_cosine_distance(cls, target: Embedding) -> "ColumnElement[float]":
+        """Calculate cosine distance to target embedding."""
+        embedding_col = cast("ColumnElement[Vector]", cls.__table__.c.embedding)  # type: ignore
+        return embedding_col.cosine_distance(target)
+
+    @classmethod
+    def embedding_is_not_null(cls) -> "ColumnElement[bool]":
+        """Check if embedding is not null."""
+        embedding_col = cast("ColumnElement[Vector]", cls.__table__.c.embedding)  # type: ignore
+        return embedding_col.is_not(None)
+
+
+class TweetRead(TweetBase):
+    """Model for repository operations (id is guaranteed to exist)"""
+
+    id: int
+    created_at: datetime
+
+
+class TweetResponse(SQLModel):
+    """Model for API responses (id is guaranteed to exist)"""
+
+    id: int
+    tweet_id: str
+    author_username: str
+    author_display_name: str
+    content: str
+    media_urls: list[str]
+    position_in_thread: int
+    tweeted_at: datetime
+    created_at: datetime
+
+
+class TweetThreadWithTweetsResponse(SQLModel):
+    """Model for thread with all tweets"""
+
+    thread: TweetThreadResponse
+    tweets: list[TweetResponse]
+
+
 # Unified Response Models (for /random endpoint)
 # Uses discriminated unions for type safety
 
@@ -277,8 +398,21 @@ class URLSource(SQLModel):
     created_at: datetime
 
 
+class TweetThreadSource(SQLModel):
+    """Tweet thread source - for tweets"""
+
+    id: int
+    title: str
+    type: Literal["tweet_thread"]
+    author_username: str
+    author_display_name: str
+    root_tweet_id: str
+    tweet_count: int
+    created_at: datetime
+
+
 # Type alias for source union
-SourceResponse = BookSource | URLSource
+SourceResponse = BookSource | URLSource | TweetThreadSource
 
 
 class NoteContent(SQLModel):
@@ -301,13 +435,26 @@ class URLChunkContent(SQLModel):
     created_at: datetime
 
 
+class TweetContent(SQLModel):
+    """Tweet content item"""
+
+    id: int
+    content_type: Literal["tweet"]
+    content: str
+    author_username: str
+    position_in_thread: int
+    media_urls: list[str]
+    tweeted_at: datetime
+    created_at: datetime
+
+
 # Type alias for content union
-ContentItemResponse = NoteContent | URLChunkContent
+ContentItemResponse = NoteContent | URLChunkContent | TweetContent
 
 
 class ContentWithRelatedItemsResponse(SQLModel):
     """Unified response for random/streaming endpoints"""
 
-    source: BookSource | URLSource
-    content: NoteContent | URLChunkContent
-    related_items: list[NoteContent | URLChunkContent]
+    source: BookSource | URLSource | TweetThreadSource
+    content: NoteContent | URLChunkContent | TweetContent
+    related_items: list[NoteContent | URLChunkContent | TweetContent]

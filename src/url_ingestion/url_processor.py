@@ -12,6 +12,10 @@ import logging
 from src.prompts import SYSTEM_INSTRUCTIONS, create_summary_prompt
 from src.types import Embedding
 from src.url_ingestion.content_chunker import TextChunk, chunk_text_by_paragraphs
+from src.url_ingestion.semantic_chunker import (
+    SemanticChunkingError,
+    chunk_content_with_llm,
+)
 from src.embedding_interface import EmbeddingClientInterface
 from src.llm_interface import LLMClientInterface
 from src.url_ingestion.repositories.interfaces import (
@@ -88,9 +92,8 @@ async def process_url_content(
     saved_url = url_repo.add(url_create)
     logger.info(f"Saved URL record with ID {saved_url.id}")
 
-    # Step 4: Chunk content and generate summary
-    chunks = chunk_text_by_paragraphs(fetched.content)
-    logger.info(f"Created {len(chunks)} text chunks from {url}")
+    # Step 4: Chunk content using LLM-based semantic chunking with fallback
+    chunks = await _chunk_content(llm_client, fetched.content, url)
 
     summary = await _generate_summary(
         llm_client, fetched.content[:SUMMARY_CONTENT_LIMIT]
@@ -210,6 +213,60 @@ def _build_response(
         url=url_response,
         chunks=chunk_responses,
     )
+
+
+async def _chunk_content(
+    llm_client: LLMClientInterface,
+    content: str,
+    url: str,
+) -> list[TextChunk]:
+    """
+    Chunk content using LLM-based semantic chunking with paragraph fallback.
+
+    Attempts semantic chunking first for better content extraction and
+    coherent chunks. Falls back to paragraph-based chunking if semantic
+    chunking fails.
+
+    Args:
+        llm_client: LLM client for semantic chunking
+        content: Raw content to chunk
+        url: URL being processed (for logging)
+
+    Returns:
+        List of TextChunk objects
+    """
+    try:
+        result = await chunk_content_with_llm(llm_client, content)
+        chunks = _convert_semantic_to_text_chunks(result.chunks)
+        logger.info(f"Created {len(chunks)} semantic chunks from {url}")
+        return chunks
+    except SemanticChunkingError as e:
+        logger.warning(
+            f"Semantic chunking failed for {url}, using paragraph fallback: {e}"
+        )
+        chunks = chunk_text_by_paragraphs(content)
+        logger.info(f"Created {len(chunks)} paragraph-based chunks from {url}")
+        return chunks
+
+
+def _convert_semantic_to_text_chunks(chunks: list[str]) -> list[TextChunk]:
+    """
+    Convert semantic chunk strings to TextChunk format.
+
+    Args:
+        chunks: List of chunk content strings from semantic chunking
+
+    Returns:
+        List of TextChunk objects with content, hash, and order
+    """
+    return [
+        TextChunk(
+            content=chunk,
+            content_hash=hashlib.sha256(chunk.encode("utf-8")).hexdigest(),
+            chunk_order=i,
+        )
+        for i, chunk in enumerate(chunks)
+    ]
 
 
 async def _generate_summary(llm_client: LLMClientInterface, content: str) -> str:

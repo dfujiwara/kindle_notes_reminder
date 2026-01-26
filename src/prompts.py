@@ -22,6 +22,9 @@ Format your response in markdown:
 - **Examples:** [2-3 concrete real-world examples or analogies, as a bulleted list]
 - **Connection:** [Optional: Broader theme links]""",
     "summarizer": "You are a skilled summarizer. Generate clear, concise summaries that capture the most important information.",
+    "semantic_chunker": """You are a precise content extraction and semantic chunking assistant.
+Extract main article content, ignore boilerplate (nav, sidebars, related articles, ads, comments).
+Always respond with valid JSON.""",
 }
 
 
@@ -112,3 +115,27 @@ Content passage:
 "{chunk_content}"
 
 Explain this concept clearly and provide a practical example that makes it memorable."""
+
+
+def create_semantic_chunking_prompt(content: str) -> str:
+    """
+    Create a prompt for semantic chunking of content.
+
+    Args:
+        content: The raw content to chunk semantically
+
+    Returns:
+        A formatted semantic chunking prompt string
+    """
+    return f"""Extract the main article content from the following text, ignoring any navigation, sidebars, related articles, author bios, ads, or comments.
+
+Then divide the main content into semantic chunks. Each chunk should:
+- Contain a complete thought, idea, or section
+- Be 200-800 characters in length (target range)
+- Preserve the original meaning and context
+
+Text to process:
+{content}
+
+Respond with a JSON object in this exact format:
+{{"chunks": ["chunk 1 text", "chunk 2 text", ...]}}"""

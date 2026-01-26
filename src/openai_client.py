@@ -2,7 +2,7 @@
 import openai
 import logging
 from typing import AsyncGenerator
-from openai import APIError, RateLimitError, AuthenticationError
+from openai import APIError, RateLimitError, AuthenticationError, NOT_GIVEN
 from src.llm_interface import LLMClientInterface, LLMError
 from src.types import Embedding
 from src.embedding_interface import EmbeddingClientInterface, EmbeddingError
@@ -24,7 +24,9 @@ class OpenAIClient(LLMClientInterface):
             api_key=settings.openai_api_key.get_secret_value()
         )
 
-    async def get_response(self, prompt: str, instruction: str) -> str:
+    async def get_response(
+        self, prompt: str, instruction: str, json_mode: bool = False
+    ) -> str:
         try:
             response = await self.client.chat.completions.create(
                 model=self.model,
@@ -32,6 +34,7 @@ class OpenAIClient(LLMClientInterface):
                     {"role": "system", "content": instruction},
                     {"role": "user", "content": prompt},
                 ],
+                response_format={"type": "json_object"} if json_mode else NOT_GIVEN,
             )
             message_content = response.choices[0].message.content
             if message_content is None:

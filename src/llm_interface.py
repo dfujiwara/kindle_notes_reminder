@@ -18,11 +18,15 @@ class LLMError(Exception):
 
 class LLMClientInterface(ABC):
     @abstractmethod
-    async def get_response(self, prompt: str, instruction: str) -> str:
+    async def get_response(
+        self, prompt: str, instruction: str, json_mode: bool = False
+    ) -> str:
         """
         Send a prompt and instruction to the language model and return the response.
 
         :param prompt: The input prompt to send to the model.
+        :param instruction: The system instruction for the model.
+        :param json_mode: If True, request JSON formatted output from the model.
         :return: The model's response as a string.
         :raises LLMError: If there is an error communicating with the LLM service
         """

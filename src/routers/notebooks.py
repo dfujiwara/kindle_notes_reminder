@@ -49,13 +49,25 @@ async def parse_notes(
     note_repository: NoteRepositoryInterface = Depends(get_note_repository),
     embedding_client: EmbeddingClientInterface = Depends(get_embedding_client),
 ) -> BookWithNoteResponses:
-    html_content = await file.read()
-    if len(html_content) > settings.max_upload_size:
+    # Enforce upload size limit without reading entire file into memory
+    if file.size and file.size > settings.max_upload_size:
         raise HTTPException(
             status_code=413,
-            detail=f"File too large ({len(html_content)} bytes). "
+            detail=f"File too large ({file.size} bytes). "
             f"Maximum allowed size is {settings.max_upload_size} bytes.",
         )
+    chunks: list[bytes] = []
+    total = 0
+    while chunk := await file.read(1024 * 64):
+        total += len(chunk)
+        if total > settings.max_upload_size:
+            raise HTTPException(
+                status_code=413,
+                detail=f"File too large (>{settings.max_upload_size} bytes). "
+                f"Maximum allowed size is {settings.max_upload_size} bytes.",
+            )
+        chunks.append(chunk)
+    html_content = b"".join(chunks)
     try:
         # Attempt to parse the notebook HTML content
         result = parse_notebook_html(html_content.decode("utf-8"))

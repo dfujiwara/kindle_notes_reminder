@@ -14,6 +14,7 @@ from src.repositories.interfaces import (
 )
 from src.notebook_processing.notebook_processor import process_notebook_result
 from src.embedding_interface import EmbeddingClientInterface
+from src.config import settings
 from src.dependencies import (
     get_book_repository,
     get_note_repository,
@@ -38,6 +39,7 @@ router = APIRouter(tags=["notebooks"])
     response_description="Processing result with book and notes count",
     responses={
         400: {"description": "Invalid file or parsing error"},
+        413: {"description": "File too large"},
         200: {"description": "Notebook processed successfully"},
     },
 )
@@ -48,6 +50,12 @@ async def parse_notes(
     embedding_client: EmbeddingClientInterface = Depends(get_embedding_client),
 ) -> BookWithNoteResponses:
     html_content = await file.read()
+    if len(html_content) > settings.max_upload_size:
+        raise HTTPException(
+            status_code=413,
+            detail=f"File too large ({len(html_content)} bytes). "
+            f"Maximum allowed size is {settings.max_upload_size} bytes.",
+        )
     try:
         # Attempt to parse the notebook HTML content
         result = parse_notebook_html(html_content.decode("utf-8"))

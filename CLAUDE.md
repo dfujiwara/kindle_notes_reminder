@@ -139,6 +139,11 @@ FastAPI application for managing Kindle notes with AI-powered features, embeddin
 
 ## Testing Patterns
 
+**General Rules**:
+- Do not write tests against private functions or methods (prefixed with `_`). Test only the public API surface.
+
+
+
 ### Router Tests
 Router tests use pytest fixtures from `src/routers/conftest.py` to reduce boilerplate and ensure consistent dependency injection patterns.
 

@@ -18,7 +18,7 @@ FastAPI application for managing Kindle notes with AI-powered features, embeddin
   - Unit tests: `src/test_*.py`
   - Router tests: `src/routers/test_*.py`
 
-**IMPORTANT**: Always run `uv run ruff format` and `uv run pytest` before completing any task.
+**IMPORTANT**: Always run `uv run ruff format`, `uv run pyright`, and `uv run pytest` before completing any task.
 
 **Database**:
 - `uv run alembic revision --autogenerate -m "description"` - Create migration
@@ -138,6 +138,11 @@ FastAPI application for managing Kindle notes with AI-powered features, embeddin
 - Note: URL chunks do not trigger background evaluation (notes only)
 
 ## Testing Patterns
+
+**General Rules**:
+- Do not write tests against private functions or methods (prefixed with `_`). Test only the public API surface.
+
+
 
 ### Router Tests
 Router tests use pytest fixtures from `src/routers/conftest.py` to reduce boilerplate and ensure consistent dependency injection patterns.

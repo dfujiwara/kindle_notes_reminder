@@ -59,6 +59,13 @@ class NoteRepository(NoteRepositoryInterface):
         self.session.delete(note)
         self.session.commit()
 
+    def delete_by_book_id(self, book_id: int) -> None:
+        statement = select(Note).where(Note.book_id == book_id)
+        notes = self.session.exec(statement).all()
+        for note in notes:
+            self.session.delete(note)
+        self.session.commit()
+
     def get_random(self) -> NoteRead | None:
         statement = select(Note).join(Book).order_by(func.random()).limit(1)
         note = self.session.exec(statement).first()

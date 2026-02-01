@@ -56,6 +56,10 @@ NotebookDepsSetup = Callable[
     ...,
     tuple[StubBookRepository, StubNoteRepository, StubEmbeddingClient, StubLLMClient],
 ]
+BookDeleteDepsSetup = Callable[
+    ...,
+    tuple[StubBookRepository, StubNoteRepository, StubEvaluationRepository],
+]
 RandomV2DepsSetup = Callable[
     ...,
     tuple[
@@ -161,6 +165,27 @@ def setup_evaluation_deps() -> Generator[EvaluationDepsSetup, None, None]:
         app.dependency_overrides[get_evaluation_repository] = lambda: eval_repo
 
         return note_repo, eval_repo
+
+    yield _setup
+    app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def setup_book_delete_deps() -> Generator[BookDeleteDepsSetup, None, None]:
+    """Setup dependencies for book delete endpoint (book, note, evaluation)."""
+
+    def _setup() -> tuple[
+        StubBookRepository, StubNoteRepository, StubEvaluationRepository
+    ]:
+        book_repo = StubBookRepository()
+        note_repo = StubNoteRepository()
+        eval_repo = StubEvaluationRepository()
+
+        app.dependency_overrides[get_book_repository] = lambda: book_repo
+        app.dependency_overrides[get_note_repository] = lambda: note_repo
+        app.dependency_overrides[get_evaluation_repository] = lambda: eval_repo
+
+        return book_repo, note_repo, eval_repo
 
     yield _setup
     app.dependency_overrides.clear()

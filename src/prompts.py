@@ -22,8 +22,9 @@ Format your response in markdown:
 - **Examples:** [2-3 concrete real-world examples or analogies, as a bulleted list]
 - **Connection:** [Optional: Broader theme links]""",
     "summarizer": "You are a skilled summarizer. Generate clear, concise summaries that capture the most important information.",
-    "semantic_chunker": """You are a precise content extraction and semantic chunking assistant.
-Extract main article content, ignore boilerplate (nav, sidebars, related articles, ads, comments).
+    "semantic_chunker": """You are a selective content extraction and semantic chunking assistant.
+Extract only the most noteworthy parts of the main article content — key insights, good examples, and important ideas.
+Ignore boilerplate (nav, sidebars, related articles, ads, comments) and skip filler or repetitive content.
 Always respond with valid JSON.""",
 }
 
@@ -129,7 +130,15 @@ def create_semantic_chunking_prompt(content: str) -> str:
     """
     return f"""Extract the main article content from the following text, ignoring any navigation, sidebars, related articles, author bios, ads, or comments.
 
-Then divide the main content into semantic chunks. Each chunk should:
+Then select and extract only the most noteworthy parts of the content. Not every paragraph or section needs to be included. Focus on:
+- Key insights, arguments, or takeaways that capture the article's main theme
+- Memorable examples, analogies, or case studies that illustrate important points
+- Surprising facts, counterintuitive claims, or notable quotes
+- Practical advice or actionable information
+
+Skip filler, transitions, repetitive points, and sections that don't add substantive value.
+
+Each extracted chunk should:
 - Contain a complete thought, idea, or section
 - Be 200-800 characters in length (target range)
 - Use the exact original text verbatim — do not paraphrase, summarize, or reword

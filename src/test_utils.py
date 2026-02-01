@@ -148,6 +148,9 @@ class StubNoteRepository(NoteRepositoryInterface):
     def count_with_embeddings(self) -> int:
         return len([n for n in self.notes if n.embedding is not None])
 
+    def delete_by_book_id(self, book_id: int) -> None:
+        self.notes = [n for n in self.notes if n.book_id != book_id]
+
 
 class StubEvaluationRepository(EvaluationRepositoryInterface):
     def __init__(self):
@@ -160,6 +163,12 @@ class StubEvaluationRepository(EvaluationRepositoryInterface):
 
     def get_by_note_id(self, note_id: int) -> list[Evaluation]:
         return [eval for eval in self.evaluations if eval.note_id == note_id]
+
+    def delete_by_note_ids(self, note_ids: list[int]) -> None:
+        note_ids_set = set(note_ids)
+        self.evaluations = [
+            e for e in self.evaluations if e.note_id not in note_ids_set
+        ]
 
 
 class StubURLRepository(URLRepositoryInterface):

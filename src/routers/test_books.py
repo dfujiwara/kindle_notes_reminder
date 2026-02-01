@@ -1,7 +1,7 @@
 from fastapi.testclient import TestClient
 from ..main import app
-from ..repositories.models import BookCreate, NoteCreate
-from .conftest import BookNoteDepsSetup
+from ..repositories.models import BookCreate, NoteCreate, Evaluation
+from .conftest import BookNoteDepsSetup, BookDeleteDepsSetup
 
 client = TestClient(app)
 
@@ -85,3 +85,38 @@ def test_get_books_multiple_books_different_note_counts(
     assert data["books"][0]["title"] == "Book No Notes"
     assert data["books"][1]["title"] == "Book One Note"
     assert data["books"][2]["title"] == "Book Many Notes"
+
+
+def test_delete_book_not_found(setup_book_delete_deps: BookDeleteDepsSetup):
+    setup_book_delete_deps()
+
+    response = client.delete("/books/999")
+
+    assert response.status_code == 404
+
+
+def test_delete_book_with_notes_and_evaluations(
+    setup_book_delete_deps: BookDeleteDepsSetup,
+):
+    book_repo, note_repo, eval_repo = setup_book_delete_deps()
+
+    book = book_repo.add(BookCreate(title="Test Book", author="Author"))
+    note = note_repo.add(
+        NoteCreate(content="Note 1", content_hash="h1", book_id=book.id)
+    )
+    eval_repo.add(
+        Evaluation(
+            note_id=note.id,
+            score=0.8,
+            prompt="test prompt",
+            response="test response",
+            analysis="test analysis",
+        )
+    )
+
+    response = client.delete(f"/books/{book.id}")
+
+    assert response.status_code == 204
+    assert book_repo.get(book.id) is None
+    assert note_repo.get_by_book_id(book.id) == []
+    assert eval_repo.evaluations == []

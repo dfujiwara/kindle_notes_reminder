@@ -20,3 +20,12 @@ class EvaluationRepository(EvaluationRepositoryInterface):
             .order_by(Evaluation.created_at.desc())  # type: ignore
         )
         return list(self.session.exec(statement))
+
+    def delete_by_note_ids(self, note_ids: list[int]) -> None:
+        if not note_ids:
+            return
+        statement = select(Evaluation).where(Evaluation.note_id.in_(note_ids))  # type: ignore
+        evaluations = self.session.exec(statement).all()
+        for evaluation in evaluations:
+            self.session.delete(evaluation)
+        self.session.commit()

@@ -11,8 +11,13 @@ from src.repositories.models import (
 from src.repositories.interfaces import (
     BookRepositoryInterface,
     NoteRepositoryInterface,
+    EvaluationRepositoryInterface,
 )
-from src.dependencies import get_book_repository, get_note_repository
+from src.dependencies import (
+    get_book_repository,
+    get_note_repository,
+    get_evaluation_repository,
+)
 import logging
 
 logger = logging.getLogger(__name__)
@@ -44,6 +49,34 @@ async def get_books(
             )
         )
     return {"books": book_responses}
+
+
+@router.delete(
+    "/books/{book_id}",
+    summary="Delete book and all associated data",
+    description="Delete a book and all associated notes and evaluations from the database.",
+    status_code=204,
+    responses={
+        404: {"description": "Book not found"},
+        204: {"description": "Book deleted successfully"},
+    },
+)
+async def delete_book(
+    book_id: int,
+    book_repository: BookRepositoryInterface = Depends(get_book_repository),
+    note_repository: NoteRepositoryInterface = Depends(get_note_repository),
+    evaluation_repository: EvaluationRepositoryInterface = Depends(
+        get_evaluation_repository
+    ),
+) -> None:
+    book = book_repository.get(book_id)
+    if not book:
+        raise HTTPException(status_code=404, detail="Book not found")
+
+    note_ids = [n.id for n in note_repository.get_by_book_id(book_id)]
+    evaluation_repository.delete_by_note_ids(note_ids)
+    note_repository.delete_by_book_id(book_id)
+    book_repository.delete(book_id)
 
 
 @router.get(

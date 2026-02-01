@@ -20,7 +20,7 @@ class BookRepository(BookRepositoryInterface):
         # If no existing book found, create a new one
         db_book = Book.model_validate(book)
         self.session.add(db_book)
-        self.session.commit()
+        self.session.flush()
         self.session.refresh(db_book)
         return BookResponse.model_validate(db_book)
 
@@ -43,4 +43,4 @@ class BookRepository(BookRepositoryInterface):
         if not book:
             return
         self.session.delete(book)
-        self.session.commit()
+        self.session.flush()

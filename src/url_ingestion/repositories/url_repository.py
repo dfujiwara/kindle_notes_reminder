@@ -20,7 +20,7 @@ class URLRepository(URLRepositoryInterface):
         # If no existing URL found, create a new one
         db_url = URL.model_validate(url)
         self.session.add(db_url)
-        self.session.commit()
+        self.session.flush()
         self.session.refresh(db_url)
         return URLResponse.model_validate(db_url)
 
@@ -50,4 +50,4 @@ class URLRepository(URLRepositoryInterface):
         if not url:
             return
         self.session.delete(url)
-        self.session.commit()
+        self.session.flush()

@@ -20,7 +20,7 @@ class URLChunkRepository(URLChunkRepositoryInterface):
         # If no existing chunk found, create a new one
         db_chunk = URLChunk.model_validate(chunk)
         self.session.add(db_chunk)
-        self.session.commit()
+        self.session.flush()
         self.session.refresh(db_chunk)
 
         return URLChunkRead.model_validate(db_chunk)
@@ -176,4 +176,4 @@ class URLChunkRepository(URLChunkRepositoryInterface):
     def delete_by_url_id(self, url_id: int) -> None:
         for chunk in self._get_db_chunks_by_url_id(url_id):
             self.session.delete(chunk)
-        self.session.commit()
+        self.session.flush()

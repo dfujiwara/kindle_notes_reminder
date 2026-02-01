@@ -22,7 +22,7 @@ class TweetThreadRepository(TweetThreadRepositoryInterface):
         # If no existing thread found, create a new one
         db_thread = TweetThread.model_validate(thread)
         self.session.add(db_thread)
-        self.session.commit()
+        self.session.flush()
         self.session.refresh(db_thread)
         return TweetThreadResponse.model_validate(db_thread)
 
@@ -55,11 +55,10 @@ class TweetThreadRepository(TweetThreadRepositoryInterface):
             return
         thread.tweet_count = tweet_count
         self.session.add(thread)
-        self.session.commit()
 
     def delete(self, thread_id: int) -> None:
         thread = self.session.get(TweetThread, thread_id)
         if not thread:
             return
         self.session.delete(thread)
-        self.session.commit()
+        self.session.flush()

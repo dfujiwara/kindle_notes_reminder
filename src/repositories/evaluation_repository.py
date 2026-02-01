@@ -9,7 +9,7 @@ class EvaluationRepository(EvaluationRepositoryInterface):
 
     def add(self, evaluation: Evaluation) -> Evaluation:
         self.session.add(evaluation)
-        self.session.commit()
+        self.session.flush()
         self.session.refresh(evaluation)
         return evaluation
 
@@ -28,4 +28,4 @@ class EvaluationRepository(EvaluationRepositoryInterface):
         evaluations = self.session.exec(statement).all()
         for evaluation in evaluations:
             self.session.delete(evaluation)
-        self.session.commit()
+        self.session.flush()

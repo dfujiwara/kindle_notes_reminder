@@ -13,11 +13,10 @@ from src.context_generation.additional_context import (
 )
 from src.dependencies import (
     get_book_repository,
-    get_evaluation_repository,
     get_llm_client,
     get_note_repository,
 )
-from src.evaluation_service import evaluate_response
+from src.evaluation_service import evaluate_response_background
 from src.llm_interface import LLMClientInterface
 from src.prompts import (
     SYSTEM_INSTRUCTIONS,
@@ -25,7 +24,6 @@ from src.prompts import (
 )
 from src.repositories.interfaces import (
     BookRepositoryInterface,
-    EvaluationRepositoryInterface,
     NoteRepositoryInterface,
 )
 from src.routers.response_builders import (
@@ -74,9 +72,6 @@ async def get_note_with_context_stream(
     background_tasks: BackgroundTasks,
     book_repository: BookRepositoryInterface = Depends(get_book_repository),
     note_repository: NoteRepositoryInterface = Depends(get_note_repository),
-    evaluation_repository: EvaluationRepositoryInterface = Depends(
-        get_evaluation_repository
-    ),
     llm_client: LLMClientInterface = Depends(get_llm_client),
 ) -> StreamingResponse:
     # Fetch and validate data before streaming
@@ -132,10 +127,9 @@ async def get_note_with_context_stream(
         # Evaluate response in background
         if llm_prompt_response:
             background_tasks.add_task(
-                evaluate_response,
+                evaluate_response_background,
                 llm_client,
                 llm_prompt_response,
-                evaluation_repository,
                 note,
             )
 

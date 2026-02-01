@@ -22,7 +22,7 @@ class TweetRepository(TweetRepositoryInterface):
         # If no existing tweet found, create a new one
         db_tweet = Tweet.model_validate(tweet)
         self.session.add(db_tweet)
-        self.session.commit()
+        self.session.flush()
         self.session.refresh(db_tweet)
 
         return TweetRead.model_validate(db_tweet)

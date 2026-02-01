@@ -52,14 +52,19 @@ class URLChunkRepository(URLChunkRepositoryInterface):
 
         return URLChunkRead.model_validate(chunk)
 
-    def get_by_url_id(self, url_id: int) -> list[URLChunkRead]:
+    def _get_db_chunks_by_url_id(self, url_id: int) -> list[URLChunk]:
         statement = (
             select(URLChunk)
             .where(URLChunk.url_id == url_id)
             .order_by(col(URLChunk.chunk_order))
         )
-        chunks = self.session.exec(statement).all()
-        return [URLChunkRead.model_validate(chunk) for chunk in chunks]
+        return list(self.session.exec(statement).all())
+
+    def get_by_url_id(self, url_id: int) -> list[URLChunkRead]:
+        return [
+            URLChunkRead.model_validate(chunk)
+            for chunk in self._get_db_chunks_by_url_id(url_id)
+        ]
 
     def find_similar_chunks(
         self, chunk: URLChunkRead, limit: int = 5, similarity_threshold: float = 0.5
@@ -167,3 +172,8 @@ class URLChunkRepository(URLChunkRepositoryInterface):
 
         count = self.session.exec(statement).first()
         return count or 0
+
+    def delete_by_url_id(self, url_id: int) -> None:
+        for chunk in self._get_db_chunks_by_url_id(url_id):
+            self.session.delete(chunk)
+        self.session.commit()

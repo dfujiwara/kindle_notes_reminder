@@ -132,7 +132,7 @@ def create_semantic_chunking_prompt(content: str) -> str:
 Then divide the main content into semantic chunks. Each chunk should:
 - Contain a complete thought, idea, or section
 - Be 200-800 characters in length (target range)
-- Preserve the original meaning and context
+- Use the exact original text verbatim — do not paraphrase, summarize, or reword
 
 Text to process:
 {content}

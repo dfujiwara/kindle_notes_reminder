@@ -1,7 +1,11 @@
 """Tests for the URL content processing pipeline."""
 
+import json
+
 import pytest
-from src.url_ingestion.url_processor import process_url_content
+from src.url_ingestion.url_processor import (
+    process_url_content,
+)
 from src.url_ingestion.url_fetcher import FetchedContent, URLFetcherInterface
 from src.test_utils import (
     StubURLRepository,
@@ -10,6 +14,9 @@ from src.test_utils import (
     StubLLMClient,
 )
 from src.repositories.models import URLCreate, URLChunkCreate
+
+
+LONG_CONTENT = "A" * 100  # Must be >= 50 chars to pass semantic chunking check
 
 
 @pytest.fixture
@@ -22,7 +29,7 @@ def mock_simple_fetcher():
         return FetchedContent(
             url=url,
             title="Test Article",
-            content="Content paragraph.",
+            content=LONG_CONTENT,
         )
 
     return _mock_fetch
@@ -47,7 +54,8 @@ async def test_process_url_content_success(mock_simple_fetcher: URLFetcherInterf
     url_repo = StubURLRepository()
     chunk_repo = StubURLChunkRepository()
     embedding_client = StubEmbeddingClient()
-    llm_client = StubLLMClient(responses=["This is a test summary."])
+    semantic_response = json.dumps({"chunks": [LONG_CONTENT]})
+    llm_client = StubLLMClient(responses=[semantic_response, "This is a test summary."])
 
     test_url = "https://example.com/article"
 
@@ -75,11 +83,11 @@ async def test_process_url_content_success(mock_simple_fetcher: URLFetcherInterf
     assert summary_chunk.is_summary is True
     assert summary_chunk.content == "This is a test summary."
 
-    # Check that remaining chunks are text chunks with proper ordering
-    for i, chunk in enumerate(result.chunks[1:], start=1):
-        assert chunk.chunk_order == i
-        assert chunk.is_summary is False
-        assert len(chunk.content) > 0
+    # Check text chunk
+    text_chunk = result.chunks[1]
+    assert text_chunk.chunk_order == 1
+    assert text_chunk.is_summary is False
+    assert text_chunk.content == LONG_CONTENT
 
 
 @pytest.mark.asyncio
@@ -128,3 +136,33 @@ async def test_process_url_content_duplicate_url_returns_existing(
     assert result.url.url == test_url
     assert result.url.title == "Existing Article"
     assert len(result.chunks) == 2
+
+
+@pytest.mark.asyncio
+async def test_process_url_content_falls_back_to_paragraph_chunking(
+    mock_simple_fetcher: URLFetcherInterface,
+):
+    """Test that pipeline falls back to paragraph chunking when semantic chunking fails."""
+    url_repo = StubURLRepository()
+    chunk_repo = StubURLChunkRepository()
+    embedding_client = StubEmbeddingClient()
+    # First response (semantic chunking) is invalid JSON → triggers fallback
+    # Second response is the summary
+    llm_client = StubLLMClient(responses=["not valid json", "Summary text."])
+
+    result = await process_url_content(
+        "https://example.com/fallback",
+        url_repo,
+        chunk_repo,
+        llm_client,
+        embedding_client,
+        fetch_fn=mock_simple_fetcher,
+    )
+
+    # Should still succeed with paragraph-based chunks
+    assert result.url.url == "https://example.com/fallback"
+    assert result.chunks[0].is_summary is True
+    assert result.chunks[0].content == "Summary text."
+    # At least one paragraph chunk from the fallback
+    text_chunks = [c for c in result.chunks if not c.is_summary]
+    assert len(text_chunks) >= 1

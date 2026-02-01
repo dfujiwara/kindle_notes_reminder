@@ -135,6 +135,30 @@ async def get_urls(
     return URLListResponse(urls=url_responses)
 
 
+@router.delete(
+    "/urls/{url_id}",
+    summary="Delete URL and all its chunks",
+    description="Delete a URL and all associated chunks from the database.",
+    status_code=204,
+    responses={
+        404: {"description": "URL not found"},
+        204: {"description": "URL deleted successfully"},
+    },
+)
+async def delete_url(
+    url_id: int,
+    url_repository: URLRepositoryInterface = Depends(get_url_repository),
+    chunk_repository: URLChunkRepositoryInterface = Depends(get_urlchunk_repository),
+) -> None:
+    """Delete a URL and all its chunks."""
+    url = url_repository.get(url_id)
+    if not url:
+        raise HTTPException(status_code=404, detail="URL not found")
+
+    chunk_repository.delete_by_url_id(url_id)
+    url_repository.delete(url_id)
+
+
 @router.get(
     "/urls/{url_id}",
     summary="Get URL with all chunks",

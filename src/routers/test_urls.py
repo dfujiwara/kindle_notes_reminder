@@ -253,6 +253,55 @@ def test_get_url_with_chunks_success(setup_url_deps: URLDepsSetup):
     assert data["chunks"][2]["content"] == "Content 2"
 
 
+def test_delete_url_not_found(setup_url_deps: URLDepsSetup):
+    """Test DELETE /urls/{url_id} returns 404 when URL doesn't exist."""
+    setup_url_deps()
+
+    response = client.delete("/urls/999")
+
+    assert response.status_code == 404
+    data = response.json()
+    assert data["detail"] == "URL not found"
+
+
+def test_delete_url_success(setup_url_deps: URLDepsSetup):
+    """Test DELETE /urls/{url_id} deletes URL and all its chunks."""
+    url_repo, chunk_repo, _ = setup_url_deps()
+
+    # Create URL with chunks
+    url = url_repo.add(URLCreate(url="https://example.com", title="Example"))
+    chunk_repo.add(
+        URLChunkCreate(
+            content="Content 1",
+            content_hash="hash1",
+            url_id=url.id,
+            chunk_order=0,
+            is_summary=True,
+            embedding=[0.1] * 1536,
+        )
+    )
+    chunk_repo.add(
+        URLChunkCreate(
+            content="Content 2",
+            content_hash="hash2",
+            url_id=url.id,
+            chunk_order=1,
+            is_summary=False,
+            embedding=[0.2] * 1536,
+        )
+    )
+
+    response = client.delete(f"/urls/{url.id}")
+
+    assert response.status_code == 204
+
+    # Verify URL is gone
+    assert url_repo.get(url.id) is None
+
+    # Verify chunks are gone
+    assert chunk_repo.get_by_url_id(url.id) == []
+
+
 def test_get_chunk_with_context_stream_not_found(setup_url_deps: URLDepsSetup):
     """Test GET /urls/{url_id}/chunks/{chunk_id} returns 404 when chunk not found."""
     setup_url_deps()

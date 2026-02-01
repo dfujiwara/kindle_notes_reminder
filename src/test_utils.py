@@ -280,6 +280,9 @@ class StubURLChunkRepository(URLChunkRepositoryInterface):
     def count_with_embeddings(self) -> int:
         return len([c for c in self.chunks if c.embedding is not None])
 
+    def delete_by_url_id(self, url_id: int) -> None:
+        self.chunks = [c for c in self.chunks if c.url_id != url_id]
+
 
 class StubURLFetcher:
     """Stub implementation of URL fetcher for testing."""

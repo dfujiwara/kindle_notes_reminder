@@ -9,11 +9,13 @@ Includes utilities for parsing evaluation responses and validating scores.
 """
 
 import logging
+
+from src.database import SessionFactory
 from src.llm_interface import LLMClientInterface, LLMError, LLMPromptResponse
-from src.prompts import create_evaluation_prompt, SYSTEM_INSTRUCTIONS
+from src.prompts import SYSTEM_INSTRUCTIONS, create_evaluation_prompt
+from src.repositories.evaluation_repository import EvaluationRepository
 from src.repositories.interfaces import EvaluationRepositoryInterface
 from src.repositories.models import Evaluation, NoteRead
-
 
 logger = logging.getLogger(__name__)
 
@@ -157,3 +159,14 @@ async def evaluate_response(
         note_id=note.id,
     )
     repository.add(evaluation)
+
+
+async def evaluate_response_background(
+    llm_client: LLMClientInterface,
+    llm_interaction: LLMPromptResponse,
+    note: NoteRead,
+    session_factory: SessionFactory,
+) -> None:
+    with session_factory() as session:
+        repository = EvaluationRepository(session)
+        await evaluate_response(llm_client, llm_interaction, repository, note)

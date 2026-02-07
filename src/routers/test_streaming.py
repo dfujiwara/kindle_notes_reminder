@@ -6,75 +6,27 @@ for the specific note endpoint (/books/{book_id}/notes/{note_id} in notes.py).
 """
 
 import json
+from typing import Any
+
 import pytest
 from httpx import AsyncClient, ASGITransport
-from typing import Callable, Generator, Any
-from ..main import app
-from ..dependencies import (
-    get_book_repository,
-    get_note_repository,
-    get_llm_client,
-    get_evaluation_repository,
-)
-from ..repositories.models import NoteCreate, BookCreate
-from ..test_utils import (
-    StubNoteRepository,
-    StubBookRepository,
-    StubEvaluationRepository,
-    StubLLMClient,
-)
 
-# Type alias for the setup function returned by fixture
-SetupFunction = Callable[
-    [list[str] | None],
-    tuple[
-        StubNoteRepository, StubBookRepository, StubEvaluationRepository, StubLLMClient
-    ],
-]
-
+from src.main import app
+from src.repositories.models import NoteCreate, BookCreate
+from src.routers.conftest import StreamingDepsSetup
 
 evaluation_response = (
     "Score: 0.85\nEvaluation: Well-structured and informative response."
 )
 
 
-@pytest.fixture
-def setup_dependencies() -> Generator[SetupFunction, None, None]:
-    """Fixture to set up dependency overrides with proper cleanup"""
-
-    def _setup(
-        llm_responses: list[str] | None = None,
-    ) -> tuple[
-        StubNoteRepository, StubBookRepository, StubEvaluationRepository, StubLLMClient
-    ]:
-        if llm_responses is None:
-            llm_responses = ["Default additional context", evaluation_response]
-
-        # Create fresh instances for each test call
-        book_repo = StubBookRepository()
-        note_repo = StubNoteRepository()
-        evaluation_repo = StubEvaluationRepository()
-        llm_client = StubLLMClient(responses=llm_responses)
-
-        # Override dependencies
-        app.dependency_overrides[get_book_repository] = lambda: book_repo
-        app.dependency_overrides[get_note_repository] = lambda: note_repo
-        app.dependency_overrides[get_llm_client] = lambda: llm_client
-        app.dependency_overrides[get_evaluation_repository] = lambda: evaluation_repo
-
-        return note_repo, book_repo, evaluation_repo, llm_client
-
-    yield _setup
-
-    # Cleanup
-    app.dependency_overrides.clear()
-
-
 @pytest.mark.asyncio
-async def test_get_note_with_context_stream_success(setup_dependencies: SetupFunction):
+async def test_get_note_with_context_stream_success(
+    setup_streaming_deps: StreamingDepsSetup,
+):
     """Test streaming specific note endpoint returns proper SSE events"""
-    note_repo, book_repo, _, _ = setup_dependencies(
-        ["Specific note context", evaluation_response]
+    book_repo, note_repo, _, _ = setup_streaming_deps(
+        llm_responses=["Specific note context", evaluation_response]
     )
 
     # Create a book
@@ -138,10 +90,10 @@ async def test_get_note_with_context_stream_success(setup_dependencies: SetupFun
 
 @pytest.mark.asyncio
 async def test_get_note_with_context_stream_note_not_found(
-    setup_dependencies: SetupFunction,
+    setup_streaming_deps: StreamingDepsSetup,
 ):
     """Test streaming specific note endpoint when note doesn't exist"""
-    _, book_repo, _, _ = setup_dependencies(None)
+    book_repo, _, _, _ = setup_streaming_deps()
 
     # Create a book
     book = BookCreate(title="Test Book", author="Test Author")
@@ -159,10 +111,10 @@ async def test_get_note_with_context_stream_note_not_found(
 
 @pytest.mark.asyncio
 async def test_get_note_with_context_stream_wrong_book(
-    setup_dependencies: SetupFunction,
+    setup_streaming_deps: StreamingDepsSetup,
 ):
     """Test streaming when note belongs to different book"""
-    note_repo, book_repo, _, _ = setup_dependencies(None)
+    book_repo, note_repo, _, _ = setup_streaming_deps()
 
     # Create two books
     book1 = BookCreate(title="Book 1", author="Author 1")

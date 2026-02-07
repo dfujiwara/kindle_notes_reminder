@@ -20,7 +20,7 @@ class NoteRepository(NoteRepositoryInterface):
         # If no existing note found, create a new one
         db_note = Note.model_validate(note)
         self.session.add(db_note)
-        self.session.commit()
+        self.session.flush()
         self.session.refresh(db_note)
 
         return NoteRead.model_validate(db_note)
@@ -57,14 +57,14 @@ class NoteRepository(NoteRepositoryInterface):
         if not note:
             return
         self.session.delete(note)
-        self.session.commit()
+        self.session.flush()
 
     def delete_by_book_id(self, book_id: int) -> None:
         statement = select(Note).where(Note.book_id == book_id)
         notes = self.session.exec(statement).all()
         for note in notes:
             self.session.delete(note)
-        self.session.commit()
+        self.session.flush()
 
     def get_random(self) -> NoteRead | None:
         statement = select(Note).join(Book).order_by(func.random()).limit(1)

@@ -11,15 +11,16 @@ from fastapi.responses import StreamingResponse
 from src.context_generation.additional_context import (
     get_additional_context_stream,
 )
+from src.database import SessionFactory
 from src.dependencies import (
     get_book_repository,
-    get_evaluation_repository,
     get_llm_client,
     get_note_repository,
+    get_session_factory,
     get_url_repository,
     get_urlchunk_repository,
 )
-from src.evaluation_service import evaluate_response
+from src.evaluation_service import evaluate_response_background
 from src.llm_interface import LLMClientInterface
 from src.prompts import (
     SYSTEM_INSTRUCTIONS,
@@ -28,7 +29,6 @@ from src.prompts import (
 )
 from src.repositories.interfaces import (
     BookRepositoryInterface,
-    EvaluationRepositoryInterface,
     NoteRepositoryInterface,
 )
 from src.repositories.models import (
@@ -127,12 +127,10 @@ async def get_random_content_v2(
     background_tasks: BackgroundTasks,
     book_repository: BookRepositoryInterface = Depends(get_book_repository),
     note_repository: NoteRepositoryInterface = Depends(get_note_repository),
-    evaluation_repository: EvaluationRepositoryInterface = Depends(
-        get_evaluation_repository
-    ),
     url_repository: URLRepositoryInterface = Depends(get_url_repository),
     chunk_repository: URLChunkRepositoryInterface = Depends(get_urlchunk_repository),
     llm_client: LLMClientInterface = Depends(get_llm_client),
+    session_factory: SessionFactory = Depends(get_session_factory),
 ) -> StreamingResponse:
     # Select random content (note or URL chunk) with weighted distribution
     selection = select_random_content(note_repository, chunk_repository)
@@ -182,11 +180,11 @@ async def get_random_content_v2(
         # Evaluate response in background (only for notes, not URL chunks)
         if llm_prompt_response and content_for_evaluation:
             background_tasks.add_task(
-                evaluate_response,
+                evaluate_response_background,
                 llm_client,
                 llm_prompt_response,
-                evaluation_repository,
                 content_for_evaluation,
+                session_factory,
             )
 
     return StreamingResponse(

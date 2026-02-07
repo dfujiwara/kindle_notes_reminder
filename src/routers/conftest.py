@@ -19,7 +19,9 @@ from src.dependencies import (
     get_url_repository,
     get_urlchunk_repository,
     get_url_fetcher,
+    get_session_factory,
 )
+from src.database import SessionFactory
 from src.test_utils import (
     StubBookRepository,
     StubNoteRepository,
@@ -68,6 +70,15 @@ RandomV2DepsSetup = Callable[
         StubEvaluationRepository,
         StubURLRepository,
         StubURLChunkRepository,
+    ],
+]
+StreamingDepsSetup = Callable[
+    ...,
+    tuple[
+        StubBookRepository,
+        StubNoteRepository,
+        StubEvaluationRepository,
+        StubLLMClient,
     ],
 ]
 
@@ -258,7 +269,9 @@ def setup_notebook_deps() -> Generator[NotebookDepsSetup, None, None]:
 
 
 @pytest.fixture
-def setup_random_v2_deps() -> Generator[RandomV2DepsSetup, None, None]:
+def setup_random_v2_deps(
+    session_factory: SessionFactory,
+) -> Generator[RandomV2DepsSetup, None, None]:
     """
     Setup dependencies for /random/v2 endpoint (book, note, evaluation, URL, chunk).
 
@@ -288,12 +301,64 @@ def setup_random_v2_deps() -> Generator[RandomV2DepsSetup, None, None]:
         app.dependency_overrides[get_evaluation_repository] = lambda: eval_repo
         app.dependency_overrides[get_url_repository] = lambda: url_repo
         app.dependency_overrides[get_urlchunk_repository] = lambda: chunk_repo
+        app.dependency_overrides[get_session_factory] = lambda: session_factory
         # Provide multiple responses: one for context generation, one for evaluation
         app.dependency_overrides[get_llm_client] = lambda: StubLLMClient(
             responses=["Test LLM response", "Score: 0.8\nEvaluation: Good response"]
         )
 
         return book_repo, note_repo, eval_repo, url_repo, chunk_repo
+
+    yield _setup
+    app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def setup_streaming_deps(
+    session_factory: SessionFactory,
+) -> Generator[StreamingDepsSetup, None, None]:
+    """
+    Setup dependencies for SSE streaming endpoints (book, note, evaluation, LLM).
+
+    Accepts optional llm_responses to configure the stub LLM client.
+    Used in test_streaming.py.
+
+    Usage:
+        def test_streaming(setup_streaming_deps):
+            book_repo, note_repo, eval_repo, llm_client = setup_streaming_deps()
+            # or with custom LLM responses:
+            book_repo, note_repo, eval_repo, llm_client = setup_streaming_deps(
+                llm_responses=["Context response", "Score: 0.9\\nEvaluation: Great"]
+            )
+            # Cleanup is automatic!
+    """
+
+    def _setup(
+        llm_responses: list[str] | None = None,
+    ) -> tuple[
+        StubBookRepository,
+        StubNoteRepository,
+        StubEvaluationRepository,
+        StubLLMClient,
+    ]:
+        if llm_responses is None:
+            llm_responses = [
+                "Default additional context",
+                "Score: 0.85\nEvaluation: Well-structured and informative response.",
+            ]
+
+        book_repo = StubBookRepository()
+        note_repo = StubNoteRepository()
+        eval_repo = StubEvaluationRepository()
+        llm_client = StubLLMClient(responses=llm_responses)
+
+        app.dependency_overrides[get_book_repository] = lambda: book_repo
+        app.dependency_overrides[get_note_repository] = lambda: note_repo
+        app.dependency_overrides[get_evaluation_repository] = lambda: eval_repo
+        app.dependency_overrides[get_llm_client] = lambda: llm_client
+        app.dependency_overrides[get_session_factory] = lambda: session_factory
+
+        return book_repo, note_repo, eval_repo, llm_client
 
     yield _setup
     app.dependency_overrides.clear()

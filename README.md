@@ -43,9 +43,9 @@ Search your notes:
 curl "http://localhost:8000/search?q=your+query&limit=5"
 ```
 
-Get a random note with AI context:
+Get random content with AI context:
 ```bash
-curl "http://localhost:8000/random"
+curl "http://localhost:8000/random/v2"
 ```
 
 ## Development

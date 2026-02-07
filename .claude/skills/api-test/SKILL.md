@@ -146,8 +146,7 @@ API Testing Menu
     - GET /books/{id}/notes/{id} (SSE)
     - GET /notes/{id}/evaluations
 
-[3] Random & Discovery (2 endpoints)
-    - GET /random (SSE)
+[3] Random & Discovery (1 endpoint)
     - GET /random/v2 (SSE)
 
 [4] URL Content (4 endpoints)
@@ -167,7 +166,7 @@ What would you like to test? (0-5, or comma-separated for multiple)
 **Supported inputs:**
 - Single number: `2` → test category 2
 - Multiple categories: `1,2,4` → test categories 1, 2, and 4
-- `0` → test all 15 endpoints
+- `0` → test all 14 endpoints
 - Exit: `exit` or `quit`
 
 ### Step 5: Execute Tests
@@ -185,7 +184,7 @@ curl -X GET "http://localhost:8000/books" \
 **For SSE streaming endpoints:**
 ```bash
 # Capture first 30 lines (metadata + context chunks + completion)
-timeout 5s curl -N "http://localhost:8000/random" \
+timeout 5s curl -N "http://localhost:8000/random/v2" \
   -H "Accept: text/event-stream" \
   -w "\n\nHTTP Status: %{http_code}\nConnect Time: %{time_connect}s\n" \
   -s 2>/dev/null | head -n 30 | tee /tmp/api_test_sse.txt
@@ -240,11 +239,11 @@ Response Preview (first 500 chars):
 
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Endpoint: GET /random (SSE Stream)
+Endpoint: GET /random/v2 (SSE Stream)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Command:
-curl -N "http://localhost:8000/random"
+curl -N "http://localhost:8000/random/v2"
 
 Results:
   HTTP Status: 200 OK ✓
@@ -270,7 +269,7 @@ After all tests, show summary:
 
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-API Test Summary (15 endpoints)
+API Test Summary (14 endpoints)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Health & General (1/1 passed)
@@ -283,8 +282,7 @@ Books & Notes (5/5 passed)
   ✓ GET /books/{id}/notes/{id} (SSE)      200  0.089s
   ✓ GET /notes/{id}/evaluations           200  0.034s
 
-Random & Discovery (2/2 passed)
-  ✓ GET /random (SSE)                     200  0.123s
+Random & Discovery (1/1 passed)
   ✓ GET /random/v2 (SSE)                  200  0.156s
 
 URL Content (4/4 passed)
@@ -297,7 +295,7 @@ Search (1/1 passed)
   ✓ GET /search?q=test                    200  0.234s
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Total: 15/15 passed (100%)
+Total: 14/14 passed (100%)
 Average Response Time: 0.367s
 Slowest Endpoint: POST /urls (2.345s) - loading/parsing URL
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -339,7 +337,6 @@ DELETE FROM urls WHERE id = {url_id};
 - `GET /notes/{note_id}/evaluations` - Get evaluation history
 
 ### Random & Discovery
-- `GET /random` - Random Kindle note with AI context (SSE)
 - `GET /random/v2` - Random content (note or URL chunk) with unified schema (SSE)
 
 ### URL Content Management
@@ -403,7 +400,7 @@ User: /api-test
 [System checks data - finds none]
 [System uploads test notebook and URL]
 [User selects option 0 - Run all endpoints]
-[System executes all 15 endpoints]
+[System executes all 14 endpoints]
 [Shows summary with pass rates and timings]
 [Asks about cleanup]
 [User says no]
@@ -414,7 +411,7 @@ User: /api-test
 ```
 User: /api-test
 [User selects 2,4 - Books & Notes + URL Content]
-[System tests 9 endpoints total]
+[System tests 8 endpoints total]
 [Shows grouped results by category]
 ```
 

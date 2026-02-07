@@ -125,12 +125,11 @@ FastAPI application for managing Kindle notes with AI-powered features, embeddin
 - `GET /urls/{url_id}/chunks/{chunk_id}` - Specific chunk with AI context (SSE stream)
 
 ### Content Discovery
-- `GET /random` - Random Kindle note with AI context (SSE stream)
 - `GET /random/v2` - Random content (note or URL chunk) with unified schema (SSE stream)
 - `GET /books/{book_id}/notes/{note_id}` - Specific note with AI context (SSE stream)
 - `GET /search?q={query}&limit={limit}` - Semantic search across Kindle notes (max 50, threshold 0.7)
 
-**SSE Streaming Endpoints** (`/random`, `/random/v2`, `/books/{book_id}/notes/{note_id}`, `/urls/{url_id}/chunks/{chunk_id}`):
+**SSE Streaming Endpoints** (`/random/v2`, `/books/{book_id}/notes/{note_id}`, `/urls/{url_id}/chunks/{chunk_id}`):
 - Returns `text/event-stream` with Server-Sent Events
 - Event types: `metadata` (content + related items), `context_chunk` (AI context), `context_complete` (end), `error`
 - AI context streams as it generates, improving perceived performance

@@ -40,7 +40,7 @@ app = FastAPI(
 
     1. Upload your Kindle notebook HTML files via `/notebooks`
     2. Browse your books and notes via `/books`
-    3. Get AI-enhanced random notes via `/random`
+    3. Get AI-enhanced random content via `/random/v2`
     4. Search semantically across all notes via `/search`
     """,
     version="1.0.0",

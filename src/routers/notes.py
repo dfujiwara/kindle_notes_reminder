@@ -11,10 +11,12 @@ from fastapi.responses import StreamingResponse
 from src.context_generation.additional_context import (
     get_additional_context_stream,
 )
+from src.database import SessionFactory
 from src.dependencies import (
     get_book_repository,
     get_llm_client,
     get_note_repository,
+    get_session_factory,
 )
 from src.evaluation_service import evaluate_response_background
 from src.llm_interface import LLMClientInterface
@@ -73,6 +75,7 @@ async def get_note_with_context_stream(
     book_repository: BookRepositoryInterface = Depends(get_book_repository),
     note_repository: NoteRepositoryInterface = Depends(get_note_repository),
     llm_client: LLMClientInterface = Depends(get_llm_client),
+    session_factory: SessionFactory = Depends(get_session_factory),
 ) -> StreamingResponse:
     # Fetch and validate data before streaming
     note = note_repository.get(book_id=book_id, note_id=note_id)
@@ -131,6 +134,7 @@ async def get_note_with_context_stream(
                 llm_client,
                 llm_prompt_response,
                 note,
+                session_factory,
             )
 
     return StreamingResponse(

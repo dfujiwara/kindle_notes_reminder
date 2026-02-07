@@ -8,7 +8,7 @@ to route handlers.
 
 from fastapi import Depends
 from sqlmodel import Session
-from src.database import get_session
+from src.database import get_session, session_scope, SessionFactory
 from src.repositories.book_repository import BookRepository
 from src.repositories.note_repository import NoteRepository
 from src.repositories.evaluation_repository import EvaluationRepository
@@ -66,6 +66,11 @@ def get_llm_client() -> LLMClientInterface:
 def get_url_fetcher() -> URLFetcherInterface:
     """Get the URL fetcher function."""
     return fetch_url_content
+
+
+def get_session_factory() -> SessionFactory:
+    """Get a factory that creates new database sessions (for background tasks)."""
+    return session_scope
 
 
 def get_url_repository(

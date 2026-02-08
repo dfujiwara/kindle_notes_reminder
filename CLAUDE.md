@@ -11,8 +11,6 @@ This project uses `uv` (not pip/poetry):
 
 **IMPORTANT**: Always run `uv run ruff format`, `uv run pyright`, and `uv run pytest` before completing any task.
 
-**Database migrations**: `uv run alembic revision --autogenerate -m "description"` / `uv run alembic upgrade head`
-
 **Dev server**: `docker compose build --no-cache && docker compose up -d`
 
 ## Testing Patterns

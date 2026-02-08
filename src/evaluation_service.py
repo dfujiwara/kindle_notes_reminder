@@ -142,7 +142,7 @@ async def evaluate_llm_response(
     return _parse_evaluation_response(evaluation_response)
 
 
-async def evaluate_response(
+async def _evaluate_response(
     llm_client: LLMClientInterface,
     llmInteraction: LLMPromptResponse,
     repository: EvaluationRepositoryInterface,
@@ -169,4 +169,4 @@ async def evaluate_response_background(
 ) -> None:
     with session_factory() as session:
         repository = EvaluationRepository(session)
-        await evaluate_response(llm_client, llm_interaction, repository, note)
+        await _evaluate_response(llm_client, llm_interaction, repository, note)

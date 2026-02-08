@@ -15,6 +15,10 @@ from src.repositories.models import (
     URLResponse,
     URLChunkCreate,
     URLChunkRead,
+    TweetThreadCreate,
+    TweetThreadResponse,
+    TweetCreate,
+    TweetRead,
 )
 from src.repositories.interfaces import (
     BookRepositoryInterface,
@@ -24,6 +28,10 @@ from src.repositories.interfaces import (
 from src.url_ingestion.repositories.interfaces import (
     URLRepositoryInterface,
     URLChunkRepositoryInterface,
+)
+from src.tweet_ingestion.repositories.interfaces import (
+    TweetThreadRepositoryInterface,
+    TweetRepositoryInterface,
 )
 from src.embedding_interface import EmbeddingClientInterface, EmbeddingError
 from src.llm_interface import LLMClientInterface, LLMError
@@ -356,3 +364,136 @@ class StubLLMClient(LLMClientInterface):
         chunk_size = 10
         for i in range(0, len(response), chunk_size):
             yield response[i : i + chunk_size]
+
+
+class StubTweetThreadRepository(TweetThreadRepositoryInterface):
+    """Stub implementation of TweetThreadRepository for testing."""
+
+    def __init__(self):
+        self.threads: list[TweetThreadResponse] = []
+
+    def add(self, thread: TweetThreadCreate) -> TweetThreadResponse:
+        # Check for duplicate root_tweet_id
+        existing = self.get_by_root_tweet_id(thread.root_tweet_id)
+        if existing:
+            return existing
+
+        thread_response = TweetThreadResponse(
+            id=len(self.threads) + 1,
+            root_tweet_id=thread.root_tweet_id,
+            author_username=thread.author_username,
+            author_display_name=thread.author_display_name,
+            title=thread.title,
+            tweet_count=0,
+            fetched_at=datetime.now(timezone.utc),
+            created_at=datetime.now(timezone.utc),
+        )
+        self.threads.append(thread_response)
+        return thread_response
+
+    def get(self, id: int) -> TweetThreadResponse | None:
+        return next((t for t in self.threads if t.id == id), None)
+
+    def get_by_root_tweet_id(self, root_tweet_id: str) -> TweetThreadResponse | None:
+        return next((t for t in self.threads if t.root_tweet_id == root_tweet_id), None)
+
+    def get_by_ids(self, ids: list[int]) -> list[TweetThreadResponse]:
+        return [t for t in self.threads if t.id in ids]
+
+    def list_threads(self) -> list[TweetThreadResponse]:
+        return self.threads
+
+    def update_tweet_count(self, thread_id: int, tweet_count: int) -> None:
+        for thread in self.threads:
+            if thread.id == thread_id:
+                # Create a new response with updated tweet_count
+                idx = self.threads.index(thread)
+                self.threads[idx] = TweetThreadResponse(
+                    id=thread.id,
+                    root_tweet_id=thread.root_tweet_id,
+                    author_username=thread.author_username,
+                    author_display_name=thread.author_display_name,
+                    title=thread.title,
+                    tweet_count=tweet_count,
+                    fetched_at=thread.fetched_at,
+                    created_at=thread.created_at,
+                )
+                break
+
+    def delete(self, thread_id: int) -> None:
+        self.threads = [t for t in self.threads if t.id != thread_id]
+
+
+class StubTweetRepository(TweetRepositoryInterface):
+    """Stub implementation of TweetRepository for testing."""
+
+    def __init__(self):
+        self.tweets: list[TweetRead] = []
+
+    def add(self, tweet: TweetCreate) -> TweetRead:
+        # Check for duplicate tweet_id
+        existing = self.get_by_tweet_id(tweet.tweet_id)
+        if existing:
+            return existing
+
+        tweet_read = TweetRead(
+            id=len(self.tweets) + 1,
+            tweet_id=tweet.tweet_id,
+            author_username=tweet.author_username,
+            author_display_name=tweet.author_display_name,
+            content=tweet.content,
+            media_urls=tweet.media_urls,
+            thread_id=tweet.thread_id,
+            position_in_thread=tweet.position_in_thread,
+            tweeted_at=tweet.tweeted_at,
+            embedding=tweet.embedding,
+            created_at=datetime.now(timezone.utc),
+        )
+        self.tweets.append(tweet_read)
+        return tweet_read
+
+    def get(self, id: int, thread_id: int) -> TweetRead | None:
+        return next(
+            (t for t in self.tweets if t.id == id and t.thread_id == thread_id),
+            None,
+        )
+
+    def get_by_id(self, id: int) -> TweetRead | None:
+        return next((t for t in self.tweets if t.id == id), None)
+
+    def get_by_tweet_id(self, tweet_id: str) -> TweetRead | None:
+        return next((t for t in self.tweets if t.tweet_id == tweet_id), None)
+
+    def get_random(self) -> TweetRead | None:
+        return self.tweets[0] if self.tweets else None
+
+    def get_by_thread_id(self, thread_id: int) -> list[TweetRead]:
+        return sorted(
+            [t for t in self.tweets if t.thread_id == thread_id],
+            key=lambda t: t.position_in_thread,
+        )
+
+    def find_similar_tweets(self, tweet: TweetRead, limit: int = 5) -> list[TweetRead]:
+        """Stub: returns first `limit` tweets from same thread (excluding input)."""
+        return [
+            t
+            for t in self.tweets
+            if t.id != tweet.id and t.thread_id == tweet.thread_id
+        ][:limit]
+
+    def search_tweets_by_embedding(
+        self, embedding: Embedding, limit: int = 10, similarity_threshold: float = 0.5
+    ) -> list[TweetRead]:
+        """Stub: returns first `limit` tweets."""
+        return self.tweets[:limit]
+
+    def get_tweet_counts_by_thread_ids(self, thread_ids: list[int]) -> dict[int, int]:
+        result: dict[int, int] = {}
+        thread_ids_set = set(thread_ids)
+        for tweet in self.tweets:
+            if tweet.thread_id in thread_ids_set:
+                result[tweet.thread_id] = result.get(tweet.thread_id, 0) + 1
+        return result
+
+    def count_with_embeddings(self) -> int:
+        return len([t for t in self.tweets if t.embedding is not None])

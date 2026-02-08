@@ -12,6 +12,8 @@ engine = create_engine(
 )
 
 
+# A callable that returns a context-managed Session which auto-commits on exit.
+# Used by background tasks that need their own transaction scope.
 SessionFactory = Callable[[], AbstractContextManager[Session]]
 
 

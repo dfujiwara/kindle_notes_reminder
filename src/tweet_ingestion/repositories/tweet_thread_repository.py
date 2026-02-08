@@ -55,6 +55,7 @@ class TweetThreadRepository(TweetThreadRepositoryInterface):
             return
         thread.tweet_count = tweet_count
         self.session.add(thread)
+        self.session.flush()
 
     def delete(self, thread_id: int) -> None:
         thread = self.session.get(TweetThread, thread_id)

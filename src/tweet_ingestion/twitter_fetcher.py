@@ -4,7 +4,6 @@ Twitter fetching and content extraction utilities.
 Fetches tweets and threads using Twitter API v2 with Bearer Token authentication.
 """
 
-import asyncio
 import httpx
 import logging
 import re
@@ -83,12 +82,12 @@ async def fetch_tweet(
         RateLimitError: If rate limit exceeded
     """
     bearer_token = bearer_token or _get_bearer_token()
-    timeout_val = timeout or getattr(settings, "twitter_fetch_timeout", 30)
+    timeout_val = timeout or settings.twitter_fetch_timeout
 
     url = f"{TWITTER_API_BASE}/tweets/{tweet_id}"
     params = {
-        "tweet.fields": "author_id,conversation_id,created_at,in_reply_to_user_id,attachments",
-        "expansions": "author_id,attachments.media_keys",
+        "tweet.fields": "author_id,conversation_id,created_at,referenced_tweets,attachments",
+        "expansions": "author_id,attachments.media_keys,referenced_tweets.id",
         "user.fields": "username,name",
         "media.fields": "url,preview_image_url",
     }
@@ -166,7 +165,7 @@ async def fetch_thread(
         ThreadTooLargeError: If thread exceeds max_depth
     """
     bearer_token = bearer_token or _get_bearer_token()
-    timeout_val = timeout or getattr(settings, "twitter_fetch_timeout", 30)
+    timeout_val = timeout or settings.twitter_fetch_timeout
 
     # First, fetch the initial tweet to get conversation_id and author
     initial_tweet = await fetch_tweet(tweet_id, bearer_token, timeout_val)
@@ -214,7 +213,7 @@ async def fetch_thread(
     tweets.sort(key=lambda t: t.tweeted_at or datetime.min)
 
     # Find the root tweet
-    root_tweet = tweets[0] if tweets else initial_tweet
+    root_tweet = tweets[0]
 
     return FetchedThread(
         root_tweet_id=root_tweet.tweet_id,
@@ -239,8 +238,8 @@ async def _fetch_conversation_tweets(
     url = f"{TWITTER_API_BASE}/tweets/search/recent"
     params = {
         "query": f"conversation_id:{conversation_id} from:{author_username}",
-        "tweet.fields": "author_id,conversation_id,created_at,in_reply_to_user_id,attachments",
-        "expansions": "author_id,attachments.media_keys",
+        "tweet.fields": "author_id,conversation_id,created_at,referenced_tweets,attachments",
+        "expansions": "author_id,attachments.media_keys,referenced_tweets.id",
         "user.fields": "username,name",
         "media.fields": "url,preview_image_url",
         "max_results": min(max_results, 100),  # API limit is 100
@@ -320,29 +319,26 @@ async def _fetch_thread_recursive(
             if parent.author_username == author_username:
                 tweets.insert(0, parent)
                 seen_ids.add(parent.tweet_id)
-            current = parent
+                current = parent
+            else:
+                # Different author means we've left the thread
+                break
         except TweetNotFoundError:
             # Parent deleted, stop traversal
             break
-        except RateLimitError:
-            # Respect rate limits with backoff
-            await asyncio.sleep(1)
 
     return tweets
 
 
 def _get_bearer_token() -> str:
     """Get Twitter Bearer Token from settings."""
-    token = getattr(settings, "twitter_bearer_token", None)
+    token = settings.twitter_bearer_token
     if not token:
         raise TwitterFetchError(
             "Twitter Bearer Token not configured. "
             "Set TWITTER_BEARER_TOKEN environment variable."
         )
-    # Handle SecretStr if configured that way
-    if hasattr(token, "get_secret_value"):
-        return token.get_secret_value()
-    return str(token)
+    return token.get_secret_value()
 
 
 def _parse_tweet_response(data: dict[str, Any]) -> FetchedTweet:
@@ -379,23 +375,23 @@ def _parse_single_tweet(
             if url:
                 media_urls.append(url)
 
+    # Extract in_reply_to_tweet_id from referenced_tweets (v2 API)
+    in_reply_to_tweet_id: str | None = None
+    for ref in tweet_data.get("referenced_tweets", []):
+        if ref.get("type") == "replied_to":
+            in_reply_to_tweet_id = ref["id"]
+            break
+
     # Parse created_at
-    created_at = None
-    if "created_at" in tweet_data:
-        try:
-            created_at = datetime.fromisoformat(
-                tweet_data["created_at"].replace("Z", "+00:00")
-            )
-        except ValueError:
-            pass
+    created_at = datetime.fromisoformat(tweet_data["created_at"].replace("Z", "+00:00"))
 
     return FetchedTweet(
         tweet_id=tweet_data["id"],
         author_username=author.get("username", "unknown"),
         author_display_name=author.get("name", "Unknown"),
         content=tweet_data.get("text", ""),
+        tweeted_at=created_at,
         media_urls=media_urls,
         conversation_id=tweet_data.get("conversation_id"),
-        in_reply_to_tweet_id=tweet_data.get("in_reply_to_status_id"),
-        tweeted_at=created_at,
+        in_reply_to_tweet_id=in_reply_to_tweet_id,
     )

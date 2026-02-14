@@ -41,10 +41,10 @@ class FetchedTweet:
     author_username: str
     author_display_name: str
     content: str
-    media_urls: list[str] = field(default_factory=list[str])
+    tweeted_at: datetime
+    media_urls: list[str] = field(default_factory=lambda: [])
     conversation_id: str | None = None
     in_reply_to_tweet_id: str | None = None
-    tweeted_at: datetime | None = None
 
 
 @dataclass
@@ -54,7 +54,7 @@ class FetchedThread:
     root_tweet_id: str
     author_username: str
     author_display_name: str
-    tweets: list[FetchedTweet] = field(default_factory=list[FetchedTweet])
+    tweets: list[FetchedTweet] = field(default_factory=lambda: [])
 
 
 # Type alias for thread fetcher function

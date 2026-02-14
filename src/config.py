@@ -53,6 +53,10 @@ class Settings(BaseSettings):
     max_url_content_size: int = 500_000  # 500KB HTML limit
     url_fetch_timeout: int = 30  # seconds
 
+    # Twitter ingestion configuration
+    twitter_bearer_token: SecretStr | None = None
+    twitter_fetch_timeout: int = 30  # seconds
+
 
 # Create global settings instance
 # This will validate and fail-fast on import if required config is missing

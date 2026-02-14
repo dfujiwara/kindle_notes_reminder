@@ -220,6 +220,17 @@ class TestFetchTweet:
             await fetch_tweet("1234567890", bearer_token="test_token")
 
     @pytest.mark.asyncio
+    @respx.mock
+    async def test_fetch_tweet_connection_error(self):
+        """Test that connection errors raise TwitterFetchError."""
+        respx.get("https://api.twitter.com/2/tweets/1234567890").mock(
+            side_effect=httpx.ConnectError("Connection refused")
+        )
+
+        with pytest.raises(TwitterFetchError, match="Request failed"):
+            await fetch_tweet("1234567890", bearer_token="test_token")
+
+    @pytest.mark.asyncio
     async def test_fetch_tweet_no_bearer_token(self):
         """Test that missing bearer token raises TwitterFetchError."""
         with patch(
@@ -439,7 +450,7 @@ class TestFetchThreadFallback:
                 "text": "Reply tweet",
                 "author_id": "12345",
                 "conversation_id": "tweet_1",
-                "in_reply_to_status_id": "tweet_1",
+                "referenced_tweets": [{"type": "replied_to", "id": "tweet_1"}],
                 "created_at": "2024-01-15T10:01:00.000Z",
             },
             "includes": {
@@ -480,3 +491,70 @@ class TestFetchThreadFallback:
         # Should have both tweets via recursive traversal
         assert len(result.tweets) == 2
         assert result.root_tweet_id == "tweet_1"
+
+    @pytest.mark.asyncio
+    @respx.mock
+    async def test_recursive_traversal_stops_at_different_author(self):
+        """Test that recursive traversal stops when it encounters a different author."""
+        # tweet_3 replies to tweet_2, which replies to tweet_1 (different author)
+        tweet_3 = {
+            "data": {
+                "id": "tweet_3",
+                "text": "My follow-up",
+                "author_id": "author_a",
+                "conversation_id": "tweet_1",
+                "referenced_tweets": [{"type": "replied_to", "id": "tweet_2"}],
+                "created_at": "2024-01-15T10:02:00.000Z",
+            },
+            "includes": {
+                "users": [{"id": "author_a", "username": "alice", "name": "Alice"}]
+            },
+        }
+
+        tweet_2 = {
+            "data": {
+                "id": "tweet_2",
+                "text": "Alice continues",
+                "author_id": "author_a",
+                "conversation_id": "tweet_1",
+                "referenced_tweets": [{"type": "replied_to", "id": "tweet_1"}],
+                "created_at": "2024-01-15T10:01:00.000Z",
+            },
+            "includes": {
+                "users": [{"id": "author_a", "username": "alice", "name": "Alice"}]
+            },
+        }
+
+        tweet_1_different_author = {
+            "data": {
+                "id": "tweet_1",
+                "text": "Someone else started this",
+                "author_id": "author_b",
+                "conversation_id": "tweet_1",
+                "created_at": "2024-01-15T10:00:00.000Z",
+            },
+            "includes": {
+                "users": [{"id": "author_b", "username": "bob", "name": "Bob"}]
+            },
+        }
+
+        respx.get("https://api.twitter.com/2/tweets/tweet_3").mock(
+            return_value=Response(200, json=tweet_3)
+        )
+        respx.get("https://api.twitter.com/2/tweets/search/recent").mock(
+            return_value=Response(403)
+        )
+        respx.get("https://api.twitter.com/2/tweets/tweet_2").mock(
+            return_value=Response(200, json=tweet_2)
+        )
+        respx.get("https://api.twitter.com/2/tweets/tweet_1").mock(
+            return_value=Response(200, json=tweet_1_different_author)
+        )
+
+        result = await fetch_thread("tweet_3", bearer_token="test_token")
+
+        # Should only include alice's tweets, stopping before bob's tweet
+        assert len(result.tweets) == 2
+        assert all(t.author_username == "alice" for t in result.tweets)
+        assert result.tweets[0].tweet_id == "tweet_2"
+        assert result.tweets[1].tweet_id == "tweet_3"

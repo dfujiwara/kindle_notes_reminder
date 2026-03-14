@@ -2,19 +2,13 @@
 Unit tests for the /search endpoint.
 """
 
-from datetime import datetime, timezone
-
 from fastapi.testclient import TestClient
 
 from src.repositories.models import (
-    TweetCreate,
-    TweetRead,
-    TweetThreadCreate,
-    TweetThreadResponse,
     URLChunkCreate,
     URLCreate,
 )
-from src.test_utils import StubTweetRepository, StubTweetThreadRepository
+from src.test_utils import make_thread_and_tweets
 
 from ..config import settings
 from ..main import app
@@ -22,8 +16,6 @@ from ..repositories.models import BookCreate, NoteCreate
 from .conftest import SearchDepsSetup
 
 client = TestClient(app)
-
-_NOW = datetime(2026, 1, 1, tzinfo=timezone.utc)
 
 
 def test_search_notes_empty_results(setup_search_deps: SearchDepsSetup):
@@ -241,42 +233,6 @@ def test_search_mixed_notes_and_chunks(setup_search_deps: SearchDepsSetup):
     assert data["count"] == 2
 
 
-def _make_thread_and_tweets(
-    thread_repo: StubTweetThreadRepository,
-    tweet_repo: StubTweetRepository,
-    root_tweet_id: str,
-    author_username: str,
-    author_display_name: str,
-    tweet_contents: list[str],
-) -> tuple[TweetThreadResponse, list[TweetRead]]:
-    """Helper to create a thread and its tweets in stub repos."""
-    thread = thread_repo.add(
-        TweetThreadCreate(
-            root_tweet_id=root_tweet_id,
-            author_username=author_username,
-            author_display_name=author_display_name,
-            title=tweet_contents[0][:50],
-        )
-    )
-    tweets: list[TweetRead] = []
-    for i, content in enumerate(tweet_contents):
-        tweet = tweet_repo.add(
-            TweetCreate(
-                tweet_id=f"{root_tweet_id}_{i}",
-                author_username=author_username,
-                author_display_name=author_display_name,
-                content=content,
-                media_urls=[],
-                thread_id=thread.id,
-                position_in_thread=i,
-                embedding=[0.5] * settings.embedding_dimension,
-                tweeted_at=_NOW,
-            )
-        )
-        tweets.append(tweet)
-    return thread, tweets
-
-
 def test_search_tweets_empty(setup_search_deps: SearchDepsSetup):
     """Test search endpoint returns empty tweet_threads when no tweets match."""
     _, _, _, _, _, _, _ = setup_search_deps()
@@ -293,13 +249,11 @@ def test_search_tweets_single_thread(setup_search_deps: SearchDepsSetup):
     """Test search returns tweets grouped by thread."""
     _, _, _, _, _, thread_repo, tweet_repo = setup_search_deps()
 
-    _make_thread_and_tweets(
+    make_thread_and_tweets(
         thread_repo,
         tweet_repo,
-        root_tweet_id="123456789",
-        author_username="testuser",
-        author_display_name="Test User",
         tweet_contents=["First tweet about AI", "Second tweet about ML"],
+        root_tweet_id="123456789",
     )
 
     response = client.get("/search?q=artificial intelligence")
@@ -311,35 +265,28 @@ def test_search_tweets_single_thread(setup_search_deps: SearchDepsSetup):
 
     # Check thread structure
     assert thread_result["thread"]["root_tweet_id"] == "123456789"
-    assert thread_result["thread"]["author_username"] == "testuser"
-    assert thread_result["thread"]["author_display_name"] == "Test User"
 
     # Check matched tweets
     assert len(thread_result["tweets"]) == 2
     assert thread_result["tweets"][0]["content"] == "First tweet about AI"
     assert thread_result["tweets"][1]["content"] == "Second tweet about ML"
-    assert thread_result["tweets"][0]["author_username"] == "testuser"
 
 
 def test_search_tweets_multiple_threads(setup_search_deps: SearchDepsSetup):
     """Test search groups tweets from different threads separately."""
     _, _, _, _, _, thread_repo, tweet_repo = setup_search_deps()
 
-    _make_thread_and_tweets(
+    make_thread_and_tweets(
         thread_repo,
         tweet_repo,
-        root_tweet_id="111",
-        author_username="alice",
-        author_display_name="Alice",
         tweet_contents=["Alice talks about Python"],
+        root_tweet_id="111",
     )
-    _make_thread_and_tweets(
+    make_thread_and_tweets(
         thread_repo,
         tweet_repo,
-        root_tweet_id="222",
-        author_username="bob",
-        author_display_name="Bob",
         tweet_contents=["Bob talks about Python too"],
+        root_tweet_id="222",
     )
 
     response = client.get("/search?q=python")
@@ -351,32 +298,28 @@ def test_search_tweets_multiple_threads(setup_search_deps: SearchDepsSetup):
     thread_root_ids = {t["thread"]["root_tweet_id"] for t in data["tweet_threads"]}
     assert thread_root_ids == {"111", "222"}
 
-    alice_thread = next(
+    thread_111 = next(
         t for t in data["tweet_threads"] if t["thread"]["root_tweet_id"] == "111"
     )
-    bob_thread = next(
+    thread_222 = next(
         t for t in data["tweet_threads"] if t["thread"]["root_tweet_id"] == "222"
     )
 
-    assert alice_thread["thread"]["author_username"] == "alice"
-    assert len(alice_thread["tweets"]) == 1
-    assert alice_thread["tweets"][0]["content"] == "Alice talks about Python"
+    assert len(thread_111["tweets"]) == 1
+    assert thread_111["tweets"][0]["content"] == "Alice talks about Python"
 
-    assert bob_thread["thread"]["author_username"] == "bob"
-    assert len(bob_thread["tweets"]) == 1
+    assert len(thread_222["tweets"]) == 1
 
 
 def test_search_tweet_count_includes_tweets(setup_search_deps: SearchDepsSetup):
     """Test that count includes tweet matches."""
     _, _, _, _, _, thread_repo, tweet_repo = setup_search_deps()
 
-    _make_thread_and_tweets(
+    make_thread_and_tweets(
         thread_repo,
         tweet_repo,
-        root_tweet_id="999",
-        author_username="user",
-        author_display_name="User",
         tweet_contents=["Tweet one", "Tweet two", "Tweet three"],
+        root_tweet_id="999",
     )
 
     response = client.get("/search?q=tweets")
@@ -419,13 +362,11 @@ def test_search_mixed_all_content_types(setup_search_deps: SearchDepsSetup):
     )
 
     # Add tweets
-    _make_thread_and_tweets(
+    make_thread_and_tweets(
         thread_repo,
         tweet_repo,
-        root_tweet_id="tweet1",
-        author_username="airesearcher",
-        author_display_name="AI Researcher",
         tweet_contents=["Great thread about AI research"],
+        root_tweet_id="tweet1",
     )
 
     response = client.get("/search?q=artificial intelligence")

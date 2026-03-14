@@ -75,7 +75,7 @@ def test_ingest_tweet_deduplication(setup_tweet_deps: TweetDepsSetup):
     assert data1["thread"]["id"] == data2["thread"]["id"]
     assert data1["thread"]["root_tweet_id"] == data2["thread"]["root_tweet_id"]
 
-    # Fetcher should only have been called twice (once per request, but dedup stops DB writes)
+    # Fetcher is called for each request; deduplication happens at the DB layer
     assert len(fetcher.calls) == 2
 
 

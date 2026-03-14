@@ -49,7 +49,9 @@ RELATED_TWEETS_LIMIT = 3
 class TweetIngestRequest(SQLModel):
     """Request model for tweet ingestion."""
 
-    tweet_input: str = Field(description="Tweet URL or tweet ID to ingest")
+    tweet_input: str = Field(
+        description="Tweet URL or tweet ID to ingest", max_length=2048
+    )
 
 
 class TweetThreadsListResponse(SQLModel):
@@ -113,13 +115,11 @@ async def ingest_tweet(
         logger.error(f"Thread too large: {str(e)}")
         raise HTTPException(status_code=422, detail=f"Thread too large: {str(e)}")
     except TwitterFetchError as e:
-        logger.error(f"Twitter fetch error for {request.tweet_input}: {str(e)}")
+        logger.error(f"Twitter fetch error: {str(e)}")
         raise HTTPException(status_code=422, detail=f"Cannot process tweet: {str(e)}")
     except Exception as e:
-        logger.error(
-            f"Unexpected error processing tweet {request.tweet_input}: {str(e)}"
-        )
-        raise HTTPException(status_code=500, detail=f"Error processing tweet: {str(e)}")
+        logger.error(f"Unexpected error processing tweet: {str(e)}")
+        raise HTTPException(status_code=500, detail="An internal error occurred")
 
 
 @router.get(
@@ -236,7 +236,7 @@ async def get_tweet_with_context_stream(
                     yield format_sse("context_chunk", {"content": stream_chunk.content})
         except Exception as e:
             logger.error(f"Error streaming context: {e}")
-            yield format_sse("error", {"detail": str(e)})
+            yield format_sse("error", {"detail": "Context generation failed"})
             return
 
         # Signal completion

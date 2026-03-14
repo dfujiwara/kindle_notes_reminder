@@ -9,6 +9,7 @@ from src.routers import (
     search,
     evaluations,
     urls,
+    tweets,
 )
 from src.cors_config import get_cors_config
 from src.config import settings
@@ -85,6 +86,10 @@ app = FastAPI(
             "name": "urls",
             "description": "Ingest and explore URLs with AI-enhanced chunks",
         },
+        {
+            "name": "tweets",
+            "description": "Ingest and explore tweets and tweet threads with AI enhancements",
+        },
     ],
 )
 
@@ -101,3 +106,4 @@ app.include_router(random.router)
 app.include_router(search.router)
 app.include_router(evaluations.router)
 app.include_router(urls.router)
+app.include_router(tweets.router)

@@ -8,6 +8,10 @@ from src.repositories.models import (
     NoteRead,
     NoteResponse,
     NoteWithRelatedNotesResponse,
+    TweetContent,
+    TweetRead,
+    TweetThreadResponse,
+    TweetThreadSource,
     URLChunkContent,
     URLChunkRead,
     URLResponse,
@@ -107,4 +111,45 @@ def build_unified_response_for_chunk(
         source=build_source_response_from_url(url),
         content=build_content_item_from_chunk(chunk),
         related_items=[build_content_item_from_chunk(c) for c in related_chunks],
+    )
+
+
+def build_source_response_from_thread(thread: TweetThreadResponse) -> TweetThreadSource:
+    """Build a TweetThreadSource from a TweetThreadResponse."""
+    return TweetThreadSource(
+        id=thread.id,
+        title=thread.title,
+        type="tweet_thread",
+        author_username=thread.author_username,
+        author_display_name=thread.author_display_name,
+        root_tweet_id=thread.root_tweet_id,
+        tweet_count=thread.tweet_count,
+        created_at=thread.created_at,
+    )
+
+
+def build_content_item_from_tweet(tweet: TweetRead) -> TweetContent:
+    """Build a TweetContent from a TweetRead."""
+    return TweetContent(
+        id=tweet.id,
+        content_type="tweet",
+        content=tweet.content,
+        author_username=tweet.author_username,
+        position_in_thread=tweet.position_in_thread,
+        media_urls=tweet.media_urls,
+        tweeted_at=tweet.tweeted_at,
+        created_at=tweet.created_at,
+    )
+
+
+def build_unified_response_for_tweet(
+    thread: TweetThreadResponse,
+    tweet: TweetRead,
+    related_tweets: list[TweetRead],
+) -> ContentWithRelatedItemsResponse:
+    """Build unified response for a tweet with related tweets."""
+    return ContentWithRelatedItemsResponse(
+        source=build_source_response_from_thread(thread),
+        content=build_content_item_from_tweet(tweet),
+        related_items=[build_content_item_from_tweet(t) for t in related_tweets],
     )

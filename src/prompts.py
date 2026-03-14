@@ -118,6 +118,23 @@ Content passage:
 Explain this concept clearly and provide a practical example that makes it memorable."""
 
 
+def create_tweet_context_prompt(author_username: str, tweet_content: str) -> str:
+    """
+    Create a prompt for generating additional context for a tweet.
+
+    Args:
+        author_username: The Twitter username of the tweet author
+        tweet_content: The content of the tweet
+
+    Returns:
+        A formatted context generation prompt string
+    """
+    return f"""Tweet by @{author_username}:
+"{tweet_content}"
+
+Explain the key idea in this tweet clearly and provide a practical example or context that makes it memorable."""
+
+
 def create_semantic_chunking_prompt(content: str) -> str:
     """
     Create a prompt for semantic chunking of content.

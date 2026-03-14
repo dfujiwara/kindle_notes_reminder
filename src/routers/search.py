@@ -1,5 +1,5 @@
 """
-Search endpoints for semantic search across notes, URL chunks, and tweets using AI embeddings.
+Search endpoints for semantic search across notes and URL chunks using AI embeddings.
 """
 
 import asyncio
@@ -9,10 +9,6 @@ from src.repositories.models import (
     NoteResponse,
     BookWithNoteResponses,
     NoteRead,
-    TweetRead,
-    TweetResponse,
-    TweetThreadResponse,
-    TweetThreadWithTweetsResponse,
     URLResponse,
     URLChunkResponse,
     URLWithChunksResponses,
@@ -23,10 +19,6 @@ from src.repositories.interfaces import (
     BookRepositoryInterface,
     NoteRepositoryInterface,
 )
-from src.tweet_ingestion.repositories.interfaces import (
-    TweetRepositoryInterface,
-    TweetThreadRepositoryInterface,
-)
 from src.url_ingestion.repositories.interfaces import (
     URLRepositoryInterface,
     URLChunkRepositoryInterface,
@@ -35,8 +27,6 @@ from src.embedding_interface import EmbeddingClientInterface
 from src.dependencies import (
     get_book_repository,
     get_note_repository,
-    get_tweet_repository,
-    get_tweet_thread_repository,
     get_url_repository,
     get_urlchunk_repository,
     get_embedding_client,
@@ -134,68 +124,19 @@ def _group_and_fetch_chunks(
     return list(urls_dict.values())
 
 
-def _group_and_fetch_tweets(
-    similar_tweets: list[TweetRead],
-    tweet_thread_repository: TweetThreadRepositoryInterface,
-) -> list[TweetThreadWithTweetsResponse]:
-    """
-    Group tweets by thread and fetch related thread information.
-
-    Args:
-        similar_tweets: List of similar tweets from embedding search
-        tweet_thread_repository: Repository for fetching thread details
-
-    Returns:
-        List of TweetThreadWithTweetsResponse grouped by thread
-    """
-    threads_dict: dict[int, TweetThreadWithTweetsResponse] = {}
-
-    if not similar_tweets:
-        return []
-
-    thread_ids = list({t.thread_id for t in similar_tweets})
-    fetched_threads = tweet_thread_repository.get_by_ids(thread_ids)
-    fetched_threads_dict: dict[int, TweetThreadResponse] = {
-        t.id: t for t in fetched_threads
-    }
-
-    for tweet in similar_tweets:
-        thread_id = tweet.thread_id
-        if thread_id not in threads_dict:
-            thread = fetched_threads_dict[thread_id]
-            threads_dict[thread_id] = TweetThreadWithTweetsResponse(
-                thread=thread, tweets=[]
-            )
-        threads_dict[thread_id].tweets.append(
-            TweetResponse(
-                id=tweet.id,
-                tweet_id=tweet.tweet_id,
-                author_username=tweet.author_username,
-                author_display_name=tweet.author_display_name,
-                content=tweet.content,
-                media_urls=tweet.media_urls,
-                position_in_thread=tweet.position_in_thread,
-                tweeted_at=tweet.tweeted_at,
-                created_at=tweet.created_at,
-            )
-        )
-
-    return list(threads_dict.values())
-
-
 @router.get(
     "/search",
-    summary="Semantic search across notes, URL content, and tweets",
+    summary="Semantic search across notes and URL content",
     description="""
-    Search for notes, URL content, and tweets using semantic search based on the provided query.
+    Search for notes and URL content using semantic search based on the provided query.
 
     This endpoint:
     - Converts your search query into embeddings using OpenAI
-    - Finds semantically similar notes, URL chunks, and tweets using vector similarity
-    - Groups notes by book, chunks by URL, and tweets by thread for better organization
+    - Finds semantically similar notes and URL chunks using vector similarity
+    - Groups notes by book and chunks by URL for better organization
     - Returns results with similarity scores above the threshold
     """,
-    response_description="Search results grouped by book/URL/thread with similarity scores",
+    response_description="Search results grouped by book/URL with similarity scores",
     responses={
         200: {"description": "Search completed successfully"},
         422: {"description": "Invalid query parameters"},
@@ -208,10 +149,6 @@ async def search(
     note_repository: NoteRepositoryInterface = Depends(get_note_repository),
     url_repository: URLRepositoryInterface = Depends(get_url_repository),
     urlchunk_repository: URLChunkRepositoryInterface = Depends(get_urlchunk_repository),
-    tweet_repository: TweetRepositoryInterface = Depends(get_tweet_repository),
-    tweet_thread_repository: TweetThreadRepositoryInterface = Depends(
-        get_tweet_thread_repository
-    ),
     embedding_client: EmbeddingClientInterface = Depends(get_embedding_client),
 ) -> SearchResult:
     # Validate limit
@@ -221,7 +158,7 @@ async def search(
     query_embedding = await embedding_client.generate_embedding(q)
 
     # Search repositories sequentially to avoid session concurrency issues
-    # All are already ordered by relevance (similarity score ascending)
+    # Both are already ordered by relevance (similarity score ascending)
     similar_notes = await asyncio.to_thread(
         note_repository.search_notes_by_embedding,
         query_embedding,
@@ -234,25 +171,14 @@ async def search(
         limit,
         0.7,
     )
-    similar_tweets = await asyncio.to_thread(
-        tweet_repository.search_tweets_by_embedding,
-        query_embedding,
-        limit,
-        0.7,
-    )
 
     # Group and fetch related data
     books_results = _group_and_fetch_notes(similar_notes, book_repository)
     urls_results = _group_and_fetch_chunks(similar_chunks, url_repository)
-    tweet_threads_results = _group_and_fetch_tweets(
-        similar_tweets, tweet_thread_repository
-    )
 
     # Calculate total count
-    total_count = (
-        sum(len(book.notes) for book in books_results)
-        + sum(len(url.chunks) for url in urls_results)
-        + sum(len(thread.tweets) for thread in tweet_threads_results)
+    total_count = sum(len(book.notes) for book in books_results) + sum(
+        len(url.chunks) for url in urls_results
     )
 
     return SearchResult(
@@ -260,6 +186,5 @@ async def search(
         results=books_results,  # For backwards compatibility
         books=books_results,
         urls=urls_results,
-        tweet_threads=tweet_threads_results,
         count=total_count,
     )

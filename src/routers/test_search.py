@@ -2,16 +2,9 @@
 Unit tests for the /search endpoint.
 """
 
-from datetime import datetime, timezone
-
 from fastapi.testclient import TestClient
 
-from src.repositories.models import (
-    TweetCreate,
-    TweetThreadCreate,
-    URLChunkCreate,
-    URLCreate,
-)
+from src.repositories.models import URLChunkCreate, URLCreate
 
 from ..config import settings
 from ..main import app
@@ -33,7 +26,6 @@ def test_search_notes_empty_results(setup_search_deps: SearchDepsSetup):
     assert data["results"] == []  # Backwards compatibility
     assert data["books"] == []
     assert data["urls"] == []
-    assert data["tweet_threads"] == []
     assert data["count"] == 0
 
 
@@ -69,7 +61,6 @@ def test_search_notes_single_book(setup_search_deps: SearchDepsSetup):
     assert len(data["results"]) == 1  # Backwards compatibility: same as books
     assert len(data["books"]) == 1  # One book
     assert len(data["urls"]) == 0  # No URLs
-    assert len(data["tweet_threads"]) == 0  # No tweets
 
     # Check book structure (from new 'books' field)
     book_result = data["books"][0]
@@ -129,7 +120,6 @@ def test_search_notes_multiple_books(setup_search_deps: SearchDepsSetup):
     assert len(data["results"]) == 2  # Backwards compatibility: same as books
     assert len(data["books"]) == 2  # Two books
     assert len(data["urls"]) == 0  # No URLs
-    assert len(data["tweet_threads"]) == 0  # No tweets
 
     # Results should be grouped by book
     book_ids = {result["book"]["id"] for result in data["books"]}
@@ -192,7 +182,6 @@ def test_search_notes_max_limit(setup_search_deps: SearchDepsSetup):
     assert data["results"] == []  # Backwards compatibility
     assert data["books"] == []
     assert data["urls"] == []
-    assert data["tweet_threads"] == []
 
 
 def test_search_mixed_notes_and_chunks(setup_search_deps: SearchDepsSetup):
@@ -229,60 +218,7 @@ def test_search_mixed_notes_and_chunks(setup_search_deps: SearchDepsSetup):
     assert len(data["results"]) == 1  # Backwards compatibility
     assert len(data["books"]) == 1
     assert len(data["urls"]) == 1
-    assert len(data["tweet_threads"]) == 0  # No tweets
     # Verify results and books are identical for backwards compatibility
     assert data["results"] == data["books"]
     # Total count should include both
     assert data["count"] == 2
-
-
-def test_search_with_tweets(setup_search_deps: SearchDepsSetup):
-    """Test search endpoint includes tweet results."""
-    # setup_search_deps now includes tweet repos in app.dependency_overrides
-    # We get them from app directly to populate with test data
-    from src.main import app as test_app
-    from src.dependencies import get_tweet_repository, get_tweet_thread_repository
-
-    setup_search_deps()
-
-    # Retrieve the tweet repos set up by the fixture by checking overrides
-    thread_repo = test_app.dependency_overrides[get_tweet_thread_repository]()
-    tweet_repo = test_app.dependency_overrides[get_tweet_repository]()
-
-    thread = thread_repo.add(
-        TweetThreadCreate(
-            root_tweet_id="root123",
-            author_username="mlexpert",
-            author_display_name="ML Expert",
-            title="Thread about machine learning",
-        )
-    )
-    tweet_repo.add(
-        TweetCreate(
-            tweet_id="tweet123",
-            author_username="mlexpert",
-            author_display_name="ML Expert",
-            content="Machine learning is transforming the world",
-            thread_id=thread.id,
-            position_in_thread=0,
-            tweeted_at=datetime.now(timezone.utc),
-            embedding=[0.1] * settings.embedding_dimension,
-        )
-    )
-
-    response = client.get("/search?q=machine learning")
-
-    assert response.status_code == 200
-    data = response.json()
-    assert data["query"] == "machine learning"
-    assert len(data["tweet_threads"]) == 1
-
-    tweet_thread_result = data["tweet_threads"][0]
-    assert tweet_thread_result["thread"]["root_tweet_id"] == "root123"
-    assert tweet_thread_result["thread"]["author_username"] == "mlexpert"
-    assert len(tweet_thread_result["tweets"]) == 1
-    assert (
-        tweet_thread_result["tweets"][0]["content"]
-        == "Machine learning is transforming the world"
-    )
-    assert data["count"] == 1

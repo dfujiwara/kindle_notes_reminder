@@ -158,18 +158,12 @@ def setup_search_deps() -> Generator[SearchDepsSetup, None, None]:
         embedding_client = StubEmbeddingClient(should_fail=embedding_should_fail)
         url_repo = StubURLRepository()
         chunk_repo = StubURLChunkRepository()
-        tweet_thread_repo = StubTweetThreadRepository()
-        tweet_repo = StubTweetRepository()
 
         app.dependency_overrides[get_book_repository] = lambda: book_repo
         app.dependency_overrides[get_note_repository] = lambda: note_repo
         app.dependency_overrides[get_embedding_client] = lambda: embedding_client
         app.dependency_overrides[get_url_repository] = lambda: url_repo
         app.dependency_overrides[get_urlchunk_repository] = lambda: chunk_repo
-        app.dependency_overrides[get_tweet_thread_repository] = (
-            lambda: tweet_thread_repo
-        )
-        app.dependency_overrides[get_tweet_repository] = lambda: tweet_repo
 
         return book_repo, note_repo, embedding_client, url_repo, chunk_repo
 

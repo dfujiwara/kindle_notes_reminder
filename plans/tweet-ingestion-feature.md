@@ -4,7 +4,7 @@
 
 Add capability to ingest tweets (and tweet threads) into the system, making them searchable alongside Kindle notes and URL content. Tweets will be stored with embeddings for semantic search and served through the existing API infrastructure.
 
-**Status: In Progress - Phase 5 Complete**
+**Status: In Progress - Phase 6 Complete**
 
 ## Current Architecture Understanding
 
@@ -295,20 +295,20 @@ Twitter API v2 access has become increasingly restricted. This phase validates A
 - [x] Import and include tweets router
 - [x] Add OpenAPI tag for documentation
 
-### Phase 6: Unified Response Integration
+### Phase 6: Unified Response Integration ✅
 
 **6.1 Update `src/routers/response_builders.py`:**
-- [ ] `build_source_response_from_thread()` - TweetThread → TweetThreadSource
-- [ ] `build_content_item_from_tweet()` - Tweet → TweetContent
-- [ ] `build_unified_response_for_tweet()` - Combined tweet + thread + related tweets
+- [x] `build_source_response_from_thread()` - TweetThread → TweetThreadSource
+- [x] `build_content_item_from_tweet()` - Tweet → TweetContent
+- [x] `build_unified_response_for_tweet()` - Combined tweet + thread + related tweets
 
 **6.2 Update `src/routers/random_selector.py`:**
-- [ ] Add tweet count to weighted selection
-- [ ] Return tweets from random selection
+- [x] Add tweet count to weighted selection
+- [x] Return tweets from random selection
 
-**6.3 Update `src/routers/notes.py` `/random/v2`:**
-- [ ] Handle tweet selection case
-- [ ] Stream tweet with context using unified schema
+**6.3 Update `src/routers/random.py` `/random/v2`:**
+- [x] Handle tweet selection case via `_prepare_tweet_content()`
+- [x] Stream tweet with context using unified schema
 
 ### Phase 7: Search Integration
 
@@ -334,7 +334,7 @@ Twitter API v2 access has become increasingly restricted. This phase validates A
 
 **8.3 Router Tests:**
 - [x] `src/routers/test_tweets.py` - All tweet endpoints
-- [ ] Update `src/routers/test_random_content.py` - Include tweets
+- [x] Update `src/routers/test_random_content.py` - Include tweets
 - [ ] Update `src/routers/test_search.py` - Include tweets
 
 **8.4 Add Test Fixtures:**
@@ -527,12 +527,6 @@ Twitter API v2 access has become increasingly restricted. This phase validates A
 - Updated Q2 recommendation to Option C (more flexible single tweet + expand later)
 - Added testing strategy note with `respx` library recommendation
 
-**Next Steps:**
-1. Complete Phase 6: Unified response integration (random selection + search)
-2. Complete Phase 7: Search integration
-
----
-
 **Phase 4 Completed (2026-03-14):**
 - Added `max_thread_depth: int = 50` and `twitter_rate_limit_retries: int = 3` to `src/config.py`
 - Added `get_tweet_thread_repository()`, `get_tweet_repository()`, `get_twitter_fetcher()` to `src/dependencies.py`
@@ -548,13 +542,23 @@ Twitter API v2 access has become increasingly restricted. This phase validates A
 
 ---
 
-**Next Steps:**
-1. Complete Phase 6: Unified response integration (random selection + search)
-2. Complete Phase 7: Search integration
+**Phase 6 Completed (2026-03-14):**
+- Added `RandomTweetSelection` to `src/routers/random_selector.py` with weighted tweet count
+- Updated `select_random_content()` to include tweets in weighted distribution
+- Added `_prepare_tweet_content()` to `src/routers/random.py` to handle tweet random selection
+- Updated `/random/v2` endpoint to stream tweet context using unified schema
+- Added comprehensive tweet tests to `src/routers/test_random_content.py` and `test_random_selector.py`
 
 ---
 
-*Plan Status: **IN PROGRESS - PHASE 5 COMPLETE***
+**Next Steps:**
+1. Complete Phase 7: Search integration (search.py has no tweet support yet)
+2. Complete Phase 8 remaining: Update `src/routers/test_search.py` with tweet tests
+3. Complete Phase 9: Documentation updates
+
+---
+
+*Plan Status: **IN PROGRESS - PHASE 6 COMPLETE***
 
 *Created: 2026-01-24*
 

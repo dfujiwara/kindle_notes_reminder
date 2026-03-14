@@ -24,13 +24,12 @@ from src.repositories.models import TweetThreadCreate, TweetCreate
 @pytest.mark.asyncio
 async def test_process_single_tweet_success(
     single_tweet_fetcher: ThreadFetcherFn,
+    thread_repo: StubTweetThreadRepository,
+    tweet_repo: StubTweetRepository,
+    embedding_client: StubEmbeddingClient,
+    llm_client: StubLLMClient,
 ) -> None:
     """Test successful processing of a single tweet."""
-    thread_repo = StubTweetThreadRepository()
-    tweet_repo = StubTweetRepository()
-    embedding_client = StubEmbeddingClient()
-    llm_client = StubLLMClient()
-
     result = await process_tweet_content(
         "1234567890",
         thread_repo,
@@ -54,11 +53,11 @@ async def test_process_single_tweet_success(
 @pytest.mark.asyncio
 async def test_process_multi_tweet_thread_success(
     multi_tweet_fetcher: ThreadFetcherFn,
+    thread_repo: StubTweetThreadRepository,
+    tweet_repo: StubTweetRepository,
+    embedding_client: StubEmbeddingClient,
 ) -> None:
     """Test successful processing of a multi-tweet thread."""
-    thread_repo = StubTweetThreadRepository()
-    tweet_repo = StubTweetRepository()
-    embedding_client = StubEmbeddingClient()
     llm_client = StubLLMClient(responses=["This is a thread about the topic."])
 
     result = await process_tweet_content(
@@ -92,14 +91,14 @@ async def test_process_multi_tweet_thread_success(
     ],
 )
 async def test_process_tweet_with_url_input(
-    url: str, single_tweet_fetcher: ThreadFetcherFn
+    url: str,
+    single_tweet_fetcher: ThreadFetcherFn,
+    thread_repo: StubTweetThreadRepository,
+    tweet_repo: StubTweetRepository,
+    embedding_client: StubEmbeddingClient,
+    llm_client: StubLLMClient,
 ) -> None:
     """Test processing with twitter.com and x.com URL inputs."""
-    thread_repo = StubTweetThreadRepository()
-    tweet_repo = StubTweetRepository()
-    embedding_client = StubEmbeddingClient()
-    llm_client = StubLLMClient()
-
     result = await process_tweet_content(
         url,
         thread_repo,
@@ -114,17 +113,17 @@ async def test_process_tweet_with_url_input(
 
 
 @pytest.mark.asyncio
-async def test_process_duplicate_thread_returns_existing() -> None:
+async def test_process_duplicate_thread_returns_existing(
+    thread_repo: StubTweetThreadRepository,
+    tweet_repo: StubTweetRepository,
+    embedding_client: StubEmbeddingClient,
+    llm_client: StubLLMClient,
+) -> None:
     """Test that duplicate threads return existing record without re-saving.
 
     Note: The fetcher is still called to get the root_tweet_id for deduplication,
     but the existing data from the database is returned rather than re-processing.
     """
-    thread_repo = StubTweetThreadRepository()
-    tweet_repo = StubTweetRepository()
-    embedding_client = StubEmbeddingClient()
-    llm_client = StubLLMClient()
-
     # Pre-populate with existing thread
     existing_thread = thread_repo.add(
         TweetThreadCreate(
@@ -192,11 +191,11 @@ async def test_process_duplicate_thread_returns_existing() -> None:
 @pytest.mark.asyncio
 async def test_process_tweet_generates_embeddings(
     multi_tweet_fetcher: ThreadFetcherFn,
+    thread_repo: StubTweetThreadRepository,
+    tweet_repo: StubTweetRepository,
+    embedding_client: StubEmbeddingClient,
 ) -> None:
     """Test that embeddings are generated for all tweets."""
-    thread_repo = StubTweetThreadRepository()
-    tweet_repo = StubTweetRepository()
-    embedding_client = StubEmbeddingClient()
     llm_client = StubLLMClient(responses=["Thread summary"])
 
     await process_tweet_content(
@@ -215,13 +214,12 @@ async def test_process_tweet_generates_embeddings(
 @pytest.mark.asyncio
 async def test_process_tweet_fetch_error_propagates(
     failing_fetcher: ThreadFetcherFn,
+    thread_repo: StubTweetThreadRepository,
+    tweet_repo: StubTweetRepository,
+    embedding_client: StubEmbeddingClient,
+    llm_client: StubLLMClient,
 ) -> None:
     """Test that fetch errors are propagated."""
-    thread_repo = StubTweetThreadRepository()
-    tweet_repo = StubTweetRepository()
-    embedding_client = StubEmbeddingClient()
-    llm_client = StubLLMClient()
-
     with pytest.raises(TwitterFetchError, match="Failed to fetch tweet"):
         await process_tweet_content(
             "1234567890",
@@ -236,13 +234,12 @@ async def test_process_tweet_fetch_error_propagates(
 @pytest.mark.asyncio
 async def test_process_tweet_invalid_input_raises_error(
     single_tweet_fetcher: ThreadFetcherFn,
+    thread_repo: StubTweetThreadRepository,
+    tweet_repo: StubTweetRepository,
+    embedding_client: StubEmbeddingClient,
+    llm_client: StubLLMClient,
 ) -> None:
     """Test that invalid input raises error."""
-    thread_repo = StubTweetThreadRepository()
-    tweet_repo = StubTweetRepository()
-    embedding_client = StubEmbeddingClient()
-    llm_client = StubLLMClient()
-
     with pytest.raises(TwitterFetchError, match="Invalid tweet input"):
         await process_tweet_content(
             "not-a-valid-tweet-or-url",
@@ -257,13 +254,12 @@ async def test_process_tweet_invalid_input_raises_error(
 @pytest.mark.asyncio
 async def test_single_tweet_uses_content_as_title(
     single_tweet_fetcher: ThreadFetcherFn,
+    thread_repo: StubTweetThreadRepository,
+    tweet_repo: StubTweetRepository,
+    embedding_client: StubEmbeddingClient,
+    llm_client: StubLLMClient,
 ) -> None:
     """Test that single tweets use truncated content as title."""
-    thread_repo = StubTweetThreadRepository()
-    tweet_repo = StubTweetRepository()
-    embedding_client = StubEmbeddingClient()
-    llm_client = StubLLMClient()
-
     result = await process_tweet_content(
         "1234567890",
         thread_repo,
@@ -278,12 +274,13 @@ async def test_single_tweet_uses_content_as_title(
 
 
 @pytest.mark.asyncio
-async def test_process_tweet_with_media_urls() -> None:
+async def test_process_tweet_with_media_urls(
+    thread_repo: StubTweetThreadRepository,
+    tweet_repo: StubTweetRepository,
+    embedding_client: StubEmbeddingClient,
+    llm_client: StubLLMClient,
+) -> None:
     """Test processing a tweet with media attachments."""
-    thread_repo = StubTweetThreadRepository()
-    tweet_repo = StubTweetRepository()
-    embedding_client = StubEmbeddingClient()
-    llm_client = StubLLMClient()
 
     async def fetcher_with_media(tweet_id: str, max_depth: int = 50) -> FetchedThread:
         tweet = FetchedTweet(
@@ -323,11 +320,11 @@ async def test_process_tweet_with_media_urls() -> None:
 @pytest.mark.asyncio
 async def test_llm_failure_uses_fallback_title(
     multi_tweet_fetcher: ThreadFetcherFn,
+    thread_repo: StubTweetThreadRepository,
+    tweet_repo: StubTweetRepository,
+    embedding_client: StubEmbeddingClient,
 ) -> None:
     """Test that LLM failure falls back to truncated first tweet."""
-    thread_repo = StubTweetThreadRepository()
-    tweet_repo = StubTweetRepository()
-    embedding_client = StubEmbeddingClient()
     llm_client = StubLLMClient(should_fail=True)
 
     result = await process_tweet_content(
@@ -346,10 +343,10 @@ async def test_llm_failure_uses_fallback_title(
 @pytest.mark.asyncio
 async def test_embedding_failure_propagates(
     multi_tweet_fetcher: ThreadFetcherFn,
+    thread_repo: StubTweetThreadRepository,
+    tweet_repo: StubTweetRepository,
 ) -> None:
     """Test that embedding generation failure propagates as an error."""
-    thread_repo = StubTweetThreadRepository()
-    tweet_repo = StubTweetRepository()
     embedding_client = StubEmbeddingClient(should_fail=True)
     llm_client = StubLLMClient(responses=["Thread summary"])
 
@@ -367,10 +364,10 @@ async def test_embedding_failure_propagates(
 @pytest.mark.asyncio
 async def test_embedding_failure_cleans_up_thread(
     multi_tweet_fetcher: ThreadFetcherFn,
+    thread_repo: StubTweetThreadRepository,
+    tweet_repo: StubTweetRepository,
 ) -> None:
     """Test that a failed embedding run removes the orphaned thread record."""
-    thread_repo = StubTweetThreadRepository()
-    tweet_repo = StubTweetRepository()
     embedding_client = StubEmbeddingClient(should_fail=True)
     llm_client = StubLLMClient(responses=["Thread summary"])
 

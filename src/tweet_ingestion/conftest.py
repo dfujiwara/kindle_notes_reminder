@@ -9,6 +9,12 @@ from src.tweet_ingestion.interfaces import (
     ThreadFetcherFn,
     TwitterFetchError,
 )
+from src.test_utils import (
+    StubEmbeddingClient,
+    StubLLMClient,
+    StubTweetRepository,
+    StubTweetThreadRepository,
+)
 
 
 def make_fetched_tweet(
@@ -102,3 +108,23 @@ def failing_fetcher() -> ThreadFetcherFn:
         raise TwitterFetchError("Failed to fetch tweet")
 
     return _fetch
+
+
+@pytest.fixture
+def thread_repo() -> StubTweetThreadRepository:
+    return StubTweetThreadRepository()
+
+
+@pytest.fixture
+def tweet_repo() -> StubTweetRepository:
+    return StubTweetRepository()
+
+
+@pytest.fixture
+def embedding_client() -> StubEmbeddingClient:
+    return StubEmbeddingClient()
+
+
+@pytest.fixture
+def llm_client() -> StubLLMClient:
+    return StubLLMClient()

@@ -18,6 +18,7 @@ from src.repositories.models import (
     BookCreate,
     NoteCreate,
     TweetCreate,
+    TweetThreadCreate,
     URLChunkCreate,
     URLCreate,
 )
@@ -157,8 +158,6 @@ async def test_random_v2_tweet_response_structure(
 ):
     """Test GET /random/v2 returns correct unified schema for tweet."""
     _, _, _, _, _, thread_repo, tweet_repo = setup_random_v2_deps()
-
-    from src.repositories.models import TweetThreadCreate
 
     thread = thread_repo.add(
         TweetThreadCreate(

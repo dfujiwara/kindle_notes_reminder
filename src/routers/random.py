@@ -17,6 +17,8 @@ from src.dependencies import (
     get_llm_client,
     get_note_repository,
     get_session_factory,
+    get_tweet_repository,
+    get_tweet_thread_repository,
     get_url_repository,
     get_urlchunk_repository,
 )
@@ -26,6 +28,7 @@ from src.prompts import (
     SYSTEM_INSTRUCTIONS,
     create_chunk_context_prompt,
     create_context_prompt,
+    create_tweet_context_prompt,
 )
 from src.repositories.interfaces import (
     BookRepositoryInterface,
@@ -34,18 +37,26 @@ from src.repositories.interfaces import (
 from src.repositories.models import (
     ContentWithRelatedItemsResponse,
     NoteRead,
+    TweetRead,
     URLChunkRead,
 )
 from src.routers.random_selector import select_random_content
 from src.routers.response_builders import (
     build_unified_response_for_chunk,
     build_unified_response_for_note,
+    build_unified_response_for_tweet,
+)
+from src.tweet_ingestion.repositories.interfaces import (
+    TweetRepositoryInterface,
+    TweetThreadRepositoryInterface,
 )
 from src.sse_utils import format_sse
 from src.url_ingestion.repositories.interfaces import (
     URLChunkRepositoryInterface,
     URLRepositoryInterface,
 )
+
+RELATED_TWEETS_LIMIT = 3
 
 logger = logging.getLogger(__name__)
 
@@ -94,6 +105,26 @@ def _prepare_chunk_content(
     return metadata, prompt
 
 
+def _prepare_tweet_content(
+    tweet: TweetRead,
+    tweet_thread_repository: TweetThreadRepositoryInterface,
+    tweet_repository: TweetRepositoryInterface,
+) -> tuple[ContentWithRelatedItemsResponse, str]:
+    """Prepare metadata and prompt for a tweet (no evaluation)."""
+    thread = tweet_thread_repository.get(tweet.thread_id)
+    if not thread:
+        logger.error(f"Error finding tweet thread with id {tweet.thread_id}")
+        raise HTTPException(status_code=404, detail="Tweet thread not found")
+
+    similar_tweets = tweet_repository.find_similar_tweets(
+        tweet, limit=RELATED_TWEETS_LIMIT
+    )
+    metadata = build_unified_response_for_tweet(thread, tweet, similar_tweets)
+    prompt = create_tweet_context_prompt(tweet.author_username, tweet.content)
+
+    return metadata, prompt
+
+
 @router.get(
     "/random/v2",
     summary="Get random content with streaming AI context (unified schema)",
@@ -129,11 +160,17 @@ async def get_random_content_v2(
     note_repository: NoteRepositoryInterface = Depends(get_note_repository),
     url_repository: URLRepositoryInterface = Depends(get_url_repository),
     chunk_repository: URLChunkRepositoryInterface = Depends(get_urlchunk_repository),
+    tweet_thread_repository: TweetThreadRepositoryInterface = Depends(
+        get_tweet_thread_repository
+    ),
+    tweet_repository: TweetRepositoryInterface = Depends(get_tweet_repository),
     llm_client: LLMClientInterface = Depends(get_llm_client),
     session_factory: SessionFactory = Depends(get_session_factory),
 ) -> StreamingResponse:
-    # Select random content (note or URL chunk) with weighted distribution
-    selection = select_random_content(note_repository, chunk_repository)
+    # Select random content (note, URL chunk, or tweet) with weighted distribution
+    selection = select_random_content(
+        note_repository, chunk_repository, tweet_repository
+    )
     if not selection:
         logger.error("Error finding random content")
         raise HTTPException(status_code=404, detail="No content found")
@@ -144,9 +181,14 @@ async def get_random_content_v2(
             selection.item, book_repository, note_repository
         )
         content_for_evaluation = selection.item
-    else:  # selection.content_type == "url_chunk"
+    elif selection.content_type == "url_chunk":
         metadata, prompt = _prepare_chunk_content(
             selection.item, url_repository, chunk_repository
+        )
+        content_for_evaluation = None
+    else:  # selection.content_type == "tweet"
+        metadata, prompt = _prepare_tweet_content(
+            selection.item, tweet_thread_repository, tweet_repository
         )
         content_for_evaluation = None
 

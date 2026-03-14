@@ -1,11 +1,12 @@
 """
-Tests for /random/v2 endpoint with unified schema supporting notes and URL chunks.
+Tests for /random/v2 endpoint with unified schema supporting notes, URL chunks, and tweets.
 
-Tests the weighted random selection between Kindle notes and URL chunks,
+Tests the weighted random selection between Kindle notes, URL chunks, and tweets,
 unified response schema, SSE streaming, and background evaluation.
 """
 
 import json
+from datetime import datetime, timezone
 from typing import Any
 
 import pytest
@@ -13,7 +14,14 @@ from fastapi.testclient import TestClient
 from httpx import ASGITransport, AsyncClient
 
 from src.main import app
-from src.repositories.models import BookCreate, NoteCreate, URLChunkCreate, URLCreate
+from src.repositories.models import (
+    BookCreate,
+    NoteCreate,
+    TweetCreate,
+    TweetThreadCreate,
+    URLChunkCreate,
+    URLCreate,
+)
 from src.routers.conftest import RandomV2DepsSetup
 
 client = TestClient(app)
@@ -35,7 +43,7 @@ async def test_random_v2_note_response_structure(
     setup_random_v2_deps: RandomV2DepsSetup,
 ):
     """Test GET /random/v2 returns correct unified schema for note."""
-    book_repo, note_repo, _, _, _ = setup_random_v2_deps()
+    book_repo, note_repo, _, _, _, _, _ = setup_random_v2_deps()
 
     # Create test data
     book = book_repo.add(BookCreate(title="Test Book", author="Test Author"))
@@ -91,7 +99,7 @@ async def test_random_v2_chunk_response_structure(
     setup_random_v2_deps: RandomV2DepsSetup,
 ):
     """Test GET /random/v2 returns correct unified schema for URL chunk."""
-    _, _, _, url_repo, chunk_repo = setup_random_v2_deps()
+    _, _, _, url_repo, chunk_repo, _, _ = setup_random_v2_deps()
 
     # Create test data
     url = url_repo.add(URLCreate(url="https://example.com", title="Example"))
@@ -142,3 +150,72 @@ async def test_random_v2_chunk_response_structure(
             assert metadata["content"]["content"] == "Test chunk content"
 
             assert metadata["related_items"] == []
+
+
+@pytest.mark.asyncio
+async def test_random_v2_tweet_response_structure(
+    setup_random_v2_deps: RandomV2DepsSetup,
+):
+    """Test GET /random/v2 returns correct unified schema for tweet."""
+    _, _, _, _, _, thread_repo, tweet_repo = setup_random_v2_deps()
+
+    thread = thread_repo.add(
+        TweetThreadCreate(
+            root_tweet_id="root123",
+            author_username="testuser",
+            author_display_name="Test User",
+            title="Test thread title",
+        )
+    )
+    tweet = tweet_repo.add(
+        TweetCreate(
+            tweet_id="tweet123",
+            author_username="testuser",
+            author_display_name="Test User",
+            content="This is a test tweet about programming",
+            thread_id=thread.id,
+            position_in_thread=0,
+            tweeted_at=datetime.now(timezone.utc),
+            embedding=[0.1] * 1536,
+        )
+    )
+
+    # Make async SSE streaming request
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as async_client:
+        async with async_client.stream(
+            "GET", "/random/v2", headers={"Accept": "text/event-stream"}
+        ) as response:
+            assert response.status_code == 200
+            assert "text/event-stream" in response.headers["content-type"]
+
+            # Parse SSE events
+            events: list[dict[str, Any]] = []
+            event_type: str = ""
+            async for line in response.aiter_lines():
+                if line.startswith("event: "):
+                    event_type = line[7:]
+                elif line.startswith("data: "):
+                    data = json.loads(line[6:])
+                    events.append({"type": event_type, "data": data})
+
+            # Verify event sequence
+            assert len(events) >= 2
+            assert events[0]["type"] == "metadata"
+            assert events[-1]["type"] == "context_complete"
+
+            # Verify metadata structure for tweet
+            metadata = events[0]["data"]
+
+            # Verify source is a tweet thread
+            assert metadata["source"]["id"] == thread.id
+            assert metadata["source"]["type"] == "tweet_thread"
+            assert metadata["source"]["root_tweet_id"] == "root123"
+
+            # Verify content is the tweet
+            assert metadata["content"]["id"] == tweet.id
+            assert metadata["content"]["content_type"] == "tweet"
+            assert (
+                metadata["content"]["content"]
+                == "This is a test tweet about programming"
+            )

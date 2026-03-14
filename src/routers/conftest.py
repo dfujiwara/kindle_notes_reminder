@@ -76,6 +76,8 @@ RandomV2DepsSetup = Callable[
         StubEvaluationRepository,
         StubURLRepository,
         StubURLChunkRepository,
+        StubTweetThreadRepository,
+        StubTweetRepository,
     ],
 ]
 StreamingDepsSetup = Callable[
@@ -287,13 +289,13 @@ def setup_random_v2_deps(
     session_factory: SessionFactory,
 ) -> Generator[RandomV2DepsSetup, None, None]:
     """
-    Setup dependencies for /random/v2 endpoint (book, note, evaluation, URL, chunk).
+    Setup dependencies for /random/v2 endpoint (book, note, evaluation, URL, chunk, tweet).
 
     Returns a function for consistent interface. Used in test_random_v2.py.
 
     Usage:
         def test_random_v2(setup_random_v2_deps):
-            book_repo, note_repo, eval_repo, url_repo, chunk_repo = setup_random_v2_deps()
+            book_repo, note_repo, eval_repo, url_repo, chunk_repo, thread_repo, tweet_repo = setup_random_v2_deps()
             # Cleanup is automatic!
     """
 
@@ -303,25 +305,39 @@ def setup_random_v2_deps(
         StubEvaluationRepository,
         StubURLRepository,
         StubURLChunkRepository,
+        StubTweetThreadRepository,
+        StubTweetRepository,
     ]:
         book_repo = StubBookRepository()
         note_repo = StubNoteRepository()
         eval_repo = StubEvaluationRepository()
         url_repo = StubURLRepository()
         chunk_repo = StubURLChunkRepository()
+        thread_repo = StubTweetThreadRepository()
+        tweet_repo = StubTweetRepository()
 
         app.dependency_overrides[get_book_repository] = lambda: book_repo
         app.dependency_overrides[get_note_repository] = lambda: note_repo
         app.dependency_overrides[get_evaluation_repository] = lambda: eval_repo
         app.dependency_overrides[get_url_repository] = lambda: url_repo
         app.dependency_overrides[get_urlchunk_repository] = lambda: chunk_repo
+        app.dependency_overrides[get_tweet_thread_repository] = lambda: thread_repo
+        app.dependency_overrides[get_tweet_repository] = lambda: tweet_repo
         app.dependency_overrides[get_session_factory] = lambda: session_factory
         # Provide multiple responses: one for context generation, one for evaluation
         app.dependency_overrides[get_llm_client] = lambda: StubLLMClient(
             responses=["Test LLM response", "Score: 0.8\nEvaluation: Good response"]
         )
 
-        return book_repo, note_repo, eval_repo, url_repo, chunk_repo
+        return (
+            book_repo,
+            note_repo,
+            eval_repo,
+            url_repo,
+            chunk_repo,
+            thread_repo,
+            tweet_repo,
+        )
 
     yield _setup
     app.dependency_overrides.clear()

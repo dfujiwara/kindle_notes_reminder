@@ -19,6 +19,9 @@ from src.dependencies import (
     get_url_repository,
     get_urlchunk_repository,
     get_url_fetcher,
+    get_tweet_thread_repository,
+    get_tweet_repository,
+    get_twitter_fetcher,
     get_session_factory,
 )
 from src.database import SessionFactory
@@ -31,6 +34,9 @@ from src.test_utils import (
     StubURLRepository,
     StubURLChunkRepository,
     StubURLFetcher,
+    StubTweetThreadRepository,
+    StubTweetRepository,
+    StubTwitterFetcher,
 )
 
 # Type aliases for fixtures
@@ -79,6 +85,14 @@ StreamingDepsSetup = Callable[
         StubNoteRepository,
         StubEvaluationRepository,
         StubLLMClient,
+    ],
+]
+TweetDepsSetup = Callable[
+    ...,
+    tuple[
+        StubTweetThreadRepository,
+        StubTweetRepository,
+        StubTwitterFetcher,
     ],
 ]
 
@@ -359,6 +373,40 @@ def setup_streaming_deps(
         app.dependency_overrides[get_session_factory] = lambda: session_factory
 
         return book_repo, note_repo, eval_repo, llm_client
+
+    yield _setup
+    app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def setup_tweet_deps() -> Generator[TweetDepsSetup, None, None]:
+    """
+    Setup dependencies for tweet endpoints.
+
+    Returns a function for flexible configuration. Used in test_tweets.py.
+
+    Usage:
+        def test_tweet(setup_tweet_deps):
+            thread_repo, tweet_repo, fetcher = setup_tweet_deps()
+            # or with error simulation:
+            thread_repo, tweet_repo, fetcher = setup_tweet_deps(fetcher_should_fail=True)
+            # Cleanup is automatic!
+    """
+
+    def _setup(
+        fetcher_should_fail: bool = False,
+    ) -> tuple[StubTweetThreadRepository, StubTweetRepository, StubTwitterFetcher]:
+        thread_repo = StubTweetThreadRepository()
+        tweet_repo = StubTweetRepository()
+        fetcher = StubTwitterFetcher(should_fail=fetcher_should_fail)
+
+        app.dependency_overrides[get_tweet_thread_repository] = lambda: thread_repo
+        app.dependency_overrides[get_tweet_repository] = lambda: tweet_repo
+        app.dependency_overrides[get_twitter_fetcher] = lambda: fetcher
+        app.dependency_overrides[get_llm_client] = lambda: StubLLMClient()
+        app.dependency_overrides[get_embedding_client] = lambda: StubEmbeddingClient()
+
+        return thread_repo, tweet_repo, fetcher
 
     yield _setup
     app.dependency_overrides.clear()

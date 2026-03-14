@@ -30,6 +30,16 @@ from src.url_ingestion.url_fetcher import (
     fetch_url_content,
     URLFetcherInterface,
 )
+from src.tweet_ingestion.repositories.tweet_thread_repository import (
+    TweetThreadRepository,
+)
+from src.tweet_ingestion.repositories.tweet_repository import TweetRepository
+from src.tweet_ingestion.repositories.interfaces import (
+    TweetThreadRepositoryInterface,
+    TweetRepositoryInterface,
+)
+from src.tweet_ingestion.interfaces import ThreadFetcherFn
+from src.tweet_ingestion.twitter_fetcher import fetch_thread
 
 
 def get_book_repository(
@@ -85,3 +95,22 @@ def get_urlchunk_repository(
 ) -> URLChunkRepositoryInterface:
     """Get an instance of the URLChunk repository."""
     return URLChunkRepository(session)
+
+
+def get_tweet_thread_repository(
+    session: Session = Depends(get_session),
+) -> TweetThreadRepositoryInterface:
+    """Get an instance of the TweetThread repository."""
+    return TweetThreadRepository(session)
+
+
+def get_tweet_repository(
+    session: Session = Depends(get_session),
+) -> TweetRepositoryInterface:
+    """Get an instance of the Tweet repository."""
+    return TweetRepository(session)
+
+
+def get_twitter_fetcher() -> ThreadFetcherFn:
+    """Get the Twitter thread fetcher function."""
+    return fetch_thread

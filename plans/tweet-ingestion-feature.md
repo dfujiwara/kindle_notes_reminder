@@ -4,7 +4,7 @@
 
 Add capability to ingest tweets (and tweet threads) into the system, making them searchable alongside Kindle notes and URL content. Tweets will be stored with embeddings for semantic search and served through the existing API infrastructure.
 
-**Status: In Progress - Phase 4 Complete**
+**Status: In Progress - Phase 5 Complete**
 
 ## Current Architecture Understanding
 
@@ -283,17 +283,17 @@ Twitter API v2 access has become increasingly restricted. This phase validates A
 - [x] `StubTweetRepository`
 - [x] `StubTwitterFetcher`
 
-### Phase 5: Tweet-Specific Endpoints
+### Phase 5: Tweet-Specific Endpoints ✅
 
 **5.1 Create `src/routers/tweets.py`:**
-- [ ] `POST /tweets` - Ingest tweet/thread (synchronous)
-- [ ] `GET /tweets` - List all threads with tweet counts
-- [ ] `GET /tweets/{thread_id}` - Get thread with all tweets
-- [ ] `GET /tweets/{thread_id}/tweets/{tweet_id}` - SSE streaming with AI context
+- [x] `POST /tweets` - Ingest tweet/thread (synchronous)
+- [x] `GET /tweets` - List all threads with tweet counts
+- [x] `GET /tweets/{thread_id}` - Get thread with all tweets
+- [x] `GET /tweets/{thread_id}/tweets/{tweet_id}` - SSE streaming with AI context
 
 **5.2 Register router in `src/main.py`:**
-- [ ] Import and include tweets router
-- [ ] Add OpenAPI tag for documentation
+- [x] Import and include tweets router
+- [x] Add OpenAPI tag for documentation
 
 ### Phase 6: Unified Response Integration
 
@@ -333,12 +333,12 @@ Twitter API v2 access has become increasingly restricted. This phase validates A
 - [ ] `src/tweet_ingestion/repositories/test_tweet_repository.py`
 
 **8.3 Router Tests:**
-- [ ] `src/routers/test_tweets.py` - All tweet endpoints
+- [x] `src/routers/test_tweets.py` - All tweet endpoints
 - [ ] Update `src/routers/test_random_content.py` - Include tweets
 - [ ] Update `src/routers/test_search.py` - Include tweets
 
 **8.4 Add Test Fixtures:**
-- [ ] Update `src/routers/conftest.py` with `setup_tweet_deps()`
+- [x] Update `src/routers/conftest.py` with `setup_tweet_deps()`
 
 ### Phase 9: Documentation
 
@@ -528,8 +528,8 @@ Twitter API v2 access has become increasingly restricted. This phase validates A
 - Added testing strategy note with `respx` library recommendation
 
 **Next Steps:**
-1. Complete Phase 0: Set up Twitter Developer account and validate API access
-2. Begin Phase 5: Tweet-specific API endpoints (`src/routers/tweets.py`, register in `src/main.py`, add `setup_tweet_deps` fixture, write router tests)
+1. Complete Phase 6: Unified response integration (random selection + search)
+2. Complete Phase 7: Search integration
 
 ---
 
@@ -538,9 +538,23 @@ Twitter API v2 access has become increasingly restricted. This phase validates A
 - Added `get_tweet_thread_repository()`, `get_tweet_repository()`, `get_twitter_fetcher()` to `src/dependencies.py`
 - Added `StubTwitterFetcher` to `src/test_utils.py`
 
+**Phase 5 Completed (2026-03-14):**
+- Created `src/routers/tweets.py` with all four tweet endpoints
+- Registered tweets router in `src/main.py` with OpenAPI tag
+- Added `create_tweet_context_prompt` to `src/prompts.py`
+- Added `build_unified_response_for_tweet`, `build_source_response_from_thread`, `build_content_item_from_tweet` to `src/routers/response_builders.py`
+- Added `setup_tweet_deps` fixture to `src/routers/conftest.py`
+- Created `src/routers/test_tweets.py` with comprehensive router tests (346 lines)
+
 ---
 
-*Plan Status: **IN PROGRESS - PHASE 4 COMPLETE***
+**Next Steps:**
+1. Complete Phase 6: Unified response integration (random selection + search)
+2. Complete Phase 7: Search integration
+
+---
+
+*Plan Status: **IN PROGRESS - PHASE 5 COMPLETE***
 
 *Created: 2026-01-24*
 

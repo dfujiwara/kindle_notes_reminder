@@ -2,6 +2,7 @@
 
 import pytest
 from datetime import datetime, timezone
+from typing import Callable
 
 from src.tweet_ingestion.interfaces import (
     FetchedThread,
@@ -15,6 +16,16 @@ from src.test_utils import (
     StubTweetRepository,
     StubTweetThreadRepository,
 )
+
+TweetProcessorDepsSetup = Callable[
+    ...,
+    tuple[
+        StubTweetThreadRepository,
+        StubTweetRepository,
+        StubEmbeddingClient,
+        StubLLMClient,
+    ],
+]
 
 
 def make_fetched_tweet(
@@ -111,20 +122,39 @@ def failing_fetcher() -> ThreadFetcherFn:
 
 
 @pytest.fixture
-def thread_repo() -> StubTweetThreadRepository:
-    return StubTweetThreadRepository()
+def setup_tweet_processor_deps() -> TweetProcessorDepsSetup:
+    """Setup stub dependencies for tweet processor tests.
 
+    Returns a callable that accepts optional failure/response configuration
+    and returns a tuple of (thread_repo, tweet_repo, embedding_client, llm_client).
 
-@pytest.fixture
-def tweet_repo() -> StubTweetRepository:
-    return StubTweetRepository()
+    Usage:
+        def test_something(setup_tweet_processor_deps):
+            thread_repo, tweet_repo, embedding_client, llm_client = setup_tweet_processor_deps()
+            # or with config:
+            thread_repo, tweet_repo, embedding_client, llm_client = setup_tweet_processor_deps(
+                embedding_should_fail=True,
+                llm_responses=["summary"],
+            )
+    """
 
+    def _setup(
+        embedding_should_fail: bool = False,
+        llm_should_fail: bool = False,
+        llm_responses: list[str] | None = None,
+    ) -> tuple[
+        StubTweetThreadRepository,
+        StubTweetRepository,
+        StubEmbeddingClient,
+        StubLLMClient,
+    ]:
+        thread_repo = StubTweetThreadRepository()
+        tweet_repo = StubTweetRepository()
+        embedding_client = StubEmbeddingClient(should_fail=embedding_should_fail)
+        llm_client = StubLLMClient(
+            should_fail=llm_should_fail,
+            responses=llm_responses if llm_responses is not None else [],
+        )
+        return thread_repo, tweet_repo, embedding_client, llm_client
 
-@pytest.fixture
-def embedding_client() -> StubEmbeddingClient:
-    return StubEmbeddingClient()
-
-
-@pytest.fixture
-def llm_client() -> StubLLMClient:
-    return StubLLMClient()
+    return _setup

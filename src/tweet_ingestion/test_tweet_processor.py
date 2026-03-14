@@ -10,26 +10,23 @@ from src.tweet_ingestion.interfaces import (
     ThreadFetcherFn,
     TwitterFetchError,
 )
-from src.tweet_ingestion.conftest import make_fetched_thread, make_fetched_tweet
-from src.embedding_interface import EmbeddingError
-from src.test_utils import (
-    StubTweetThreadRepository,
-    StubTweetRepository,
-    StubEmbeddingClient,
-    StubLLMClient,
+from src.tweet_ingestion.conftest import (
+    TweetProcessorDepsSetup,
+    make_fetched_thread,
+    make_fetched_tweet,
 )
+from src.embedding_interface import EmbeddingError
 from src.repositories.models import TweetThreadCreate, TweetCreate
 
 
 @pytest.mark.asyncio
 async def test_process_single_tweet_success(
     single_tweet_fetcher: ThreadFetcherFn,
-    thread_repo: StubTweetThreadRepository,
-    tweet_repo: StubTweetRepository,
-    embedding_client: StubEmbeddingClient,
-    llm_client: StubLLMClient,
+    setup_tweet_processor_deps: TweetProcessorDepsSetup,
 ) -> None:
     """Test successful processing of a single tweet."""
+    thread_repo, tweet_repo, embedding_client, llm_client = setup_tweet_processor_deps()
+
     result = await process_tweet_content(
         "1234567890",
         thread_repo,
@@ -53,12 +50,12 @@ async def test_process_single_tweet_success(
 @pytest.mark.asyncio
 async def test_process_multi_tweet_thread_success(
     multi_tweet_fetcher: ThreadFetcherFn,
-    thread_repo: StubTweetThreadRepository,
-    tweet_repo: StubTweetRepository,
-    embedding_client: StubEmbeddingClient,
+    setup_tweet_processor_deps: TweetProcessorDepsSetup,
 ) -> None:
     """Test successful processing of a multi-tweet thread."""
-    llm_client = StubLLMClient(responses=["This is a thread about the topic."])
+    thread_repo, tweet_repo, embedding_client, llm_client = setup_tweet_processor_deps(
+        llm_responses=["This is a thread about the topic."]
+    )
 
     result = await process_tweet_content(
         "1111111111",
@@ -93,12 +90,11 @@ async def test_process_multi_tweet_thread_success(
 async def test_process_tweet_with_url_input(
     url: str,
     single_tweet_fetcher: ThreadFetcherFn,
-    thread_repo: StubTweetThreadRepository,
-    tweet_repo: StubTweetRepository,
-    embedding_client: StubEmbeddingClient,
-    llm_client: StubLLMClient,
+    setup_tweet_processor_deps: TweetProcessorDepsSetup,
 ) -> None:
     """Test processing with twitter.com and x.com URL inputs."""
+    thread_repo, tweet_repo, embedding_client, llm_client = setup_tweet_processor_deps()
+
     result = await process_tweet_content(
         url,
         thread_repo,
@@ -114,16 +110,15 @@ async def test_process_tweet_with_url_input(
 
 @pytest.mark.asyncio
 async def test_process_duplicate_thread_returns_existing(
-    thread_repo: StubTweetThreadRepository,
-    tweet_repo: StubTweetRepository,
-    embedding_client: StubEmbeddingClient,
-    llm_client: StubLLMClient,
+    setup_tweet_processor_deps: TweetProcessorDepsSetup,
 ) -> None:
     """Test that duplicate threads return existing record without re-saving.
 
     Note: The fetcher is still called to get the root_tweet_id for deduplication,
     but the existing data from the database is returned rather than re-processing.
     """
+    thread_repo, tweet_repo, embedding_client, llm_client = setup_tweet_processor_deps()
+
     # Pre-populate with existing thread
     existing_thread = thread_repo.add(
         TweetThreadCreate(
@@ -191,12 +186,12 @@ async def test_process_duplicate_thread_returns_existing(
 @pytest.mark.asyncio
 async def test_process_tweet_generates_embeddings(
     multi_tweet_fetcher: ThreadFetcherFn,
-    thread_repo: StubTweetThreadRepository,
-    tweet_repo: StubTweetRepository,
-    embedding_client: StubEmbeddingClient,
+    setup_tweet_processor_deps: TweetProcessorDepsSetup,
 ) -> None:
     """Test that embeddings are generated for all tweets."""
-    llm_client = StubLLMClient(responses=["Thread summary"])
+    thread_repo, tweet_repo, embedding_client, llm_client = setup_tweet_processor_deps(
+        llm_responses=["Thread summary"]
+    )
 
     await process_tweet_content(
         "1111111111",
@@ -214,12 +209,11 @@ async def test_process_tweet_generates_embeddings(
 @pytest.mark.asyncio
 async def test_process_tweet_fetch_error_propagates(
     failing_fetcher: ThreadFetcherFn,
-    thread_repo: StubTweetThreadRepository,
-    tweet_repo: StubTweetRepository,
-    embedding_client: StubEmbeddingClient,
-    llm_client: StubLLMClient,
+    setup_tweet_processor_deps: TweetProcessorDepsSetup,
 ) -> None:
     """Test that fetch errors are propagated."""
+    thread_repo, tweet_repo, embedding_client, llm_client = setup_tweet_processor_deps()
+
     with pytest.raises(TwitterFetchError, match="Failed to fetch tweet"):
         await process_tweet_content(
             "1234567890",
@@ -234,12 +228,11 @@ async def test_process_tweet_fetch_error_propagates(
 @pytest.mark.asyncio
 async def test_process_tweet_invalid_input_raises_error(
     single_tweet_fetcher: ThreadFetcherFn,
-    thread_repo: StubTweetThreadRepository,
-    tweet_repo: StubTweetRepository,
-    embedding_client: StubEmbeddingClient,
-    llm_client: StubLLMClient,
+    setup_tweet_processor_deps: TweetProcessorDepsSetup,
 ) -> None:
     """Test that invalid input raises error."""
+    thread_repo, tweet_repo, embedding_client, llm_client = setup_tweet_processor_deps()
+
     with pytest.raises(TwitterFetchError, match="Invalid tweet input"):
         await process_tweet_content(
             "not-a-valid-tweet-or-url",
@@ -254,12 +247,11 @@ async def test_process_tweet_invalid_input_raises_error(
 @pytest.mark.asyncio
 async def test_single_tweet_uses_content_as_title(
     single_tweet_fetcher: ThreadFetcherFn,
-    thread_repo: StubTweetThreadRepository,
-    tweet_repo: StubTweetRepository,
-    embedding_client: StubEmbeddingClient,
-    llm_client: StubLLMClient,
+    setup_tweet_processor_deps: TweetProcessorDepsSetup,
 ) -> None:
     """Test that single tweets use truncated content as title."""
+    thread_repo, tweet_repo, embedding_client, llm_client = setup_tweet_processor_deps()
+
     result = await process_tweet_content(
         "1234567890",
         thread_repo,
@@ -275,12 +267,10 @@ async def test_single_tweet_uses_content_as_title(
 
 @pytest.mark.asyncio
 async def test_process_tweet_with_media_urls(
-    thread_repo: StubTweetThreadRepository,
-    tweet_repo: StubTweetRepository,
-    embedding_client: StubEmbeddingClient,
-    llm_client: StubLLMClient,
+    setup_tweet_processor_deps: TweetProcessorDepsSetup,
 ) -> None:
     """Test processing a tweet with media attachments."""
+    thread_repo, tweet_repo, embedding_client, llm_client = setup_tweet_processor_deps()
 
     async def fetcher_with_media(tweet_id: str, max_depth: int = 50) -> FetchedThread:
         tweet = FetchedTweet(
@@ -320,12 +310,12 @@ async def test_process_tweet_with_media_urls(
 @pytest.mark.asyncio
 async def test_llm_failure_uses_fallback_title(
     multi_tweet_fetcher: ThreadFetcherFn,
-    thread_repo: StubTweetThreadRepository,
-    tweet_repo: StubTweetRepository,
-    embedding_client: StubEmbeddingClient,
+    setup_tweet_processor_deps: TweetProcessorDepsSetup,
 ) -> None:
     """Test that LLM failure falls back to truncated first tweet."""
-    llm_client = StubLLMClient(should_fail=True)
+    thread_repo, tweet_repo, embedding_client, llm_client = setup_tweet_processor_deps(
+        llm_should_fail=True
+    )
 
     result = await process_tweet_content(
         "1111111111",
@@ -343,12 +333,12 @@ async def test_llm_failure_uses_fallback_title(
 @pytest.mark.asyncio
 async def test_embedding_failure_propagates(
     multi_tweet_fetcher: ThreadFetcherFn,
-    thread_repo: StubTweetThreadRepository,
-    tweet_repo: StubTweetRepository,
+    setup_tweet_processor_deps: TweetProcessorDepsSetup,
 ) -> None:
     """Test that embedding generation failure propagates as an error."""
-    embedding_client = StubEmbeddingClient(should_fail=True)
-    llm_client = StubLLMClient(responses=["Thread summary"])
+    thread_repo, tweet_repo, embedding_client, llm_client = setup_tweet_processor_deps(
+        embedding_should_fail=True, llm_responses=["Thread summary"]
+    )
 
     with pytest.raises(EmbeddingError, match="Simulated embedding generation failure"):
         await process_tweet_content(
@@ -364,12 +354,12 @@ async def test_embedding_failure_propagates(
 @pytest.mark.asyncio
 async def test_embedding_failure_cleans_up_thread(
     multi_tweet_fetcher: ThreadFetcherFn,
-    thread_repo: StubTweetThreadRepository,
-    tweet_repo: StubTweetRepository,
+    setup_tweet_processor_deps: TweetProcessorDepsSetup,
 ) -> None:
     """Test that a failed embedding run removes the orphaned thread record."""
-    embedding_client = StubEmbeddingClient(should_fail=True)
-    llm_client = StubLLMClient(responses=["Thread summary"])
+    thread_repo, tweet_repo, embedding_client, llm_client = setup_tweet_processor_deps(
+        embedding_should_fail=True, llm_responses=["Thread summary"]
+    )
 
     with pytest.raises(EmbeddingError):
         await process_tweet_content(

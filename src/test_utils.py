@@ -39,6 +39,11 @@ from src.url_ingestion.url_fetcher import (
     URLFetchError,
     FetchedContent,
 )
+from src.tweet_ingestion.interfaces import (
+    FetchedThread,
+    FetchedTweet,
+    TwitterFetchError,
+)
 from src.types import Embedding
 from src.config import settings
 from datetime import datetime, timezone
@@ -364,6 +369,37 @@ class StubLLMClient(LLMClientInterface):
         chunk_size = 10
         for i in range(0, len(response), chunk_size):
             yield response[i : i + chunk_size]
+
+
+class StubTwitterFetcher:
+    """Stub implementation of Twitter thread fetcher for testing."""
+
+    def __init__(
+        self,
+        should_fail: bool = False,
+        root_tweet_id: str = "tweet123",
+    ):
+        self.should_fail = should_fail
+        self.root_tweet_id = root_tweet_id
+        self.calls: list[str] = []
+
+    async def __call__(self, tweet_id: str, max_depth: int = 50) -> FetchedThread:
+        self.calls.append(tweet_id)
+        if self.should_fail:
+            raise TwitterFetchError("Failed to fetch tweet")
+        fetched_tweet = FetchedTweet(
+            tweet_id=tweet_id,
+            author_username="test_user",
+            author_display_name="Test User",
+            content="Test tweet content",
+            tweeted_at=datetime.now(timezone.utc),
+        )
+        return FetchedThread(
+            root_tweet_id=self.root_tweet_id,
+            author_username="test_user",
+            author_display_name="Test User",
+            tweets=[fetched_tweet],
+        )
 
 
 class StubTweetThreadRepository(TweetThreadRepositoryInterface):

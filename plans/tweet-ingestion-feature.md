@@ -4,7 +4,7 @@
 
 Add capability to ingest tweets (and tweet threads) into the system, making them searchable alongside Kindle notes and URL content. Tweets will be stored with embeddings for semantic search and served through the existing API infrastructure.
 
-**Status: In Progress - Phase 3 Complete**
+**Status: In Progress - Phase 4 Complete**
 
 ## Current Architecture Understanding
 
@@ -269,19 +269,19 @@ Twitter API v2 access has become increasingly restricted. This phase validates A
 
 **4.1 Update `src/config.py`:**
 - [x] `twitter_bearer_token: SecretStr | None = None`
-- [ ] `max_thread_depth: int = 50`
+- [x] `max_thread_depth: int = 50`
 - [x] `twitter_fetch_timeout: int = 30`
-- [ ] `twitter_rate_limit_retries: int = 3`
+- [x] `twitter_rate_limit_retries: int = 3`
 
 **4.2 Update `src/dependencies.py`:**
-- [ ] `get_tweet_thread_repository()`
-- [ ] `get_tweet_repository()`
-- [ ] `get_twitter_fetcher()`
+- [x] `get_tweet_thread_repository()`
+- [x] `get_tweet_repository()`
+- [x] `get_twitter_fetcher()`
 
 **4.3 Update `src/test_utils.py`:**
 - [x] `StubTweetThreadRepository`
 - [x] `StubTweetRepository`
-- [ ] `StubTwitterFetcher`
+- [x] `StubTwitterFetcher`
 
 ### Phase 5: Tweet-Specific Endpoints
 
@@ -529,12 +529,18 @@ Twitter API v2 access has become increasingly restricted. This phase validates A
 
 **Next Steps:**
 1. Complete Phase 0: Set up Twitter Developer account and validate API access
-2. Complete Phase 4: Add remaining config fields (`max_thread_depth`, `twitter_rate_limit_retries`), wire `src/dependencies.py`, add `StubTwitterFetcher` to `src/test_utils.py`
-3. Begin Phase 5: Tweet-specific API endpoints
+2. Begin Phase 5: Tweet-specific API endpoints (`src/routers/tweets.py`, register in `src/main.py`, add `setup_tweet_deps` fixture, write router tests)
 
 ---
 
-*Plan Status: **IN PROGRESS - PHASE 3 COMPLETE***
+**Phase 4 Completed (2026-03-14):**
+- Added `max_thread_depth: int = 50` and `twitter_rate_limit_retries: int = 3` to `src/config.py`
+- Added `get_tweet_thread_repository()`, `get_tweet_repository()`, `get_twitter_fetcher()` to `src/dependencies.py`
+- Added `StubTwitterFetcher` to `src/test_utils.py`
+
+---
+
+*Plan Status: **IN PROGRESS - PHASE 4 COMPLETE***
 
 *Created: 2026-01-24*
 

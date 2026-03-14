@@ -56,6 +56,8 @@ class Settings(BaseSettings):
     # Twitter ingestion configuration
     twitter_bearer_token: SecretStr | None = None
     twitter_fetch_timeout: int = 30  # seconds
+    max_thread_depth: int = 50
+    twitter_rate_limit_retries: int = 3
 
 
 # Create global settings instance
